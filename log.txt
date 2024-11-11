@@ -1,0 +1,19 @@
+20241010
+i tried littleJS and it seemed to lack multiple cameras, i looked up Phaser and think i'll have a go at this instead. 
+
+as i found with the littleJS you need to run it from a server, vscode's live server should do, it explained that this is for  web browser security reasons.
+
+so in vscode, using liveserver , which you need to download, you can use the file explorer in vscode to open your html file, you can also right click and click open in liveserver
+
+
+you need to include the phaser library like so 
+
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.11.0/dist/phaser.js"></script>
+	
+although maybe you could bundle that with the game?
+
+so i'll just go through the tutorials on the website
+https://phaser.io/tutorials/making-your-first-phaser-3-game/part1
+
+20241015
+resume tut
