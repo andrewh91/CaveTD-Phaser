@@ -17,3 +17,6 @@ https://phaser.io/tutorials/making-your-first-phaser-3-game/part1
 
 20241015
 resume tut
+
+20241119
+make a start
