@@ -20,3 +20,5 @@ resume tut
 
 20241119
 make a start
+somehow i was using an old version of phaser, updated it, i've made it load from my local version instead of from online
+created a dot image, got that to display, next scale it

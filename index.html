@@ -4,18 +4,19 @@
     <script src="phaser-3.87.0\dist\phaser-arcade-physics.min.js"></script>
 </head>
 <body>
-
     <script>
     class Example extends Phaser.Scene
     {
         preload ()
         {
             this.load.setBaseURL('https://labs.phaser.io');
-
-            this.load.image('sky', 'assets/skies/space3.png');
-            this.load.image('logo', 'assets/sprites/phaser3-logo.png');
-            this.load.image('red', 'assets/particles/red.png');
-        }
+            this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
+            this.load.image('logo', 'https://labs.phaser.io/assets/sprites/phaser3-logo.png');
+            this.load.image('red', 'https://labs.phaser.io/assets/particles/red.png');
+            /*to load local images*/
+            this.load.setBaseURL();
+            this.load.image('dot', 'dot.png');
+        }   
 
         create ()
         {
@@ -34,6 +35,14 @@
             logo.setCollideWorldBounds(true);
 
             particles.startFollow(logo);
+            this.add.image(400, 300, 'dot');
+            this.add.image(400, 301, 'dot');
+            this.add.image(400, 302, 'dot');
+            this.add.image(400, 303, 'dot');
+            this.add.image(400, 304, 'dot');
+            this.add.image(400, 305, 'dot');
+            this.add.image(400, 306, 'dot');
+            this.add.image(400, 307, 'dot');
         }
     }
 
