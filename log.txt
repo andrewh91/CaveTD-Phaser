@@ -22,3 +22,10 @@ resume tut
 make a start
 somehow i was using an old version of phaser, updated it, i've made it load from my local version instead of from online
 created a dot image, got that to display, next scale it
+
+20241121
+made the player dot larger, try to move it, got smooth moving, next try to get it to conform to a grid
+20241122
+movement for the player should be like pokemon, move one grid space with one direciton button, and you can hold it to move continuously.
+in order to achieve this i have made a playerMoveTimer that decreases if above 0 and is set to a positive value (playerMoveTimerStep) when you move, you are only allowed to move when it is 0. it counts down with delta time, so if the game lags it should move the same speed - actually i should also multiply the movement distance by delta time too, cos if the game was really slow, like if the playerMoveTimerStep was lower than the game update time we would be moving less frequently, however moving more than one space at once would complicate the collision detection and you could pass through a wall, so just keep playerMoveTimerStep relatively high
+this works good enough, 

@@ -5,44 +5,54 @@
 </head>
 <body>
     <script>
+        
+    var player;
+    var cursors;
+    
+    var playerMoveTimerStep=500;//player can only move after this many milliseconds have elapsed
+    var playerMoveTimer=playerMoveTimerStep;
+    var gridStep =10;
     class Example extends Phaser.Scene
     {
         preload ()
         {
-            this.load.setBaseURL('https://labs.phaser.io');
-            this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
-            this.load.image('logo', 'https://labs.phaser.io/assets/sprites/phaser3-logo.png');
-            this.load.image('red', 'https://labs.phaser.io/assets/particles/red.png');
-            /*to load local images*/
             this.load.setBaseURL();
             this.load.image('dot', 'dot.png');
+            
         }   
 
         create ()
         {
-            this.add.image(400, 300, 'sky');
+            player =this.add.image(400, 300, 'dot').setScale(gridStep);//make the player the same size as a grid space
 
-            const particles = this.add.particles(0, 0, 'red', {
-                speed: 100,
-                scale: { start: 1, end: 0 },
-                blendMode: 'ADD'
-            });
-
-            const logo = this.physics.add.image(400, 100, 'logo');
-
-            logo.setVelocity(100, 200);
-            logo.setBounce(1, 1);
-            logo.setCollideWorldBounds(true);
-
-            particles.startFollow(logo);
-            this.add.image(400, 300, 'dot');
-            this.add.image(400, 301, 'dot');
-            this.add.image(400, 302, 'dot');
-            this.add.image(400, 303, 'dot');
-            this.add.image(400, 304, 'dot');
-            this.add.image(400, 305, 'dot');
-            this.add.image(400, 306, 'dot');
-            this.add.image(400, 307, 'dot');
+            cursors = this.input.keyboard.createCursorKeys();
+        }
+        update (time,delta)
+        {
+            if(playerMoveTimer>0)
+            {
+                playerMoveTimer-=delta;
+            }
+            if (cursors.left.isDown&&playerMoveTimer<=0)
+            {
+                player.x-=gridStep;
+                playerMoveTimer=playerMoveTimerStep;
+            }
+            if (cursors.right.isDown&&playerMoveTimer<=0)
+            {
+                player.x+=gridStep;
+                playerMoveTimer=playerMoveTimerStep;
+            }
+            if (cursors.up.isDown&&playerMoveTimer<=0)
+            {
+                player.y-=gridStep;
+                playerMoveTimer=playerMoveTimerStep;
+            }
+            if (cursors.down.isDown&&playerMoveTimer<=0)
+            {
+                player.y+=gridStep;
+                playerMoveTimer=playerMoveTimerStep;
+            }
         }
     }
 
@@ -51,12 +61,7 @@
         width: 800,
         height: 600,
         scene: Example,
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 200 }
-            }
-        }
+        
     };
 
     const game = new Phaser.Game(config);
