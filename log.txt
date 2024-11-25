@@ -29,3 +29,7 @@ made the player dot larger, try to move it, got smooth moving, next try to get i
 movement for the player should be like pokemon, move one grid space with one direciton button, and you can hold it to move continuously.
 in order to achieve this i have made a playerMoveTimer that decreases if above 0 and is set to a positive value (playerMoveTimerStep) when you move, you are only allowed to move when it is 0. it counts down with delta time, so if the game lags it should move the same speed - actually i should also multiply the movement distance by delta time too, cos if the game was really slow, like if the playerMoveTimerStep was lower than the game update time we would be moving less frequently, however moving more than one space at once would complicate the collision detection and you could pass through a wall, so just keep playerMoveTimerStep relatively high
 this works good enough, 
+
+20241125
+i want to be able to create a new player character on command, created a player class, give new players a colour derived from the player's index number 
+now i want to experiment with making new cameras, i already have some code that spaces the cameras out in the order i like, try and get that to work, seems to work, need to make the borders look right though 

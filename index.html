@@ -4,58 +4,71 @@
     <script src="phaser-3.87.0\dist\phaser-arcade-physics.min.js"></script>
 </head>
 <body>
-    <script>
+    <script type="module">
         
-    var player;
+    var players=[];
+    var colourArray=[0xff0000,0x00ff00,0x0000ff ];
+    var selectedPlayer=0;
     var cursors;
-    
-    var playerMoveTimerStep=500;//player can only move after this many milliseconds have elapsed
-    var playerMoveTimer=playerMoveTimerStep;
+
     var gridStep =10;
+    import Player from './Player.js';
+    import {manageCamera} from './splitScreen.js';
     class Example extends Phaser.Scene
     {
         preload ()
         {
             this.load.setBaseURL();
             this.load.image('dot', 'dot.png');
-            
         }   
 
         create ()
         {
-            player =this.add.image(400, 300, 'dot').setScale(gridStep);//make the player the same size as a grid space
-
+            selectedPlayer=0;
+            players.push(new Player(this, 200, 150, 'dot',gridStep,selectedPlayer,0xffffff/100*(selectedPlayer)));
             cursors = this.input.keyboard.createCursorKeys();
+            this.input.keyboard.on('keydown-P', this.onPressP, this);
+
+            window.debug={
+                players: players, scene: this
+            }
+        }
+        onPressP()
+        {
+            /*make a new player at this player's position, and select it so the cursor keys move the new player*/
+            let x = players[selectedPlayer].x;
+            let y = players[selectedPlayer].y;
+            players.push(new Player(this, 200, 150, 'dot',gridStep,selectedPlayer,0xffffff/100*(selectedPlayer)));
+            selectedPlayer=players.length-1;
+            addCamera(this,x,y);
         }
         update (time,delta)
         {
-            if(playerMoveTimer>0)
+            for(let i = 0;i<players.length;i++)
             {
-                playerMoveTimer-=delta;
-            }
-            if (cursors.left.isDown&&playerMoveTimer<=0)
-            {
-                player.x-=gridStep;
-                playerMoveTimer=playerMoveTimerStep;
-            }
-            if (cursors.right.isDown&&playerMoveTimer<=0)
-            {
-                player.x+=gridStep;
-                playerMoveTimer=playerMoveTimerStep;
-            }
-            if (cursors.up.isDown&&playerMoveTimer<=0)
-            {
-                player.y-=gridStep;
-                playerMoveTimer=playerMoveTimerStep;
-            }
-            if (cursors.down.isDown&&playerMoveTimer<=0)
-            {
-                player.y+=gridStep;
-                playerMoveTimer=playerMoveTimerStep;
+                players[i].update(cursors,delta);
             }
         }
+        
     }
+    function addCamera(scene,x,y)
+    {
+        //add a new camera, and adjust the other cameras to fit
+        
+        scene.cameras.add(0,0,800,600).setZoom(1);
+        
+        manageCamera(scene,x,y);
 
+
+
+        // Create graphics objects for borders 
+        const border = scene.add.graphics(); 
+        // Draw borders for camera1 
+        let latestCamera = scene.cameras.cameras[scene.cameras.cameras.length-1];
+        border.lineStyle(2, 0xffffff/33*(selectedPlayer)); 
+        border.strokeRect(latestCamera.x, latestCamera.y, latestCamera.width, latestCamera.height); 
+        //pass in the camera array for the scene
+    }
     const config = {
         type: Phaser.AUTO,
         width: 800,
@@ -65,6 +78,7 @@
     };
 
     const game = new Phaser.Game(config);
+    
     </script>
 
 </body>
