@@ -6,28 +6,6 @@ export function manageCamera(scene,targetx,targety)
     redrawCameras(cameraArray,width,height,targetx,targety);
 }
 
-
-function Camera(array,scale,position)
-{
-	this.array=array;
-	this.scale=scale;
-	this.canvas = document.createElement('canvas');
-	this.canvas.style.position = 'absolute';
-	this.canvas.style.top="0px";
-	this.canvas.style.left="0px";
-	canvasContainer.appendChild(this.canvas);
-	this.context = this.canvas.getContext('2d');
-	this.context.textBaseline='top';
-	this.context.textAlign = "center";
-	this.canvas.style.border='1px solid #000000';
-	/* the canvas width and height will be how large the camera appears on screen, so will need to shrink it when adding a split screen, or else they won't both fit on the screen */
-	/* give it a default value here but this will be overwritten when the cameras are automatically redrawn*/
-	this.setWidthAndHeight(windowSizeWidth,windowSizeHeight);
-	/* target is the in game position, so what the camera is looking at */
-	this.target=position;
-	/* position is how we have transalted the camera to put the target in the centre of the camera */
-	this.setPosition();
-}
 /* when you add, hide, show a camera, or if you resize the window, or the user selects the option to resize the window then we should recalculate the cameras size and position */
 /* given the window width and height - which will be recorded or given by the resize event, or might have been manually adjusted with the manuallySetupWindowSize method, configure all cameras, displaying only those that are visible */
 function redrawCameras(array,w,h,targetx,targety)
@@ -112,63 +90,3 @@ function isPortrait(w,h)
 {
 	return (Math.max(w,h)==h);
 }
-/* pass in the cameraArray, scale is just the zoom, position is the game world position that the camera will look at */
-// function addCamera(array,scale,position)
-// {
-// 	let index = array.length;
-// 	array.push(new Camera(array,scale,position));
-// 	redrawCameras(array,windowSizeWidth,windowSizeHeight);
-// 	return index;
-// }
-/* so far i'm able to hide cameras but i never destroy them, i'm not sure if this will have some performance issue... */
-// Camera.prototype.hideCamera = function()
-// {
-// 	this.canvas.style.display = 'none';
-// 	redrawCameras(this.array,windowSizeWidth,windowSizeHeight);
-// }
-// Camera.prototype.showCamera = function()
-// {
-// 	this.canvas.style.display = 'inline-grid';	
-// 	redrawCameras(this.array,windowSizeWidth,windowSizeHeight);
-
-// }
-// Camera.prototype.isShown = function()
-// {
-// 	return this.canvas.style.display != 'none'?true:false;
-// }
-Camera.prototype.setTarget= function(target)
-{
-	this.target=target;
-}
-/* this is the position the camera is looking at in the world map */
-Camera.prototype.mySetPosition = function()
-{
-	this.position = {
-	x:this.canvas.width /2-(this.target.x) *this.scale,
-	y:this.canvas.height/2-(this.target.y) *this.scale};
-}
-Camera.prototype.setScale = function(scale)
-{
-	this.scale= scale;
-}
-// /* i can use window.innerWidth to find out how big the screen is, i can then use this to resize my cameras */
-// Camera.prototype.setWidthAndHeight = function(w,h)
-// {
-// 	this.canvas.width=w;
-// 	this.canvas.height=h;
-// }
-// /* this will set the cameras position on the screen for when i use splitscreen */
-// Camera.prototype.setSplitCameraPosition = function(t,l)
-// {
-// 	this.canvas.style.top=t+'px';
-// 	this.canvas.style.left=l+'px';
-// }
-// Camera.prototype.getRect = function()
-// {
-// 	/* these values would be string with 'px' at the end, so here i parse that into an int */
-// 	let t=parseInt(this.canvas.style.top.slice(0,-2));
-// 	let l=parseInt(this.canvas.style.left.slice(0,-2));
-// 	let w=this.canvas.width;
-// 	let h=this.canvas.height;
-// 	return {top:t,left:l,width:w,height:h};
-// }

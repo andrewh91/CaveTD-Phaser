@@ -7,15 +7,21 @@
     <script type="module">
         
     var players=[];
+    var ui;
     var colourArray=[0xff0000,0x00ff00,0x0000ff ];
     var selectedPlayer=0;
     var cursors;
-
     var gridStep =10;
+    import UIScene from './UIScene.js';
+    import {drawBorders} from './UIScene.js';
     import Player from './Player.js';
     import {manageCamera} from './splitScreen.js';
-    class Example extends Phaser.Scene
+    class Game extends Phaser.Scene
     {
+        constructor()
+        {
+            super({ key: 'game' });
+        }
         preload ()
         {
             this.load.setBaseURL();
@@ -24,13 +30,17 @@
 
         create ()
         {
-            selectedPlayer=0;
-            players.push(new Player(this, 200, 150, 'dot',gridStep,selectedPlayer,0xffffff/100*(selectedPlayer)));
+            this.mainCamera = this.cameras.main;
+
+            selectedPlayer=-1;
+            selectedPlayer++;
+            players.push(new Player(this, 200, 150, 'dot',gridStep,selectedPlayer));
             cursors = this.input.keyboard.createCursorKeys();
             this.input.keyboard.on('keydown-P', this.onPressP, this);
-
+           
+            ui=this.scene.launch('uiScene');
             window.debug={
-                players: players, scene: this
+                players: players, scene: this,uiScene:ui
             }
         }
         onPressP()
@@ -38,7 +48,8 @@
             /*make a new player at this player's position, and select it so the cursor keys move the new player*/
             let x = players[selectedPlayer].x;
             let y = players[selectedPlayer].y;
-            players.push(new Player(this, 200, 150, 'dot',gridStep,selectedPlayer,0xffffff/100*(selectedPlayer)));
+            selectedPlayer++;
+            players.push(new Player(this, 200, 150, 'dot',gridStep,selectedPlayer));
             selectedPlayer=players.length-1;
             addCamera(this,x,y);
         }
@@ -54,26 +65,19 @@
     function addCamera(scene,x,y)
     {
         //add a new camera, and adjust the other cameras to fit
-        
-        scene.cameras.add(0,0,800,600).setZoom(1);
-        
+        let newCamera = scene.cameras.add(0,0,800,600).setZoom(1);
+      
+        //this is my code to organise the on screen position and size of the cameras
         manageCamera(scene,x,y);
 
-
-
-        // Create graphics objects for borders 
-        const border = scene.add.graphics(); 
-        // Draw borders for camera1 
-        let latestCamera = scene.cameras.cameras[scene.cameras.cameras.length-1];
-        border.lineStyle(2, 0xffffff/33*(selectedPlayer)); 
-        border.strokeRect(latestCamera.x, latestCamera.y, latestCamera.width, latestCamera.height); 
-        //pass in the camera array for the scene
+        //redraw the border in the ui
+        drawBorders(scene);
     }
     const config = {
-        type: Phaser.AUTO,
+        type: Phaser.WEBGL,
         width: 800,
         height: 600,
-        scene: Example,
+        scene: [Game, UIScene]
         
     };
 

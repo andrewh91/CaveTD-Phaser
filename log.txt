@@ -33,3 +33,6 @@ this works good enough,
 20241125
 i want to be able to create a new player character on command, created a player class, give new players a colour derived from the player's index number 
 now i want to experiment with making new cameras, i already have some code that spaces the cameras out in the order i like, try and get that to work, seems to work, need to make the borders look right though 
+
+20241126 
+playing with these cameras again, took a while but i got it to display a border around each camera. this border is in a separate scene for the UI. next i should test what removing cameras does, will this mess everything up?

@@ -1,14 +1,14 @@
 
 export default class Player extends Phaser.GameObjects.Sprite {
     
-        static playerMoveTimerStep=500;
-        constructor(scene, x, y, texture,gridStep,index,colour) {
+        static playerMoveTimerStep=25;
+        constructor(scene, x, y, texture,gridStep,index) {
         super(scene, x, y, texture);
         
         scene.add.existing(this);
         this.index=index;
         this.setScale(gridStep);
-        this.setTint(16711680);
+        this.setTint(0xffffff/33*(this.index+1));
         this.playerMoveTimer=0;
         this.playerMoveTimer=Player.playerMoveTimerStep;
         this.gridStep=gridStep;
