@@ -36,3 +36,15 @@ now i want to experiment with making new cameras, i already have some code that 
 
 20241126 
 playing with these cameras again, took a while but i got it to display a border around each camera. this border is in a separate scene for the UI. next i should test what removing cameras does, will this mess everything up?
+
+20241127
+added code to remove the cameras one by one, except the first camera, then redraw the borders and manage the camera positions again, seems to work well. i've also used set scroll to have the new camera target the passed in coords, which is the newly created player. #
+
+so far the arrow keys move the player, press p to create a new player at the current player's position, with their own camera, the camera points at the new player. press r to remove the most recent camera. 
+
+the players all use the arrow keys to move, and they spawn on top of each other, so they all always overlap. new players should have their own movement keys instead, or at least have a key to toggle the selected player.
+
+i've created a dialog box that appears when you create a new player, new cursor keys are then assigned to this new player, this works. currently it's just the wasd keys that are given to the new player, but i want them to be user defined
+
+next i will create a bit more dialog, saying something like, set new player movement keys, LEFT: RIGHT: UP: DOWN 
+then i need to take the user input for those events and have it set up the keys 

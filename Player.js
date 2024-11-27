@@ -12,32 +12,40 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.playerMoveTimer=0;
         this.playerMoveTimer=Player.playerMoveTimerStep;
         this.gridStep=gridStep;
+        this.cursors = scene.input.keyboard.createCursorKeys();
     }
 
-    update(cursors,delta) {
+    update(delta) {
         if(this.playerMoveTimer>0)
         {
             this.playerMoveTimer-=delta;
         }
-        if (cursors.left.isDown&&this.playerMoveTimer<=0)
+        if (this.cursors.left.isDown&&this.playerMoveTimer<=0)
         {
             this.x-=this.gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
-        if (cursors.right.isDown&&this.playerMoveTimer<=0)
+        if (this.cursors.right.isDown&&this.playerMoveTimer<=0)
         {
             this.x+=this.gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
-        if (cursors.up.isDown&&this.playerMoveTimer<=0)
+        if (this.cursors.up.isDown&&this.playerMoveTimer<=0)
         {
             this.y-=this.gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
-        if (cursors.down.isDown&&this.playerMoveTimer<=0)
+        if (this.cursors.down.isDown&&this.playerMoveTimer<=0)
         {
             this.y+=this.gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
+    }
+    updateCursors(l,r,u,d)
+    {
+        this.cursors.left=l;
+        this.cursors.right=r;
+        this.cursors.up=u;
+        this.cursors.down=d;
     }
 }

@@ -1,14 +1,14 @@
-export function manageCamera(scene,targetx,targety)
+export function manageCamera(scene)
 {
     var cameraArray = scene.scene.scene.cameras.cameras;
     var width = scene.scale.width;
     var height = scene.scale.height;
-    redrawCameras(cameraArray,width,height,targetx,targety);
+    redrawCameras(cameraArray,width,height);
 }
 
 /* when you add, hide, show a camera, or if you resize the window, or the user selects the option to resize the window then we should recalculate the cameras size and position */
 /* given the window width and height - which will be recorded or given by the resize event, or might have been manually adjusted with the manuallySetupWindowSize method, configure all cameras, displaying only those that are visible */
-function redrawCameras(array,w,h,targetx,targety)
+function redrawCameras(array,w,h)
 {
 	/* there can be cameras in the array that are hidden, so first add the indexes of the shown cameras to this array*/
 	let visibleCamerasIndexArray=[];
@@ -45,10 +45,6 @@ function redrawCameras(array,w,h,targetx,targety)
 	for(let i =0; i< visibleCamerasIndexArray.length-1;i++)
 	{
 		divide(array,visibleCamerasIndexArray[sequence[i]],visibleCamerasIndexArray[i+1]);
-	}
-	for(let i =0; i< visibleCamerasIndexArray.length;i++)
-	{
-		//array[i].setScroll(targetx,targety);
 	}
 }
 /* dividing one camera will give 2 rectangles, we should set the new dimensions of the camera we divided as the first rect, and the new camera should be given the dimensions equal to the second rect*/

@@ -12,8 +12,33 @@ export default class UIScene extends Phaser.Scene {
         this.uiLayer = this.add.layer();
         this.graphics = this.add.graphics();
 
+        this.dialogBackground = this.add.graphics(); 
+        this.dialogBackground.fillStyle(0x000000, 0.8); 
+        this.dialogBackground.fillRect(100, 100, 600, 400); 
+        this.dialogBackground.setScrollFactor(0); 
+        this.uiLayer.add(this.dialogBackground);
+        this.dialogBackground.depth=1;
+
+        this.dialogText = this.add.text(120, 120, '', { fontSize: '32px', fill: '#fff', wordWrap: { width: 560 } }); 
+        this.dialogText.setScrollFactor(0); 
+        this.uiLayer.add(this.dialogText);
+        this.dialogText.depth=1;
+
+        this.hideDialog();
+    }  
+    showNewPlayerDialog() 
+    { 
+        this.dialogText.setText("New player created.");
+        this.dialogBackground.setVisible(true); 
+        this.dialogText.setVisible(true); 
+    } 
+    hideDialog() 
+    { 
+        this.dialogBackground.setVisible(false); 
+        this.dialogText.setVisible(false); 
     }
 }
+
 export function drawBorders(scene)
 {
 
