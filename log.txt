@@ -48,3 +48,13 @@ i've created a dialog box that appears when you create a new player, new cursor 
 
 next i will create a bit more dialog, saying something like, set new player movement keys, LEFT: RIGHT: UP: DOWN 
 then i need to take the user input for those events and have it set up the keys 
+
+20241128
+created the dialog box for new player, instruct user to assign keys to the player, figured out how to take the user entered key and store that as that new player's movement key
+
+so now the p key will create a new player, and a camera centred on that player then manage the positions of the cameras and add borders, then it will show a ui dialog box prompting the user to enter keys for the new player, these keys update on the screen as you do so, and are then bound to that player, seems to work well 
+
+next i should comment the code!
+
+20241129
+adding some comments to the code

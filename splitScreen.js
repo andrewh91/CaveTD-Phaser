@@ -5,7 +5,7 @@ export function manageCamera(scene)
     var height = scene.scale.height;
     redrawCameras(cameraArray,width,height);
 }
-
+//this code was repurposed for an earlier iteration of this game that i was using just html canvas for
 /* when you add, hide, show a camera, or if you resize the window, or the user selects the option to resize the window then we should recalculate the cameras size and position */
 /* given the window width and height - which will be recorded or given by the resize event, or might have been manually adjusted with the manuallySetupWindowSize method, configure all cameras, displaying only those that are visible */
 function redrawCameras(array,w,h)
