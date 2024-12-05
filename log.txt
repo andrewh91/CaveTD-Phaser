@@ -58,3 +58,6 @@ next i should comment the code!
 
 20241129
 adding some comments to the code
+
+20241205
+i want to create a tile class and have an array of these to create the map. so far i have just created a load of random coloured tiles, i need to create a map, the tiles need to have a terrain value dictating if the player can traverse it etc

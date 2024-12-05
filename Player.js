@@ -1,9 +1,8 @@
-
 export default class Player extends Phaser.GameObjects.Sprite {
     
         //this many milliseconds must pass before the player is allowed to make a move
         static playerMoveTimerStep=25;
-        constructor(scene, x, y, texture,gridStep,index) {
+        constructor(scene, x, y, texture,index) {
         super(scene, x, y, texture);
         
         scene.add.existing(this);
@@ -14,7 +13,6 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.setTint(0xffffff/33*(this.index+1));
         this.playerMoveTimer=0;
         this.playerMoveTimer=Player.playerMoveTimerStep;
-        this.gridStep=gridStep;
         //these are the keys with which you can move the player, by default the arrow keys
         this.cursors = scene.input.keyboard.createCursorKeys();
     }
@@ -27,22 +25,22 @@ export default class Player extends Phaser.GameObjects.Sprite {
         }
         if (this.cursors.left.isDown&&this.playerMoveTimer<=0)
         {
-            this.x-=this.gridStep;
+            this.x-=gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
         if (this.cursors.right.isDown&&this.playerMoveTimer<=0)
         {
-            this.x+=this.gridStep;
+            this.x+=gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
         if (this.cursors.up.isDown&&this.playerMoveTimer<=0)
         {
-            this.y-=this.gridStep;
+            this.y-=gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
         if (this.cursors.down.isDown&&this.playerMoveTimer<=0)
         {
-            this.y+=this.gridStep;
+            this.y+=gridStep;
             this.playerMoveTimer=Player.playerMoveTimerStep;
         }
     }
