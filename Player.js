@@ -1,8 +1,8 @@
 export default class Player extends Phaser.GameObjects.Sprite {
     
         //this many milliseconds must pass before the player is allowed to make a move
-        static playerMoveTimerStep=25;
-        constructor(scene, x, y, texture,index) {
+        static playerMoveTimerStep=160;
+        constructor(scene, x, y, texture,index,colour) {
         super(scene, x, y, texture);
         
         scene.add.existing(this);
@@ -10,7 +10,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         //i've made the player image be the same size as the value it can move in one go 
         this.setScale(gridStep);
         //this is a simple way to give the player a colour based on it's index, so each player should look a little different
-        this.setTint(0xffffff/33*(this.index+1));
+        this.setTint(colour);
         this.playerMoveTimer=0;
         this.playerMoveTimer=Player.playerMoveTimerStep;
         //these are the keys with which you can move the player, by default the arrow keys

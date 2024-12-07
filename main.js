@@ -1,7 +1,5 @@
-
 var players=[];
 var tiles=[];
-var mapwidth=50;
 var cursors;
 var newCursors=[];
 var createPlayerFlag=false;
@@ -11,9 +9,9 @@ var selectedPlayer=0;
 //gridStep defines how much the player moves in one movement, also currently defines the size of the player
 var gridStep =50;
 var latestKey;
-import UIScene from './UIScene.js';
-import {drawBorders} from './UIScene.js';
-import Player from './Player.js';
+import UIScene from './uiScene.js';
+import {drawBorders} from './uiScene.js';
+import Player from './player.js';
 import {manageCamera} from './splitScreen.js';
 import Tile from'./Tile.js';
 class Game extends Phaser.Scene
@@ -34,12 +32,12 @@ class Game extends Phaser.Scene
 
         selectedPlayer=-1;
         selectedPlayer++;
-        for(let i =0;i<400;i++)
+        for(let i =0;i<mapWidth*mapHeight;i++)
         {
-            tiles.push(new Tile(this,'dot',tiles.length));
+            tiles.push(new Tile(this,'dot',tiles.length,incrementColour(i,3)));
         }
         //one player by default
-        players.push(new Player(this, 200, 150, 'dot',selectedPlayer));
+        players.push(new Player(this, 0,0, 'dot',selectedPlayer,incrementColour(selectedPlayer,3)));
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
@@ -69,7 +67,7 @@ class Game extends Phaser.Scene
         let x = players[selectedPlayer].x;
         let y = players[selectedPlayer].y;
         selectedPlayer++;
-        players.push(new Player(this, x,y, 'dot',selectedPlayer));
+        players.push(new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3)));
         selectedPlayer=players.length-1;
         addCamera(this,x,y);
     }
@@ -152,6 +150,17 @@ function removeCamera(scene)
         manageCamera(scene);
         drawBorders(scene);
     }
+}
+function incrementColour(i,d)
+{
+    //this should give d^3 variety of numbers - or d^3-1 if you don't want black
+    //if i == 0 then that would give colour black
+    //we could plus 1 to avoid black being first, but that would just make it the last colour instead
+    //so mod on the total number of colours
+    i=i%(d*d*d-1);
+    //then plus 1, now the incrementing colour will not be black
+    i=i+1;
+    return Math.floor((Math.floor((i/(d*d)))%d)*(256*256*256)/d +  (Math.floor((i/d)%d))*(256*256)/d +  (i%d)*(256)/d);
 }
 const config = {
     type: Phaser.AUTO,
