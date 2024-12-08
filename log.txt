@@ -64,3 +64,6 @@ i want to create a tile class and have an array of these to create the map. so f
 
 20241207
 see if i can make the random colour a bit better, made a incrementColour function for use with the player and tile, just for now 
+
+20241208
+made a tileMap and a way to edit the tile map

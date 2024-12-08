@@ -1,5 +1,7 @@
 var players=[];
 var tiles=[];
+var tileMap=[];
+var terrainColours= [];
 var cursors;
 var newCursors=[];
 var createPlayerFlag=false;
@@ -32,10 +34,12 @@ class Game extends Phaser.Scene
 
         selectedPlayer=-1;
         selectedPlayer++;
-        for(let i =0;i<mapWidth*mapHeight;i++)
-        {
-            tiles.push(new Tile(this,'dot',tiles.length,incrementColour(i,3)));
-        }
+        this.setUpMap();
+
+        // for(let i =0;i<mapWidth*mapHeight;i++)
+        // {
+        //     tiles.push(new Tile(this,'dot',tiles.length,incrementColour(i,3)));
+        // }
         //one player by default
         players.push(new Player(this, 0,0, 'dot',selectedPlayer,incrementColour(selectedPlayer,3)));
         this.input.keyboard.on('keydown-P', this.onPressP, this);
@@ -56,7 +60,7 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
 
         window.debug={
-            players: players, scene: this,uiScene:ui,tiles:tiles
+            players: players, scene: this,uiScene:ui,tileMap:tileMap
         }
     }
     onPressP()
@@ -115,6 +119,37 @@ class Game extends Phaser.Scene
         }
         latestKey=e;
     }
+    setUpMap()
+    {
+        //first create terrain types
+        let emptyTerrain = 0;
+        let wallTerrain = 1;
+        //also create colours associated with those terrains
+        terrainColours[emptyTerrain]=0xaaaaaa;//light grey
+        terrainColours[wallTerrain]=0x555555;//dark grey
+
+        for(let i = 0 ; i < mapWidth*mapHeight ; i ++ )
+        {
+           tileMap.push(new Tile(this,'dot',i,terrainColours[emptyTerrain],emptyTerrain));
+        }
+    }
+    mapGetIndexFromCoords(x,y)
+    {
+        return x+y*mapWidth;
+    }
+    mapSetTerrain(x,y,t)
+    {
+        //this can be out of bounds
+        if(x>=0&&x<this.mapWidth && y>=0 && y <mapHeight)
+        {
+            tileMap[this.mapGetIndexFromCoords(x,y)].setTint(terrainColours[t]);
+            tileMap[this.mapGetIndexFromCoords(x,y)].terrain = t;
+        }
+        else
+        {
+            console.log('mapSetTerrain failed , x and y is out of bounds, x: ' + x + ' y: '+y)
+        }
+    }
     update (time,delta)
     {
         //run the player update method for each player
@@ -162,6 +197,7 @@ function incrementColour(i,d)
     i=i+1;
     return Math.floor((Math.floor((i/(d*d)))%d)*(256*256*256)/d +  (Math.floor((i/d)%d))*(256*256)/d +  (i%d)*(256)/d);
 }
+
 const config = {
     type: Phaser.AUTO,
     width: 800,
