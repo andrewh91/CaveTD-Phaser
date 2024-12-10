@@ -1,6 +1,6 @@
 var players=[];
 var tiles=[];
-var tileMap=[];
+var mapData;
 var terrainColours= [];
 var cursors;
 var newCursors=[];
@@ -16,6 +16,7 @@ import {drawBorders} from './uiScene.js';
 import Player from './player.js';
 import {manageCamera} from './splitScreen.js';
 import Tile from'./Tile.js';
+import MapData from'./MapData.js';
 class Game extends Phaser.Scene
 {
     constructor()
@@ -35,13 +36,8 @@ class Game extends Phaser.Scene
         selectedPlayer=-1;
         selectedPlayer++;
         this.setUpMap();
-
-        // for(let i =0;i<mapWidth*mapHeight;i++)
-        // {
-        //     tiles.push(new Tile(this,'dot',tiles.length,incrementColour(i,3)));
-        // }
         //one player by default
-        players.push(new Player(this, 0,0, 'dot',selectedPlayer,incrementColour(selectedPlayer,3)));
+        players.push(new Player(this, mapOffSetX,mapOffSetY, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData));
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
@@ -60,7 +56,7 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
 
         window.debug={
-            players: players, scene: this,uiScene:ui,tileMap:tileMap
+            players: players, scene: this,uiScene:ui,tileMap:mapData
         }
     }
     onPressP()
@@ -71,7 +67,7 @@ class Game extends Phaser.Scene
         let x = players[selectedPlayer].x;
         let y = players[selectedPlayer].y;
         selectedPlayer++;
-        players.push(new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3)));
+        players.push(new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData));
         selectedPlayer=players.length-1;
         addCamera(this,x,y);
     }
@@ -121,35 +117,18 @@ class Game extends Phaser.Scene
     }
     setUpMap()
     {
-        //first create terrain types
-        let emptyTerrain = 0;
-        let wallTerrain = 1;
-        //also create colours associated with those terrains
-        terrainColours[emptyTerrain]=0xaaaaaa;//light grey
-        terrainColours[wallTerrain]=0x555555;//dark grey
-
+        mapData = new MapData();
         for(let i = 0 ; i < mapWidth*mapHeight ; i ++ )
         {
-           tileMap.push(new Tile(this,'dot',i,terrainColours[emptyTerrain],emptyTerrain));
+           mapData.tiles.push(new Tile(this,'dot',i,mapData.terrainColours[emptyTerrain],emptyTerrain));
         }
+        //the map is 27 across by 18 down, 
+        mapData.setTerrain({x:0 ,y:0 },wallTerrain);
+        mapData.setTerrain({x:26,y:0 },wallTerrain);
+        mapData.setTerrain({x:0 ,y:17},wallTerrain);
+        mapData.setTerrain({x:26,y:17},wallTerrain);
     }
-    mapGetIndexFromCoords(x,y)
-    {
-        return x+y*mapWidth;
-    }
-    mapSetTerrain(x,y,t)
-    {
-        //this can be out of bounds
-        if(x>=0&&x<this.mapWidth && y>=0 && y <mapHeight)
-        {
-            tileMap[this.mapGetIndexFromCoords(x,y)].setTint(terrainColours[t]);
-            tileMap[this.mapGetIndexFromCoords(x,y)].terrain = t;
-        }
-        else
-        {
-            console.log('mapSetTerrain failed , x and y is out of bounds, x: ' + x + ' y: '+y)
-        }
-    }
+    
     update (time,delta)
     {
         //run the player update method for each player

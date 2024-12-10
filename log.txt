@@ -67,3 +67,6 @@ see if i can make the random colour a bit better, made a incrementColour functio
 
 20241208
 made a tileMap and a way to edit the tile map
+
+20241210
+amendment to the mapSetTerrain method. i will make some walls by default and have the player interact with them - the player should not be able to move onto a wall. nor should it be able to move out of bounds - out of the map, make sure its default pos is in the map, this seems to work , works for new players too
