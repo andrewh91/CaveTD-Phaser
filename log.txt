@@ -70,3 +70,7 @@ made a tileMap and a way to edit the tile map
 
 20241210
 amendment to the mapSetTerrain method. i will make some walls by default and have the player interact with them - the player should not be able to move onto a wall. nor should it be able to move out of bounds - out of the map, make sure its default pos is in the map, this seems to work , works for new players too
+
+20241216
+amend the player update method
+i think i will try and make a 'vehicle' next, vehicles are basically players that can interact with the terrain, they can create /destroy walls. so now any player can press the 'action' button to create a wall, i'll have to modify this so only vehicles can do it, and also this is like god mode, that is not exactly how vehicles will interact with terrain in the game

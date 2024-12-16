@@ -82,7 +82,8 @@ class Game extends Phaser.Scene
         {
             console.log(e);
             //basically a dialog box will pop up when we have created a new player, it will prompt the user to define the 4 movement keys for the new player, then prompt them to press any key to confirm, when confirmed the dialogue will close. if i want to add additional keys i would need to adjust the numberOfKeys value, you would also need to amend what is passed to the updateCursors method, and amend the cursors variable of the player 
-            let numberOfKeys=4;
+            //i have now added one action button, which is space by default
+            let numberOfKeys=5;
             if(newCursors.length==numberOfKeys)
             {
                 ui.updateDialog(e.key);
@@ -93,8 +94,9 @@ class Game extends Phaser.Scene
             {  
                 ui.updateDialog(e.key);
                 newCursors.push(e.keyCode);
-                cursors=(this.input.keyboard.addKeys({left:newCursors[1],right:newCursors[2],up:newCursors[3],down:newCursors[4]}));
-                players[players.length-1].updateCursors(cursors.left,cursors.right,cursors.up,cursors.down);
+                //newcursors[0] will be p as that's what we pushed to create a new player
+                cursors=(this.input.keyboard.addKeys({left:newCursors[1],right:newCursors[2],up:newCursors[3],down:newCursors[4],space:newCursors[5]}));
+                players[players.length-1].updateCursors(cursors.left,cursors.right,cursors.up,cursors.down, cursors.space);
                 console.log(newCursors);
                 console.log(players[players.length-1].cursors);
                 console.log(cursors);
@@ -134,7 +136,6 @@ class Game extends Phaser.Scene
         //run the player update method for each player
         for(let i = 0;i<players.length;i++)
         {
-            players[i].update(delta);
             players[i].update(delta);
         }
     }
