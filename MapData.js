@@ -5,8 +5,9 @@ export default class MapData
         this.tiles=[];
         this.terrainColours=[];     
         //also create colours associated with those terrains
-        this.terrainColours[emptyTerrain]=0xaaaaaa;//light grey
-        this.terrainColours[wallTerrain]=0x555555;//dark grey
+        this.terrainColours[pathTerrain]=0xcccccc;//light grey
+        this.terrainColours[rubbleTerrain]=0x777777;//medium grey
+        this.terrainColours[wallTerrain]=0x333333;//dark grey
     }
     getIndexFromCoords(v)
     {
@@ -27,7 +28,18 @@ export default class MapData
     }
     isWall(v)
     {
-        return this.tiles[this.getIndexFromCoords(v)].terrain==wallTerrain;
+        //path is 0, rubble is 1, a wall is 2 or more
+        return this.tiles[this.getIndexFromCoords(v)].terrain>=wallTerrain;
+    }
+    isRubble(v)
+    {
+        //rubble is exactly 1
+        return this.tiles[this.getIndexFromCoords(v)].terrain==rubbleTerrain;
+    }
+    isPath(v)
+    {
+        //path is exactly 0
+        return this.tiles[this.getIndexFromCoords(v)].terrain==pathTerrain;
     }
     inBounds(v)
     {

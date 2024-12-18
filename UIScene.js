@@ -33,7 +33,7 @@ export default class UIScene extends Phaser.Scene {
     }  
     showNewPlayerDialog() 
     { 
-        this.dialogText.setText("New player created.\nAssign movement keys.\nAssign LEFT key:\nAssign RIGHT key:\nAssign UP key:\nAssign DOWN key:\nAssign action key:");
+        this.dialogText.setText("New player created.\nAssign movement keys.\nAssign LEFT key:\nAssign RIGHT key:\nAssign UP key:\nAssign DOWN key:\nAssign action key:\nAssign cancel key:");
         this.dialogBackground.setVisible(true); 
         this.dialogText.setVisible(true); 
         this.dialogKeys.setVisible(true); 

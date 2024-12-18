@@ -1,4 +1,6 @@
 var players=[];
+var vehicles=[];
+var vehicleIndex;
 var tiles=[];
 var mapData;
 var terrainColours= [];
@@ -7,13 +9,14 @@ var newCursors=[];
 var createPlayerFlag=false;
 var ui;
 var colourArray=[0xff0000,0x00ff00,0x0000ff ];
-var selectedPlayer=0;
+var selectedPlayer;
 //gridStep defines how much the player moves in one movement, also currently defines the size of the player
 var gridStep =50;
 var latestKey;
 import UIScene from './uiScene.js';
 import {drawBorders} from './uiScene.js';
 import Player from './player.js';
+import Vehicle from './Vehicle.js';
 import {manageCamera} from './splitScreen.js';
 import Tile from'./Tile.js';
 import MapData from'./MapData.js';
@@ -28,16 +31,18 @@ class Game extends Phaser.Scene
         this.load.setBaseURL();
         this.load.image('dot', 'dot.png');
     }   
-
     create ()
     {
         this.mainCamera = this.cameras.main;
 
-        selectedPlayer=-1;
-        selectedPlayer++;
         this.setUpMap();
+
+        vehicleIndex=-1;
+        this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*2);
+
+        selectedPlayer=-1;
         //one player by default
-        players.push(new Player(this, mapOffSetX,mapOffSetY, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData));
+        this.addPlayer(mapOffSetX,mapOffSetY);
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
@@ -56,7 +61,7 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
 
         window.debug={
-            players: players, scene: this,uiScene:ui,tileMap:mapData
+            players: players, scene: this,uiScene:ui,tileMap:mapData,vehicles:vehicles
         }
     }
     onPressP()
@@ -66,8 +71,7 @@ class Game extends Phaser.Scene
         /*make a new player at this player's position, and select it so the cursor keys move the new player*/
         let x = players[selectedPlayer].x;
         let y = players[selectedPlayer].y;
-        selectedPlayer++;
-        players.push(new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData));
+        this.addPlayer(mapOffSetX,mapOffSetY);
         selectedPlayer=players.length-1;
         addCamera(this,x,y);
     }
@@ -83,7 +87,8 @@ class Game extends Phaser.Scene
             console.log(e);
             //basically a dialog box will pop up when we have created a new player, it will prompt the user to define the 4 movement keys for the new player, then prompt them to press any key to confirm, when confirmed the dialogue will close. if i want to add additional keys i would need to adjust the numberOfKeys value, you would also need to amend what is passed to the updateCursors method, and amend the cursors variable of the player 
             //i have now added one action button, which is space by default
-            let numberOfKeys=5;
+            //also added a cancel button, need that to get out of vehicle, since i already have plans for the action button 
+            let numberOfKeys=6;
             if(newCursors.length==numberOfKeys)
             {
                 ui.updateDialog(e.key);
@@ -95,8 +100,8 @@ class Game extends Phaser.Scene
                 ui.updateDialog(e.key);
                 newCursors.push(e.keyCode);
                 //newcursors[0] will be p as that's what we pushed to create a new player
-                cursors=(this.input.keyboard.addKeys({left:newCursors[1],right:newCursors[2],up:newCursors[3],down:newCursors[4],space:newCursors[5]}));
-                players[players.length-1].updateCursors(cursors.left,cursors.right,cursors.up,cursors.down, cursors.space);
+                cursors=(this.input.keyboard.addKeys({left:newCursors[1],right:newCursors[2],up:newCursors[3],down:newCursors[4],space:newCursors[5],shift:newCursors[6]}));
+                players[players.length-1].updateCursors(cursors.left,cursors.right,cursors.up,cursors.down, cursors.space,cursors.shift);
                 console.log(newCursors);
                 console.log(players[players.length-1].cursors);
                 console.log(cursors);
@@ -122,7 +127,7 @@ class Game extends Phaser.Scene
         mapData = new MapData();
         for(let i = 0 ; i < mapWidth*mapHeight ; i ++ )
         {
-           mapData.tiles.push(new Tile(this,'dot',i,mapData.terrainColours[emptyTerrain],emptyTerrain));
+           mapData.tiles.push(new Tile(this,'dot',i,mapData.terrainColours[pathTerrain],pathTerrain));
         }
         //the map is 27 across by 18 down, 
         mapData.setTerrain({x:0 ,y:0 },wallTerrain);
@@ -130,7 +135,10 @@ class Game extends Phaser.Scene
         mapData.setTerrain({x:0 ,y:17},wallTerrain);
         mapData.setTerrain({x:26,y:17},wallTerrain);
     }
-    
+    enterVehicle()
+    {
+        console.log("entered");
+    }
     update (time,delta)
     {
         //run the player update method for each player
@@ -138,8 +146,21 @@ class Game extends Phaser.Scene
         {
             players[i].update(delta);
         }
+        for(let i = 0;i<vehicles.length;i++)
+        {
+            vehicles[i].update(delta);
+        }
     }
-    
+    addPlayer(x,y)
+    {
+        selectedPlayer++;
+        players.push(new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData));
+    }
+    addVehicle(x,y)
+    {
+        vehicleIndex++;
+        vehicles.push(new Vehicle(this,x ,y ,'dot',vehicleIndex,incrementColour(vehicleIndex,3)));
+    }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something
 function addCamera(scene,x,y)

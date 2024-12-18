@@ -17,6 +17,9 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.playerMoveTimer=Player.playerMoveTimerStep;
         //these are the keys with which you can move the player, by default the arrow keys
         this.cursors = scene.input.keyboard.createCursorKeys();
+        this.text = scene.add.text(this.x, this.y, 'p'+this.index, { fontSize: '20px', fill: '#fff'});
+        this.centreText();
+        this.inVehicle = false;
     }
 
     //movement is like pokemon, you move one gridStep at a time
@@ -47,20 +50,20 @@ export default class Player extends Phaser.GameObjects.Sprite {
             if (this.cursors.space.isDown&&this.playerMoveTimer<=0)
             {
                 console.log("action");
-                this.map.setTerrain(this.translatePosToMapPos({x:this.x,y:this.y}),wallTerrain);
+                this.map.setTerrain(this.translatePosToMapPos({x:this.x,y:this.y}),rubbleTerrain);
+            }
+            if (this.cursors.shift.isDown&&this.playerMoveTimer<=0)
+            {
+                console.log("cancel");
+                this.scene.enterVehicle(this.x,this.y);
             }
             if(proposedPos)
             {    
                 if(this.map.inBounds(this.translatePosToMapPos(proposedPos)))
                 {
-                    if(this.map.isWall(this.translatePosToMapPos(proposedPos)))
-                    {
-                        //if the proposed location is a wall, do nothing
-                    }
-                    else
-                    {                
-                        this.x=proposedPos.x;
-                        this.y=proposedPos.y;
+                    if(this.map.isPath(this.translatePosToMapPos(proposedPos)))
+                    {             
+                        this.movePlayer(proposedPos);
                         this.playerMoveTimer=Player.playerMoveTimerStep;
                     }
                 }
@@ -75,18 +78,34 @@ export default class Player extends Phaser.GameObjects.Sprite {
         }
         
     }
+    movePlayer(v)
+    {
+        this.x=v.x;
+        this.y=v.y;
+        this.centreText();
+    }
+    centreText()
+    {
+        this.text.setPosition(this.x-this.text.width/2,this.y-this.text.height/2);
+    }
+    updateText(newText)
+    {
+        this.text.setText(newText);
+        this.centreText();
+    }
     //the player may be at position 100,50 or something on the screen, but that could be position 0,0 on the map, if it moves right one place it would be 100+gridstep, but on the map that would just be 1,0, so i need to translate it 
     translatePosToMapPos(v)
     {
         return {x:(v.x-mapOffSetX)/gridStep,y:(v.y-mapOffSetY)/gridStep};
     }
     //you can set up user defined key bindings for any new player, this will set those specified keys
-    updateCursors(l,r,u,d,s)
+    updateCursors(l,r,u,d,s,sh)
     {
         this.cursors.left=l;
         this.cursors.right=r;
         this.cursors.up=u;
         this.cursors.down=d;
         this.cursors.space=s;
+        this.cursors.shift=sh;
     }
 }
