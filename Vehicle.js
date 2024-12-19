@@ -1,5 +1,7 @@
+
+import Player from './player.js';
 export default class Vehicle extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, texture,index,colour) {
+    constructor(scene, x, y, texture,index,colour,map) {
     super(scene, x, y, texture);
     
     scene.add.existing(this);
@@ -10,7 +12,8 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
     this.setTint(colour);
     this.text = scene.add.text(this.x, this.y, 'v'+this.index, { fontSize: '20px', fill: '#fff'});
     this.centreText();
-    this.occupied=false;
+    this.playerIndex=-1;
+    this.map=map;
     }
     update(delta)
     {
@@ -18,9 +21,13 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
     }
     moveVehicle(v)
     {
+        //update the old position of the player in the map
+        this.map.setVehicle(Player.translatePosToMapPos({x:this.x,y:this.y}),-1);
         this.x=v.x;
         this.y=v.y;
         this.centreText();
+        //update the new position of the player in the map
+        this.map.setVehicle(Player.translatePosToMapPos(v),this.index);
     }
     centreText()
     {

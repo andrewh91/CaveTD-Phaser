@@ -39,6 +39,7 @@ class Game extends Phaser.Scene
 
         vehicleIndex=-1;
         this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*2);
+        this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*4);
 
         selectedPlayer=-1;
         //one player by default
@@ -61,7 +62,7 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
 
         window.debug={
-            players: players, scene: this,uiScene:ui,tileMap:mapData,vehicles:vehicles
+            players: players, scene: this,uiScene:ui,mapData:mapData,vehicles:vehicles
         }
     }
     onPressP()
@@ -135,9 +136,20 @@ class Game extends Phaser.Scene
         mapData.setTerrain({x:0 ,y:17},wallTerrain);
         mapData.setTerrain({x:26,y:17},wallTerrain);
     }
-    enterVehicle()
+    //this will be called by the player when the player presses shift on the vehicle 
+    enterVehicle(p,v)
     {
         console.log("entered");
+        //give the vehicle a player index to show it is occupied by this player
+        vehicles[v].playerIndex=p;
+    }
+    exitVehicle(v)
+    {
+        vehicles[v].playerIndex=-1;
+    }
+    updateVehicle(index,v)
+    {
+        vehicles[index].moveVehicle(v);
     }
     update (time,delta)
     {
@@ -146,20 +158,22 @@ class Game extends Phaser.Scene
         {
             players[i].update(delta);
         }
-        for(let i = 0;i<vehicles.length;i++)
-        {
-            vehicles[i].update(delta);
-        }
     }
     addPlayer(x,y)
     {
         selectedPlayer++;
-        players.push(new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData));
+        let p = new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData);
+        players.push(p);
+        //the player's index is stored at the player's position in the map, make sure to update that 
+        mapData.setPlayer(Player.translatePosToMapPos({x:p.x,y:p.y}),p.index);
     }
     addVehicle(x,y)
     {
         vehicleIndex++;
-        vehicles.push(new Vehicle(this,x ,y ,'dot',vehicleIndex,incrementColour(vehicleIndex,3)));
+        let v = new Vehicle(this,x ,y ,'dot',vehicleIndex,incrementColour(vehicleIndex,3),mapData);
+        vehicles.push(v);
+        //store the vehicle's index in the map at the vehicle's position 
+        mapData.setVehicle(Player.translatePosToMapPos({x:v.x,y:v.y}),v.index);
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something

@@ -19,7 +19,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.cursors = scene.input.keyboard.createCursorKeys();
         this.text = scene.add.text(this.x, this.y, 'p'+this.index, { fontSize: '20px', fill: '#fff'});
         this.centreText();
-        this.inVehicle = false;
+        this.vehicleIndex = -1;
     }
 
     //movement is like pokemon, you move one gridStep at a time
@@ -50,18 +50,38 @@ export default class Player extends Phaser.GameObjects.Sprite {
             if (this.cursors.space.isDown&&this.playerMoveTimer<=0)
             {
                 console.log("action");
-                this.map.setTerrain(this.translatePosToMapPos({x:this.x,y:this.y}),rubbleTerrain);
+                this.map.setTerrain(Player.translatePosToMapPos({x:this.x,y:this.y}),rubbleTerrain);
             }
             if (this.cursors.shift.isDown&&this.playerMoveTimer<=0)
             {
                 console.log("cancel");
-                this.scene.enterVehicle(this.x,this.y);
+                //if we are not already in a vehicle
+                if(this.vehicleIndex==-1)
+                {
+                    let v = this.map.getVehicleIndex(Player.translatePosToMapPos({x:this.x,y:this.y}));
+                    //if there is a vehicle in our tile
+                    if(v!=-1)
+                    {
+                        //record which vehicle we are in
+                        this.vehicleIndex=v;
+                        //have the scene handle the player getting in the vehicle
+                        this.scene.enterVehicle(this.index,this.vehicleIndex);
+                        this.playerMoveTimer=Player.playerMoveTimerStep;
+                    }
+                }
+                //if we are in a vehicle
+                else
+                {
+                    this.scene.exitVehicle(this.vehicleIndex);
+                    this.vehicleIndex=-1;
+                    this.playerMoveTimer=Player.playerMoveTimerStep;
+                }
             }
             if(proposedPos)
             {    
-                if(this.map.inBounds(this.translatePosToMapPos(proposedPos)))
+                if(this.map.inBounds(Player.translatePosToMapPos(proposedPos)))
                 {
-                    if(this.map.isPath(this.translatePosToMapPos(proposedPos)))
+                    if(this.map.isPath(Player.translatePosToMapPos(proposedPos)))
                     {             
                         this.movePlayer(proposedPos);
                         this.playerMoveTimer=Player.playerMoveTimerStep;
@@ -80,9 +100,22 @@ export default class Player extends Phaser.GameObjects.Sprite {
     }
     movePlayer(v)
     {
+        //update the old position of the player in the map
+        console.log("pos "+this.x +", "+this.y+" was "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:this.x,y:this.y})));
+        this.map.setPlayer(Player.translatePosToMapPos({x:this.x,y:this.y}),-1);
+        console.log("pos "+this.x +", "+this.y+" is now "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:this.x,y:this.y})));
         this.x=v.x;
         this.y=v.y;
         this.centreText();
+        //update the new position of the player in the map
+        console.log("pos "+v.x +", "+v.y+" was "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:v.x,y:v.y})));
+        this.map.setPlayer(Player.translatePosToMapPos(v),this.index);
+        console.log("pos "+v.x +", "+v.y+" is now "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:v.x,y:v.y})));
+        //if the player is in a vehicle we we get the scene to handle the vehicle moving
+        if(this.vehicleIndex!=-1)
+        {
+            this.scene.updateVehicle(this.vehicleIndex,v);
+        }
     }
     centreText()
     {
@@ -94,7 +127,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.centreText();
     }
     //the player may be at position 100,50 or something on the screen, but that could be position 0,0 on the map, if it moves right one place it would be 100+gridstep, but on the map that would just be 1,0, so i need to translate it 
-    translatePosToMapPos(v)
+    static translatePosToMapPos(v)
     {
         return {x:(v.x-mapOffSetX)/gridStep,y:(v.y-mapOffSetY)/gridStep};
     }

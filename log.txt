@@ -80,10 +80,22 @@ made some player methods to draw text on the player, made it so the tiles can ha
 created a vehicle class, the player must move into this then press cancel button (shift) to enter if it is unoccupied, cancel to exit
 had to amend the ui to allow adding the cancel button
 
-I've realised that i want to see if the player is on top of a vehicle to see if they should enter when i press the shift key, i could loop through all the vehicles to see if the position matches the player position, which should not be too expensive since there will not be very many vehicles at once, however i could instead add a vehicle variable to the map, which is updated when the vehicle moves, this would be an advantage is there were loads of vehicles - which there won't be but i want to use the same method or similar for enemies and there will be lots of them, best to keep it consistent, 
+I've realised that i want to see if the player is on top of a vehicle to see if they should enter when i press the shift key, i could loop through all the vehicles to see if the position matches the player position, which should not be too expensive since there will not be very many vehicles at once, however i could instead add a vehicle variable to the map, which is updated when the vehicle moves, this would be an advantage is there were loads of vehicles - which there won't be but i want to use the same method or similar for enemies and there will be lots of them, best to keep it consistent, also it makes sense that things on the map can be accessed by the player through the passed in map reference
 TODO
 so now i need to add a vehicle variable to the map, may as well do one for player too, need to make sure these are updated when a player moves or is destroyed 
 
 i want to make it so if the player is in a vehicle and moves into rubble, it picks it up - the player and vehicle will move to where the rubble was, the rubble will appear on the bottom left of the player position but need to make it smaller or something to show we are carrying it, 
 similarly if we bump into a wall, the wall will become 2 bits of rubble, one on the ground and one we are carrying 
 while carrying rubble you can press space to switch from dig mode to dump mode, now if you press a direction you dump one rubble, if you dump it on an existing pile of rubble, you make a wall. I also want to be able to dump rubble on a wall to strengthen the wall, but i need a symbol for that so the player knows how strong the wall is, maybe outline the wall or something 
+
+20241219
+i can now move the player onto the vehicle and press shift, this puts the player in the vehicle, now when the player moves the vehicle moves too, press shift again to get out then the player can move and the vehicle will stay still, tested with a second player and a second vehicle
+i learned something new about dynamic property access, i created a print method in the mapData class to help show a text representation of the various variables of mapData.tiles[]
+
+TODO
+players should not be able to occupy the same space as other players, ever. 
+vehicles  should not be able to occupy the same space as other vehicles, ever. 
+doing so would mess up the mapData.tiles[].playerIndex / vehicleIndex. 
+players can occupy the same space as a vehicle but only if it is empty 
+
+i also need to make the vehicle interact with the walls and rubble etc
