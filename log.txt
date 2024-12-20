@@ -99,3 +99,17 @@ doing so would mess up the mapData.tiles[].playerIndex / vehicleIndex.
 players can occupy the same space as a vehicle but only if it is empty 
 
 i also need to make the vehicle interact with the walls and rubble etc
+
+20241220
+i will make vehicles be able to display how much rubble they carry
+i have now made the methods needed for the vehicle to drill walls and rubble, this seems to work. i now need to make the vehicle be able to drop rubble
+you can't drop the rubble where you currently are, so the action (space) button will have to switch mode, so that now the movement keys control the direction you want to dump the rubble instead of moving, this seems to work fine
+i've made it switch back to move mode if you dump all rubble
+
+TODO
+if you dump extra rubble on the wall, it functions as intended, makes the wall basically have more rubble, but it makes it white because i didn't support a value above 2, fix that also make it more obvious what is happening, make text pop up saying 'entered' when you get in a vehicle and 'exited' and 'dump mode' and 'move mode' etc
+
+players should not be able to occupy the same space as other players, ever. 
+vehicles  should not be able to occupy the same space as other vehicles, ever. 
+doing so would mess up the mapData.tiles[].playerIndex / vehicleIndex. 
+players can occupy the same space as a vehicle but only if it is empty 

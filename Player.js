@@ -20,6 +20,8 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.text = scene.add.text(this.x, this.y, 'p'+this.index, { fontSize: '20px', fill: '#fff'});
         this.centreText();
         this.vehicleIndex = -1;
+        //if this bool is true you can move, if false you will instead dump rubble - if able
+        this.moveModeDumpModeBool=true;
     }
 
     //movement is like pokemon, you move one gridStep at a time
@@ -47,12 +49,14 @@ export default class Player extends Phaser.GameObjects.Sprite {
             {
                 proposedPos = {x:this.x,y:this.y+gridStep};
             }
-            if (this.cursors.space.isDown&&this.playerMoveTimer<=0)
+            //use the justDown method instead of isDown, this will only trigger once per key press
+            if (Phaser.Input.Keyboard.JustDown(this.cursors.space)&&this.playerMoveTimer<=0)
             {
                 console.log("action");
-                this.map.setTerrain(Player.translatePosToMapPos({x:this.x,y:this.y}),rubbleTerrain);
+                //toggle the this.moveModeDumpModeBool
+                this.toggleMode();
             }
-            if (this.cursors.shift.isDown&&this.playerMoveTimer<=0)
+            if (Phaser.Input.Keyboard.JustDown(this.cursors.shift)&&this.playerMoveTimer<=0)
             {
                 console.log("cancel");
                 //if we are not already in a vehicle
@@ -66,33 +70,65 @@ export default class Player extends Phaser.GameObjects.Sprite {
                         this.vehicleIndex=v;
                         //have the scene handle the player getting in the vehicle
                         this.scene.enterVehicle(this.index,this.vehicleIndex);
-                        this.playerMoveTimer=Player.playerMoveTimerStep;
                     }
                 }
                 //if we are in a vehicle
                 else
                 {
                     this.scene.exitVehicle(this.vehicleIndex);
+                    this.setMoveMode(true);
                     this.vehicleIndex=-1;
                     this.playerMoveTimer=Player.playerMoveTimerStep;
                 }
             }
             if(proposedPos)
             {    
-                if(this.map.inBounds(Player.translatePosToMapPos(proposedPos)))
+                //if we are in movement mode
+                if(this.moveModeDumpModeBool)
                 {
-                    if(this.map.isPath(Player.translatePosToMapPos(proposedPos)))
-                    {             
-                        this.movePlayer(proposedPos);
-                        this.playerMoveTimer=Player.playerMoveTimerStep;
+                    if(this.map.inBounds(Player.translatePosToMapPos(proposedPos)))
+                    {
+                        if(this.map.isPath(Player.translatePosToMapPos(proposedPos)))
+                        {             
+                            this.movePlayer(proposedPos);
+                            this.playerMoveTimer=Player.playerMoveTimerStep;
+                        }
+                        //if not on path and in vehicle and proposedPos is a wall, or rubble
+                        else if(this.vehicleIndex>-1 && (this.map.isWall(Player.translatePosToMapPos(proposedPos)) || this.map.isRubble(Player.translatePosToMapPos(proposedPos) ) ) ) 
+                        {
+                            //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
+                            if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
+                            {
+                                //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
+                                this.map.drillWall( Player.translatePosToMapPos(proposedPos));
+                                this.playerMoveTimer=Player.playerMoveTimerStep;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        console.log("player "+this.index+" cannot move as it is out of map bounds, proposed pos =");
+                        console.log(proposedPos);
+                        //the above message will be repeated a lot if you hold the direction key, i could prevent this by resetting the this.playerMovetimer to Player.playerMoveTimerStep, or maybe just a value above 0 so that bumping a wall does not delay your movement too much
+                        this.playerMoveTimer = 40;
                     }
                 }
+                //if we are in dump mode
                 else
                 {
-                    console.log("player "+this.index+" cannot move as it is out of map bounds, proposed pos =");
-                    console.log(proposedPos);
-                    //the above message will be repeated a lot if you hold the direction key, i could prevent this by resetting the this.playerMovetimer to Player.playerMoveTimerStep, or maybe just a value above 0 so that bumping a wall does not delay your movement too much
-                    this.playerMoveTimer = 40;
+                    //get the scene to check if there is any rubble available to dump
+                    if(this.scene.isVehicleRubbleCapacityEmpty(this.vehicleIndex)==false)
+                    {
+                        //if that returned false, there must be at least one rubble to dump, now reflect that change in the terrain in the map
+                        this.map.dumpRubble(Player.translatePosToMapPos(proposedPos));
+                        this.playerMoveTimer=Player.playerMoveTimerStep;
+                    }
+                    //if there is no rubble to dump, switch back to move mode
+                    else
+                    {
+                        //this can be annoying depending on how fast the movement is 
+                        this.setMoveMode(true);
+                    }
                 }
             }
         }
@@ -101,21 +137,29 @@ export default class Player extends Phaser.GameObjects.Sprite {
     movePlayer(v)
     {
         //update the old position of the player in the map
-        console.log("pos "+this.x +", "+this.y+" was "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:this.x,y:this.y})));
         this.map.setPlayer(Player.translatePosToMapPos({x:this.x,y:this.y}),-1);
-        console.log("pos "+this.x +", "+this.y+" is now "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:this.x,y:this.y})));
         this.x=v.x;
         this.y=v.y;
         this.centreText();
         //update the new position of the player in the map
-        console.log("pos "+v.x +", "+v.y+" was "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:v.x,y:v.y})));
         this.map.setPlayer(Player.translatePosToMapPos(v),this.index);
-        console.log("pos "+v.x +", "+v.y+" is now "+this.map.getPlayerIndex(Player.translatePosToMapPos({x:v.x,y:v.y})));
-        //if the player is in a vehicle we we get the scene to handle the vehicle moving
+        //if the player is in a vehicle  we get the scene to handle the vehicle moving
         if(this.vehicleIndex!=-1)
         {
             this.scene.updateVehicle(this.vehicleIndex,v);
         }
+    }
+    toggleMode()
+    {
+        //if you are in a vehicle
+        if(this.vehicleIndex>-1)
+        {
+            this.moveModeDumpModeBool = ! this.moveModeDumpModeBool;
+        }
+    }
+    setMoveMode(b)
+    {
+        this.moveModeDumpModeBool=b;
     }
     centreText()
     {

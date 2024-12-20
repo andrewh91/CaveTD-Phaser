@@ -30,6 +30,7 @@ class Game extends Phaser.Scene
     {
         this.load.setBaseURL();
         this.load.image('dot', 'dot.png');
+        this.load.image('rubble', 'dot.png');
     }   
     create ()
     {
@@ -151,6 +152,16 @@ class Game extends Phaser.Scene
     {
         vehicles[index].moveVehicle(v);
     }
+    isVehicleRubbleCapacityFull(index)
+    {
+        //try to add rubble, if it was already at capacity it will return true
+        return vehicles[index].addRubble();
+    }
+    isVehicleRubbleCapacityEmpty(index)
+    {
+        //try to remove rubble, if it was already empty return true
+        return vehicles[index].removeRubble();
+    }
     update (time,delta)
     {
         //run the player update method for each player
@@ -170,7 +181,7 @@ class Game extends Phaser.Scene
     addVehicle(x,y)
     {
         vehicleIndex++;
-        let v = new Vehicle(this,x ,y ,'dot',vehicleIndex,incrementColour(vehicleIndex,3),mapData);
+        let v = new Vehicle(this,x ,y ,'dot','rubble',vehicleIndex,incrementColour(vehicleIndex,3),mapData);
         vehicles.push(v);
         //store the vehicle's index in the map at the vehicle's position 
         mapData.setVehicle(Player.translatePosToMapPos({x:v.x,y:v.y}),v.index);

@@ -26,6 +26,37 @@ export default class MapData
             console.log('mapSetTerrain failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
         }
     }
+    //a wall is value 2 or higher, drilling a wall means reducing that value, if it reduces to 1 then it will become rubble
+    drillWall(v)
+    {
+        let currentValue;
+        //this can be out of bounds
+        if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
+        {
+            currentValue = this.tiles[this.getIndexFromCoords(v)].terrain ;
+            this.tiles[this.getIndexFromCoords(v)].terrain = currentValue-1;
+            this.tiles[this.getIndexFromCoords(v)].setTint(this.terrainColours[currentValue-1]);
+        }
+        else
+        {
+            console.log('drillWall failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
+        }
+    }
+    dumpRubble(v)
+    {
+        let currentValue;
+        //this can be out of bounds
+        if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
+        {
+            currentValue = this.tiles[this.getIndexFromCoords(v)].terrain ;
+            this.tiles[this.getIndexFromCoords(v)].terrain = currentValue+1;
+            this.tiles[this.getIndexFromCoords(v)].setTint(this.terrainColours[currentValue+1]);
+        }
+        else
+        {
+            console.log('dumpRubble failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
+        }
+    }
     setPlayer(v,index)
     {
         this.tiles[this.getIndexFromCoords(v)].playerIndex = index;
