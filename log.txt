@@ -112,4 +112,15 @@ if you dump extra rubble on the wall, it functions as intended, makes the wall b
 players should not be able to occupy the same space as other players, ever. 
 vehicles  should not be able to occupy the same space as other vehicles, ever. 
 doing so would mess up the mapData.tiles[].playerIndex / vehicleIndex. 
-players can occupy the same space as a vehicle but only if it is empty 
+players can occupy the same space as a vehicle but only if it is empty
+
+20241223
+players should now not be able to move into each other, vehicles should not be able to move into each other 
+you should not be able to dump rubble on players or vehicles
+
+now i want to make text pop up, created this in the uiScene, it can be called by the scene, the player has the scene passed in, so the player can have the text popup appear, so far for when getting in or out of vehicle, when switching between dump mode and move mode, when trying to switch to dump mode but rubble capacity is 0, when trying to drill but rubble capacity is full. there is only one popup which disappear after 2 seconds, but it will be overwritten and reappear else where if it is triggered again, so if player 1 gets in a vehicle the popup will appear but then reappear by player 2 if they get in a vehicle
+
+made it so that if you give a wall a terrain value over 2 it just becomes black- whether it is 3 or 3,000 it will be black , when i do some proper art it will be more obvious what that value is.
+
+TODO
+next i want to create an enemy class, and some basic pathfinding, should create a better, maze like map too
