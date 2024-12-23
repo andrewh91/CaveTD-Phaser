@@ -8,6 +8,7 @@ export default class MapData
         this.terrainColours[pathTerrain]=0xcccccc;//light grey
         this.terrainColours[rubbleTerrain]=0x777777;//medium grey
         this.terrainColours[wallTerrain]=0x333333;//dark grey
+        this.terrainColours[wallTerrain+1]=0x000000;//black
     }
     getIndexFromCoords(v)
     {
@@ -18,8 +19,13 @@ export default class MapData
         //this can be out of bounds
         if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
         {
-            this.tiles[this.getIndexFromCoords(v)].setTint(this.terrainColours[t]);
+            //you can add more rubble to the wall to give it more 'health', but currently the colour will only go from light, medium and dark grey to black 
             this.tiles[this.getIndexFromCoords(v)].terrain = t;
+            if(t>=this.terrainColours.length)
+            {
+                t=this.terrainColours.length-1;
+            }
+            this.tiles[this.getIndexFromCoords(v)].setTint(this.terrainColours[t]);
         }
         else
         {
@@ -34,8 +40,7 @@ export default class MapData
         if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
         {
             currentValue = this.tiles[this.getIndexFromCoords(v)].terrain ;
-            this.tiles[this.getIndexFromCoords(v)].terrain = currentValue-1;
-            this.tiles[this.getIndexFromCoords(v)].setTint(this.terrainColours[currentValue-1]);
+            this.setTerrain(v,currentValue-1);
         }
         else
         {
@@ -49,8 +54,7 @@ export default class MapData
         if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
         {
             currentValue = this.tiles[this.getIndexFromCoords(v)].terrain ;
-            this.tiles[this.getIndexFromCoords(v)].terrain = currentValue+1;
-            this.tiles[this.getIndexFromCoords(v)].setTint(this.terrainColours[currentValue+1]);
+            this.setTerrain(v,currentValue+1);
         }
         else
         {

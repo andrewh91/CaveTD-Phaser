@@ -49,7 +49,7 @@ class Game extends Phaser.Scene
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
         ui=this.scene.get("uiScene");
-
+        this.popupTimer=0;
         //on any button press run this record key method
         this.input.keyboard.on('keydown', (event) => {
         this.recordKey(event);
@@ -143,10 +143,35 @@ class Game extends Phaser.Scene
         console.log("entered");
         //give the vehicle a player index to show it is occupied by this player
         vehicles[v].playerIndex=p;
+        this.addPopup("Player "+p+" entered Vehicle "+v,{x:players[p].x,y:players[p].y},2000);
+        
     }
     exitVehicle(v)
     {
+        this.addPopup("Player "+vehicles[v].playerIndex+" exited Vehicle "+v,{x:vehicles[v].x,y:vehicles[v].y},2000);
         vehicles[v].playerIndex=-1;
+    }
+    addPopup(text,vector,time)
+    {
+        ui.updatePopupText(text,vector);
+        this.popupTimer=time;
+    }
+    updatePopup(delta)
+    {
+        if(this.popupTimer==0)
+        {
+
+        }
+        else if(this.popupTimer>0)
+        {
+            this.popupTimer-=delta;
+        }
+        else if(this.popupTimer<0)
+        {
+            ui.hidePopupText();
+            //set this to 0 just so we don't call ui.hidePopupText all the time
+            this.popupTimer=0;
+        }
     }
     updateVehicle(index,v)
     {
@@ -162,8 +187,13 @@ class Game extends Phaser.Scene
         //try to remove rubble, if it was already empty return true
         return vehicles[index].removeRubble();
     }
+    rubbleEmpty(v)
+    {
+        return vehicles[v].rubbleEmpty();
+    }
     update (time,delta)
     {
+        this.updatePopup(delta);
         //run the player update method for each player
         for(let i = 0;i<players.length;i++)
         {

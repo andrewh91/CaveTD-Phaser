@@ -17,20 +17,35 @@ export default class UIScene extends Phaser.Scene {
         this.dialogBackground.fillRect(100, 100, 600, 400); 
         this.dialogBackground.setScrollFactor(0); 
         this.uiLayer.add(this.dialogBackground);
-        this.dialogBackground.depth=1;
-
+        this.dialogBackground.depth=9;
+        //this is for the new player text
         this.dialogText = this.add.text(20, 120, '', { fontSize: '32px', fill: '#fff', wordWrap: { width: 560 } }); 
         this.dialogText.setScrollFactor(0); 
         this.uiLayer.add(this.dialogText);
-        this.dialogText.depth=1;
+        this.dialogText.depth=9;
 
         this.dialogKeys = this.add.text(620, 120, '\n\n', { fontSize: '32px', fill: '#fff', wordWrap: { width: 560 } }); 
         this.dialogKeys.setScrollFactor(0); 
         this.uiLayer.add(this.dialogKeys);
-        this.dialogKeys.depth=1;
+        this.dialogKeys.depth=9;
 
         this.hideDialog();
+        //create popuptext to tell the user that a player has entered or extied a vehicle or if the vehicle is in move or dump mode
+        this.popupText = this.add.text(20, 120, '', { fontSize: '32px', fill: '#fff', wordWrap: { width: 560 } }); 
+        this.popupText.setScrollFactor(0); 
+        this.uiLayer.add(this.popupText);
+        this.popupText.depth=9;
     }  
+    updatePopupText(t,v)
+    {
+        this.popupText.setText(t);
+        this.popupText.setPosition(v.x,v.y);
+        this.popupText.setVisible(true);
+    }
+    hidePopupText()
+    {
+        this.popupText.setVisible(false);
+    }
     showNewPlayerDialog() 
     { 
         this.dialogText.setText("New player created.\nAssign movement keys.\nAssign LEFT key:\nAssign RIGHT key:\nAssign UP key:\nAssign DOWN key:\nAssign action key:\nAssign cancel key:");

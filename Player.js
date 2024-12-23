@@ -75,8 +75,8 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //if we are in a vehicle
                 else
                 {
-                    this.scene.exitVehicle(this.vehicleIndex);
                     this.setMoveMode(true);
+                    this.scene.exitVehicle(this.vehicleIndex);
                     this.vehicleIndex=-1;
                     this.playerMoveTimer=Player.playerMoveTimerStep;
                 }
@@ -86,22 +86,32 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //if we are in movement mode
                 if(this.moveModeDumpModeBool)
                 {
+                    //if the proposed position is not outside the map
                     if(this.map.inBounds(Player.translatePosToMapPos(proposedPos)))
                     {
-                        if(this.map.isPath(Player.translatePosToMapPos(proposedPos)))
-                        {             
-                            this.movePlayer(proposedPos);
-                            this.playerMoveTimer=Player.playerMoveTimerStep;
-                        }
-                        //if not on path and in vehicle and proposedPos is a wall, or rubble
-                        else if(this.vehicleIndex>-1 && (this.map.isWall(Player.translatePosToMapPos(proposedPos)) || this.map.isRubble(Player.translatePosToMapPos(proposedPos) ) ) ) 
+                        //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
+                        if(this.map.getPlayerIndex(Player.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Player.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
                         {
-                            //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
-                            if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
-                            {
-                                //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
-                                this.map.drillWall( Player.translatePosToMapPos(proposedPos));
+                            //if the proposed position is a path - and not a wall or rubble
+                            if(this.map.isPath(Player.translatePosToMapPos(proposedPos)))
+                            {             
+                                this.movePlayer(proposedPos);
                                 this.playerMoveTimer=Player.playerMoveTimerStep;
+                            }
+                            //if the proposed position is not a path and this player is in vehicle and proposedPos is a wall, or rubble
+                            else if(this.vehicleIndex>-1 && (this.map.isWall(Player.translatePosToMapPos(proposedPos)) || this.map.isRubble(Player.translatePosToMapPos(proposedPos) ) ) ) 
+                            {
+                                //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
+                                if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
+                                {
+                                    //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
+                                    this.map.drillWall( Player.translatePosToMapPos(proposedPos));
+                                    this.playerMoveTimer=Player.playerMoveTimerStep;
+                                }
+                                else
+                                {
+                                    this.scene.addPopup("Vehicle "+this.vehicleIndex+" Rubble capacity full",{x:this.x,y:this.y},2000);
+                                }
                             }
                         }
                     }
@@ -116,18 +126,22 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //if we are in dump mode
                 else
                 {
-                    //get the scene to check if there is any rubble available to dump
-                    if(this.scene.isVehicleRubbleCapacityEmpty(this.vehicleIndex)==false)
+                    //if the proposed position does not contains a player and does not contain a vehicle
+                    if(this.map.getPlayerIndex(Player.translatePosToMapPos(proposedPos))==-1&&this.map.getVehicleIndex(Player.translatePosToMapPos(proposedPos))==-1)
                     {
-                        //if that returned false, there must be at least one rubble to dump, now reflect that change in the terrain in the map
-                        this.map.dumpRubble(Player.translatePosToMapPos(proposedPos));
-                        this.playerMoveTimer=Player.playerMoveTimerStep;
-                    }
-                    //if there is no rubble to dump, switch back to move mode
-                    else
-                    {
-                        //this can be annoying depending on how fast the movement is 
-                        this.setMoveMode(true);
+                        //get the scene to check if there is any rubble available to dump
+                        if(this.scene.isVehicleRubbleCapacityEmpty(this.vehicleIndex)==false)
+                        {
+                            //if that returned false, there must be at least one rubble to dump, now reflect that change in the terrain in the map
+                            this.map.dumpRubble(Player.translatePosToMapPos(proposedPos));
+                            this.playerMoveTimer=Player.playerMoveTimerStep;
+                        }
+                        //if there is no rubble to dump, switch back to move mode
+                        else
+                        {
+                            //this can be annoying depending on how fast the movement is 
+                            this.setMoveMode(true);
+                        }
                     }
                 }
             }
@@ -155,11 +169,20 @@ export default class Player extends Phaser.GameObjects.Sprite {
         if(this.vehicleIndex>-1)
         {
             this.moveModeDumpModeBool = ! this.moveModeDumpModeBool;
+            if(this.scene.rubbleEmpty(this.vehicleIndex))
+            {
+                this.scene.addPopup("Vehicle "+this.vehicleIndex+ " No rubble to dump",{x:this.x,y:this.y},2000);
+            }
+            else
+            {
+                this.scene.addPopup("Vehicle "+this.vehicleIndex+ (this.moveModeDumpModeBool==true?" Move mode":" Dump mode"),{x:this.x,y:this.y},2000);
+            }
         }
     }
     setMoveMode(b)
     {
         this.moveModeDumpModeBool=b;
+        this.scene.addPopup("Vehicle "+this.vehicleIndex+ (this.moveModeDumpModeBool==true?" Move mode":" Dump mode"),{x:this.x,y:this.y},2000);
     }
     centreText()
     {

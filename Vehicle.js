@@ -67,6 +67,10 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
         }
         return true;
     }
+    rubbleEmpty()
+    {
+        return this.rubbleCarried==0;
+    }
     updateRubbleVisibility()
     {
         //make them all invisible then, for each rubble carried make one visible
