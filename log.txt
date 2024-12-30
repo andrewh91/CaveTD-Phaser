@@ -124,3 +124,12 @@ made it so that if you give a wall a terrain value over 2 it just becomes black-
 
 TODO
 next i want to create an enemy class, and some basic pathfinding, should create a better, maze like map too
+
+20241230
+i should create a way to read in map data from a text string, such that the terrain data output by the mapData.print("terrain") method can be plugged in to generate a map. the map data from print method already has line breaks on the end of each line, so from that you can work out the map width that was used for the map
+
+I can now have maps read in by passing a string in to this method MapData.loadFromText(string); the string could be something like this 
+'00,02,00,00,00,00,00,01,01,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,02,\n00,00,00,00,00,02,02,02,00,00,00,00,00,00,02,00,00,00,00,00,00,00,00,00,00,00,02'
+which is just the first 2 lines of an example map, 00 is path, 01 is rubble and 02 is wall, you can have values 3 and above, which is just stronger walls. the highest value in the print method - which prints a text representation of the map to console, the highest value is 99 since it only uses 2 digits - which is so that it prints neatly in the console. you could type in a value over 99 if you like and the loadFromText method would deal with it, but i don't think i want a wall with anywhere near 99 value
+
+TODO make a maze, make an enemy 
