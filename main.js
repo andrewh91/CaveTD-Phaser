@@ -3,6 +3,7 @@ var vehicles=[];
 var vehicleIndex;
 var tiles=[];
 var mapData;
+var savedMaps;
 var terrainColours= [];
 var cursors;
 var newCursors=[];
@@ -20,6 +21,7 @@ import Vehicle from './Vehicle.js';
 import {manageCamera} from './splitScreen.js';
 import Tile from'./Tile.js';
 import MapData from'./MapData.js';
+import SavedMaps from './SavedMaps.js';
 class Game extends Phaser.Scene
 {
     constructor()
@@ -132,10 +134,8 @@ class Game extends Phaser.Scene
            mapData.tiles.push(new Tile(this,'dot',i,mapData.terrainColours[pathTerrain],pathTerrain));
         }
         //the map is 27 across by 18 down, 
-        mapData.setTerrain({x:0 ,y:0 },wallTerrain);
-        mapData.setTerrain({x:26,y:0 },wallTerrain);
-        mapData.setTerrain({x:0 ,y:17},wallTerrain);
-        mapData.setTerrain({x:26,y:17},wallTerrain);
+        savedMaps = new SavedMaps();
+        mapData.loadFromText(savedMaps.mapsArray[0]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)

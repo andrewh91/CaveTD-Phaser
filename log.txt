@@ -133,3 +133,8 @@ I can now have maps read in by passing a string in to this method MapData.loadFr
 which is just the first 2 lines of an example map, 00 is path, 01 is rubble and 02 is wall, you can have values 3 and above, which is just stronger walls. the highest value in the print method - which prints a text representation of the map to console, the highest value is 99 since it only uses 2 digits - which is so that it prints neatly in the console. you could type in a value over 99 if you like and the loadFromText method would deal with it, but i don't think i want a wall with anywhere near 99 value
 
 TODO make a maze, make an enemy 
+
+20250107
+making a creature class
+made a map, made a class to store the maps, already have a method to load them in from text file, and i made a sort of god mode in the player class - which i've commented out, but that can help create a new map in the future using space and shift keys.
+TODO spawn a create on the right of the map, create some pathfinding for it
