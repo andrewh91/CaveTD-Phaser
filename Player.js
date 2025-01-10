@@ -1,3 +1,4 @@
+import Helper from './Helper.js';
 export default class Player extends Phaser.GameObjects.Sprite {
     
         //this many milliseconds must pass before the player is allowed to make a move
@@ -18,7 +19,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         //these are the keys with which you can move the player, by default the arrow keys
         this.cursors = scene.input.keyboard.createCursorKeys();
         this.text = scene.add.text(this.x, this.y, 'p'+this.index, { fontSize: '20px', fill: '#fff'});
-        this.centreText();
+        Helper.centreText();
         this.vehicleIndex = -1;
         //if this bool is true you can move, if false you will instead dump rubble - if able
         this.moveModeDumpModeBool=true;
@@ -162,7 +163,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.map.setPlayer(Player.translatePosToMapPos({x:this.x,y:this.y}),-1);
         this.x=v.x;
         this.y=v.y;
-        this.centreText();
+        Helper.centreText();
         //update the new position of the player in the map
         this.map.setPlayer(Player.translatePosToMapPos(v),this.index);
         //if the player is in a vehicle  we get the scene to handle the vehicle moving
@@ -192,14 +193,10 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.moveModeDumpModeBool=b;
         this.scene.addPopup("Vehicle "+this.vehicleIndex+ (this.moveModeDumpModeBool==true?" Move mode":" Dump mode"),{x:this.x,y:this.y},2000);
     }
-    centreText()
-    {
-        this.text.setPosition(this.x-this.text.width/2,this.y-this.text.height/2);
-    }
     updateText(newText)
     {
         this.text.setText(newText);
-        this.centreText();
+        Helper.centreText();
     }
     //the player may be at position 100,50 or something on the screen, but that could be position 0,0 on the map, if it moves right one place it would be 100+gridstep, but on the map that would just be 1,0, so i need to translate it 
     static translatePosToMapPos(v)

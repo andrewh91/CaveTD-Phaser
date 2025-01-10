@@ -1,5 +1,7 @@
 var players=[];
 var vehicles=[];
+var creatures=[];
+var creatureIndex;
 var vehicleIndex;
 var tiles=[];
 var mapData;
@@ -11,8 +13,7 @@ var createPlayerFlag=false;
 var ui;
 var colourArray=[0xff0000,0x00ff00,0x0000ff ];
 var selectedPlayer;
-//gridStep defines how much the player moves in one movement, also currently defines the size of the player
-var gridStep =50;
+
 var latestKey;
 import UIScene from './uiScene.js';
 import {drawBorders} from './uiScene.js';
@@ -22,6 +23,7 @@ import {manageCamera} from './splitScreen.js';
 import Tile from'./Tile.js';
 import MapData from'./MapData.js';
 import SavedMaps from './SavedMaps.js';
+import Creature from './Creature.js';
 class Game extends Phaser.Scene
 {
     constructor()
@@ -46,7 +48,9 @@ class Game extends Phaser.Scene
 
         selectedPlayer=-1;
         //one player by default
-        this.addPlayer(mapOffSetX,mapOffSetY);
+        this.addPlayer(mapOffSetX+gridStep,mapOffSetY);
+        creatureIndex=-1;
+        this.addCreature(mapOffSetX+gridStep*26,mapOffSetY+gridStep);
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
@@ -215,6 +219,12 @@ class Game extends Phaser.Scene
         vehicles.push(v);
         //store the vehicle's index in the map at the vehicle's position 
         mapData.setVehicle(Player.translatePosToMapPos({x:v.x,y:v.y}),v.index);
+    }
+    addCreature(x,y)
+    {
+        creatureIndex++;
+        let c = new Creature(this, x,y, 'dot',creatureIndex,incrementColour(creatureIndex,3),mapData);
+        mapData.setCreature(Player.translatePosToMapPos({x:c.x,y:c.y}),c.index);
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something

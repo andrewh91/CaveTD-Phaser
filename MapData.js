@@ -79,6 +79,10 @@ export default class MapData
     {
         this.tiles[this.getIndexFromCoords(v)].vehicleIndex = index;
     }
+    setCreature(c,index)
+    {
+        this.tiles[this.getIndexFromCoords(c)].creatureIndex = index;
+    }
     getPlayerIndex(v)
     {
         return this.tiles[this.getIndexFromCoords(v)].playerIndex;

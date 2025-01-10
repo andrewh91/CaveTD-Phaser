@@ -9,6 +9,7 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     //playerIndex will be -1 if there is no player there or it will be the player's index number
     this.playerIndex=-1;
     this.vehicleIndex=-1;
+    this.creatureIndex=-1;
     //gridstep is a global variable
     this.setScale(gridStep);
     this.setTint(colour);

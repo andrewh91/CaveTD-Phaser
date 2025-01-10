@@ -1,3 +1,4 @@
+import Helper from './Helper.js';
 export default class Creature extends Phaser.GameObjects.Sprite 
 {    
     //this many milliseconds must pass before the player is allowed to make a move
@@ -15,9 +16,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //this is a simple way to give the player a colour based on it's index, so each player should look a little different
         this.setTint(colour);
         this.playerMoveTimer=0;
-        this.playerMoveTimer=Player.playerMoveTimerStep;
+        this.playerMoveTimer=Creature.playerMoveTimerStep;
         this.text = scene.add.text(this.x, this.y, 'c'+this.index, { fontSize: '20px', fill: '#fff'});
-        this.centreText();
+        Helper.centreText(this);
     }
     update(delta)
     {

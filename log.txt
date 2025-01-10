@@ -138,3 +138,13 @@ TODO make a maze, make an enemy
 making a creature class
 made a map, made a class to store the maps, already have a method to load them in from text file, and i made a sort of god mode in the player class - which i've commented out, but that can help create a new map in the future using space and shift keys.
 TODO spawn a create on the right of the map, create some pathfinding for it
+
+20150110
+the creature class will share some functions with the player class, i think i should create a separate helper class and have them import that
+fixed an error, i had gridStep defined as global but also defined in the main file, deleted it from the main file
+
+so now i have a creature on screen 
+TODO give the creature pathfinding so it can move
+TODO move more methods of the player class to the helper class
+
+TODO i add vehicle, player and creature index to the map, i think my intention is to use that to get the creature in the given coords, but the creature's index in the creature array could change, so i think i want a map or something or do not remove dead creatures from the array, instead mark them as dead and given the next creature that old index
