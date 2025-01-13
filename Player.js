@@ -19,7 +19,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         //these are the keys with which you can move the player, by default the arrow keys
         this.cursors = scene.input.keyboard.createCursorKeys();
         this.text = scene.add.text(this.x, this.y, 'p'+this.index, { fontSize: '20px', fill: '#fff'});
-        Helper.centreText();
+        Helper.centreText(this);
         this.vehicleIndex = -1;
         //if this bool is true you can move, if false you will instead dump rubble - if able
         this.moveModeDumpModeBool=true;
@@ -57,7 +57,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //toggle the this.moveModeDumpModeBool
                 this.toggleMode();
                 //god mode, for making maps 
-                //this.map.setTerrain(Player.translatePosToMapPos({x:this.x,y:this.y}),2);
+                //this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),2);
             }
             if (Phaser.Input.Keyboard.JustDown(this.cursors.shift)&&this.playerMoveTimer<=0)
             {
@@ -65,13 +65,13 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 
                 //god mode for making maps
                 /*{
-                this.map.setTerrain(Player.translatePosToMapPos({x:this.x,y:this.y}),1);
+                this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),1);
                 return;
                 }*/
                 //if we are not already in a vehicle
                 if(this.vehicleIndex==-1)
                 {
-                    let v = this.map.getVehicleIndex(Player.translatePosToMapPos({x:this.x,y:this.y}));
+                    let v = this.map.getVehicleIndex(Helper.translatePosToMapPos({x:this.x,y:this.y}));
                     //if there is a vehicle in our tile
                     if(v!=-1)
                     {
@@ -96,25 +96,25 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 if(this.moveModeDumpModeBool)
                 {
                     //if the proposed position is not outside the map
-                    if(this.map.inBounds(Player.translatePosToMapPos(proposedPos)))
+                    if(this.map.inBounds(Helper.translatePosToMapPos(proposedPos)))
                     {
                         //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
-                        if(this.map.getPlayerIndex(Player.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Player.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
+                        if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
                         {
                             //if the proposed position is a path - and not a wall or rubble
-                            if(this.map.isPath(Player.translatePosToMapPos(proposedPos)))
+                            if(this.map.isPath(Helper.translatePosToMapPos(proposedPos)))
                             {             
                                 this.movePlayer(proposedPos);
                                 this.playerMoveTimer=Player.playerMoveTimerStep;
                             }
                             //if the proposed position is not a path and this player is in vehicle and proposedPos is a wall, or rubble
-                            else if(this.vehicleIndex>-1 && (this.map.isWall(Player.translatePosToMapPos(proposedPos)) || this.map.isRubble(Player.translatePosToMapPos(proposedPos) ) ) ) 
+                            else if(this.vehicleIndex>-1 && (this.map.isWall(Helper.translatePosToMapPos(proposedPos)) || this.map.isRubble(Helper.translatePosToMapPos(proposedPos) ) ) ) 
                             {
                                 //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
                                 if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
                                 {
                                     //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
-                                    this.map.drillWall( Player.translatePosToMapPos(proposedPos));
+                                    this.map.drillWall( Helper.translatePosToMapPos(proposedPos));
                                     this.playerMoveTimer=Player.playerMoveTimerStep;
                                 }
                                 else
@@ -136,13 +136,13 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 else
                 {
                     //if the proposed position does not contains a player and does not contain a vehicle
-                    if(this.map.getPlayerIndex(Player.translatePosToMapPos(proposedPos))==-1&&this.map.getVehicleIndex(Player.translatePosToMapPos(proposedPos))==-1)
+                    if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1&&this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1)
                     {
                         //get the scene to check if there is any rubble available to dump
                         if(this.scene.isVehicleRubbleCapacityEmpty(this.vehicleIndex)==false)
                         {
                             //if that returned false, there must be at least one rubble to dump, now reflect that change in the terrain in the map
-                            this.map.dumpRubble(Player.translatePosToMapPos(proposedPos));
+                            this.map.dumpRubble(Helper.translatePosToMapPos(proposedPos));
                             this.playerMoveTimer=Player.playerMoveTimerStep;
                         }
                         //if there is no rubble to dump, switch back to move mode
@@ -160,12 +160,12 @@ export default class Player extends Phaser.GameObjects.Sprite {
     movePlayer(v)
     {
         //update the old position of the player in the map
-        this.map.setPlayer(Player.translatePosToMapPos({x:this.x,y:this.y}),-1);
+        this.map.setPlayer(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
         this.x=v.x;
         this.y=v.y;
-        Helper.centreText();
+        Helper.centreText(this);
         //update the new position of the player in the map
-        this.map.setPlayer(Player.translatePosToMapPos(v),this.index);
+        this.map.setPlayer(Helper.translatePosToMapPos(v),this.index);
         //if the player is in a vehicle  we get the scene to handle the vehicle moving
         if(this.vehicleIndex!=-1)
         {
@@ -196,13 +196,9 @@ export default class Player extends Phaser.GameObjects.Sprite {
     updateText(newText)
     {
         this.text.setText(newText);
-        Helper.centreText();
+        Helper.centreText(this);
     }
-    //the player may be at position 100,50 or something on the screen, but that could be position 0,0 on the map, if it moves right one place it would be 100+gridstep, but on the map that would just be 1,0, so i need to translate it 
-    static translatePosToMapPos(v)
-    {
-        return {x:(v.x-mapOffSetX)/gridStep,y:(v.y-mapOffSetY)/gridStep};
-    }
+    
     //you can set up user defined key bindings for any new player, this will set those specified keys
     updateCursors(l,r,u,d,s,sh)
     {

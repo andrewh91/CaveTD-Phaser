@@ -22,6 +22,13 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     update(delta)
     {
-
+        if(this.playerMoveTimer>0)
+        {
+            this.playerMoveTimer-=delta;
+        }
+        else
+        {
+            updatePathfinding();
+        }
     }
 }

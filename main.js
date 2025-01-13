@@ -18,6 +18,7 @@ var latestKey;
 import UIScene from './uiScene.js';
 import {drawBorders} from './uiScene.js';
 import Player from './player.js';
+import Helper from './Helper.js';
 import Vehicle from './Vehicle.js';
 import {manageCamera} from './splitScreen.js';
 import Tile from'./Tile.js';
@@ -203,6 +204,10 @@ class Game extends Phaser.Scene
         {
             players[i].update(delta);
         }
+        for(let i = 0;i<creatures.length;i++)
+        {
+            creatures[i].update(delta);
+        }
     }
     addPlayer(x,y)
     {
@@ -210,7 +215,7 @@ class Game extends Phaser.Scene
         let p = new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData);
         players.push(p);
         //the player's index is stored at the player's position in the map, make sure to update that 
-        mapData.setPlayer(Player.translatePosToMapPos({x:p.x,y:p.y}),p.index);
+        mapData.setPlayer(Helper.translatePosToMapPos({x:p.x,y:p.y}),p.index);
     }
     addVehicle(x,y)
     {
@@ -218,13 +223,13 @@ class Game extends Phaser.Scene
         let v = new Vehicle(this,x ,y ,'dot','rubble',vehicleIndex,incrementColour(vehicleIndex,3),mapData);
         vehicles.push(v);
         //store the vehicle's index in the map at the vehicle's position 
-        mapData.setVehicle(Player.translatePosToMapPos({x:v.x,y:v.y}),v.index);
+        mapData.setVehicle(Helper.translatePosToMapPos({x:v.x,y:v.y}),v.index);
     }
     addCreature(x,y)
     {
         creatureIndex++;
         let c = new Creature(this, x,y, 'dot',creatureIndex,incrementColour(creatureIndex,3),mapData);
-        mapData.setCreature(Player.translatePosToMapPos({x:c.x,y:c.y}),c.index);
+        mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something

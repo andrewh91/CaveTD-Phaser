@@ -139,7 +139,7 @@ making a creature class
 made a map, made a class to store the maps, already have a method to load them in from text file, and i made a sort of god mode in the player class - which i've commented out, but that can help create a new map in the future using space and shift keys.
 TODO spawn a create on the right of the map, create some pathfinding for it
 
-20150110
+20250110
 the creature class will share some functions with the player class, i think i should create a separate helper class and have them import that
 fixed an error, i had gridStep defined as global but also defined in the main file, deleted it from the main file
 
@@ -148,3 +148,30 @@ TODO give the creature pathfinding so it can move
 TODO move more methods of the player class to the helper class
 
 TODO i add vehicle, player and creature index to the map, i think my intention is to use that to get the creature in the given coords, but the creature's index in the creature array could change, so i think i want a map or something or do not remove dead creatures from the array, instead mark them as dead and given the next creature that old index
+
+20250113
+moving functions from player to helper 
+pathfinding - there are a few problems with moving turn based actors in a tile based map when the actors are not able to occupy the same position, 
+1 if there are 5 actors adjacent to each other in a row, and they all want to go east, if we do not move the eastern one first then the others can not move- at least in this update, which will cause a break in this continuous line which is not a big problem but it looks odd that actors all travelling the same direction can get in each other's way 
+2 2 actors meeting head to head in a corridor will be stuck forever as they are unable to pass each other
+3 a continuous row of actors moving east will not allow an actor moving south to get past until the entire row has moved out the way
+
+pathfinding will determine the -proposed direction to move in- for each creature, that can be north, east, south, west or stationary. 
+the index of creatures with the same proposed direction will be added to an array named for each cardinal direction and stationary 
+each array will be sorted based on the creatures position, so for the north array (the array of creatures all travelling north) the first creature should be the northern most creature
+these 5 arrays are given a priority that will change after each pathfinding cycle, for example it will start, north, south, east, west, stationary, then north will go to the back of the queue so south,east, west, stationary, north 
+once all creatures have been sorted into these 5 arrays, we start moving them, in order of priority, so in this example the north array will be processed first this time
+when trying to move a create to it's proposed position, there are 3 things that could happen;
+1 if the creature's proposed position is free of creatures and is not contested it moves into that position
+2 else if the direction is blocked by a creature then that proposed position is marked as contested on the map, with reference to the direction we want to move, and we examine if our own position is contested, if so and it is contested by opposite direction to our proposed direction, then we can resolve this conflict by both moving to our proposed positions and we can clear that direction data from the contested map for both spaces. otherwise the position will remain contested until next time
+3 else if the proposed direction is already contested, check if it is contested by your direction, if so move into it - this means we have already been prevented from moving this way last time, and now the conflict is resolved by the priority system, clear your proposed direction from the contested map
+
+TODO 
+implement a simple pathfinding rule to move in a straight line to a global
+then implement the above complex movement rules
+test several pathfinding scenarios
+1 2 actors meeting head on, they should be able to swap positions once they realise thhey are contesting each others' spaces
+2 1 actor trying to move through a continuous line of actors travelling perpendicular, when the priority is right, the line should break to let the lone actor through
+3 4 way intersection 4 lines of actors meeting at one point, things should slow down and take turns but everyone should get through eventually 
+4 2 dotted lines, by that i mean not continuous but alternating space, actor,space, actor, 2 dotted lines meeting perpendicular - what will happen? will they neatly thread through each other or will it cause a slow down and more spaces to open up ? 
+5 same as 4 but what if the dotted lines go actor , space, space, actor, space space

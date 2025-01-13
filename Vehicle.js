@@ -1,5 +1,5 @@
 
-import Player from './player.js';
+import Helper from './Helper.js';
 export default class Vehicle extends Phaser.GameObjects.Sprite {
         constructor(scene, x, y, texture,rubbleTexture,index,colour,map) {
         super(scene, x, y, texture);
@@ -95,13 +95,13 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
     moveVehicle(v)
     {
         //update the old position of the player in the map
-        this.map.setVehicle(Player.translatePosToMapPos({x:this.x,y:this.y}),-1);
+        this.map.setVehicle(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
         this.x=v.x;
         this.y=v.y;
         this.updateRubbleIconsPos();
         this.centreText();
         //update the new position of the player in the map
-        this.map.setVehicle(Player.translatePosToMapPos(v),this.index);
+        this.map.setVehicle(Helper.translatePosToMapPos(v),this.index);
     }
     centreText()
     {
