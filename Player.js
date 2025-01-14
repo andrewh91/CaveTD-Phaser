@@ -98,28 +98,32 @@ export default class Player extends Phaser.GameObjects.Sprite {
                     //if the proposed position is not outside the map
                     if(this.map.inBounds(Helper.translatePosToMapPos(proposedPos)))
                     {
-                        //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
-                        if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
+                        //if the pos is not a creature
+                        if(this.map.getCreatureIndex(Helper.translatePosToMapPos(proposedPos))==-1)
                         {
-                            //if the proposed position is a path - and not a wall or rubble
-                            if(this.map.isPath(Helper.translatePosToMapPos(proposedPos)))
-                            {             
-                                this.movePlayer(proposedPos);
-                                this.playerMoveTimer=Player.playerMoveTimerStep;
-                            }
-                            //if the proposed position is not a path and this player is in vehicle and proposedPos is a wall, or rubble
-                            else if(this.vehicleIndex>-1 && (this.map.isWall(Helper.translatePosToMapPos(proposedPos)) || this.map.isRubble(Helper.translatePosToMapPos(proposedPos) ) ) ) 
+                            //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
+                            if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
                             {
-                                //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
-                                if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
-                                {
-                                    //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
-                                    this.map.drillWall( Helper.translatePosToMapPos(proposedPos));
+                                //if the proposed position is a path - and not a wall or rubble
+                                if(this.map.isPath(Helper.translatePosToMapPos(proposedPos)))
+                                {             
+                                    this.movePlayer(proposedPos);
                                     this.playerMoveTimer=Player.playerMoveTimerStep;
                                 }
-                                else
+                                //if the proposed position is not a path and this player is in vehicle and proposedPos is a wall, or rubble
+                                else if(this.vehicleIndex>-1 && (this.map.isWall(Helper.translatePosToMapPos(proposedPos)) || this.map.isRubble(Helper.translatePosToMapPos(proposedPos) ) ) ) 
                                 {
-                                    this.scene.addPopup("Vehicle "+this.vehicleIndex+" Rubble capacity full",{x:this.x,y:this.y},2000);
+                                    //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
+                                    if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
+                                    {
+                                        //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
+                                        this.map.drillWall( Helper.translatePosToMapPos(proposedPos));
+                                        this.playerMoveTimer=Player.playerMoveTimerStep;
+                                    }
+                                    else
+                                    {
+                                        this.scene.addPopup("Vehicle "+this.vehicleIndex+" Rubble capacity full",{x:this.x,y:this.y},2000);
+                                    }
                                 }
                             }
                         }

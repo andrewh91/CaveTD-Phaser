@@ -91,6 +91,10 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].vehicleIndex;
     }
+    getCreatureIndex(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].creatureIndex;
+    }
     isWall(v)
     {
         //path is 0, rubble is 1, a wall is 2 or more

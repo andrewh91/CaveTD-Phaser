@@ -2,6 +2,7 @@ var players=[];
 var vehicles=[];
 var creatures=[];
 var creatureIndex;
+var priorityArray;
 var vehicleIndex;
 var tiles=[];
 var mapData;
@@ -25,6 +26,7 @@ import Tile from'./Tile.js';
 import MapData from'./MapData.js';
 import SavedMaps from './SavedMaps.js';
 import Creature from './Creature.js';
+import PriorityArray from './PriorityArray.js';
 class Game extends Phaser.Scene
 {
     constructor()
@@ -50,8 +52,28 @@ class Game extends Phaser.Scene
         selectedPlayer=-1;
         //one player by default
         this.addPlayer(mapOffSetX+gridStep,mapOffSetY);
+        priorityArray=new PriorityArray();
         creatureIndex=-1;
-        this.addCreature(mapOffSetX+gridStep*26,mapOffSetY+gridStep);
+        //these 2 creatures are on the top row and should hit each other 
+        this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
+        creatures[0].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
+        this.addCreature(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
+        creatures[1].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
+        //this is a continuous row of creatures that go east, notice that they get in each others way
+        this.addCreature(mapOffSetX+gridStep*3,mapOffSetY+gridStep*10);
+        creatures[2].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*10);
+        creatures[3].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*10);
+        creatures[4].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
+        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*11);
+        creatures[5].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*15,mapOffSetY+gridStep*11);
+        creatures[6].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*16,mapOffSetY+gridStep*11);
+        creatures[7].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
@@ -68,9 +90,9 @@ class Game extends Phaser.Scene
             down:Phaser.Input.Keyboard.KeyCodes.S,
             left:Phaser.Input.Keyboard.KeyCodes.A,
             right:Phaser.Input.Keyboard.KeyCodes.D}));
-
+            
         window.debug={
-            players: players, scene: this,uiScene:ui,mapData:mapData,vehicles:vehicles
+            players: players, scene: this,uiScene:ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray
         }
     }
     onPressP()
@@ -196,7 +218,7 @@ class Game extends Phaser.Scene
     {
         return vehicles[v].rubbleEmpty();
     }
-    update (time,delta)
+    update(time,delta)
     {
         this.updatePopup(delta);
         //run the player update method for each player
@@ -204,10 +226,22 @@ class Game extends Phaser.Scene
         {
             players[i].update(delta);
         }
-        for(let i = 0;i<creatures.length;i++)
+        if(Creature.playerMoveTimer>0)
         {
-            creatures[i].update(delta);
+            Creature.playerMoveTimer-=delta;
         }
+        else
+        {
+            for(let i = 0;i<creatures.length;i++)
+            {
+                creatures[i].update(delta);
+            } 
+            //after each creature has moved, clear the priority array and reset the timing of the updates for creature movement
+            priorityArray.clear();
+            priorityArray.incrementPriority();
+            Creature.playerMoveTimer=Creature.playerMoveTimerStep;
+        }
+        
     }
     addPlayer(x,y)
     {
@@ -228,7 +262,8 @@ class Game extends Phaser.Scene
     addCreature(x,y)
     {
         creatureIndex++;
-        let c = new Creature(this, x,y, 'dot',creatureIndex,incrementColour(creatureIndex,3),mapData);
+        let c = new Creature(this, x,y, 'dot',creatureIndex,incrementColour(creatureIndex,3),mapData,priorityArray);
+        creatures.push(c);
         mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
     }
 }

@@ -161,13 +161,13 @@ the index of creatures with the same proposed direction will be added to an arra
 each array will be sorted based on the creatures position, so for the north array (the array of creatures all travelling north) the first creature should be the northern most creature
 these 5 arrays are given a priority that will change after each pathfinding cycle, for example it will start, north, south, east, west, stationary, then north will go to the back of the queue so south,east, west, stationary, north 
 once all creatures have been sorted into these 5 arrays, we start moving them, in order of priority, so in this example the north array will be processed first this time
-when trying to move a create to it's proposed position, there are 3 things that could happen;
+when trying to move a creature to it's proposed position, there are 3 things that could happen;
 1 if the creature's proposed position is free of creatures and is not contested it moves into that position
 2 else if the direction is blocked by a creature then that proposed position is marked as contested on the map, with reference to the direction we want to move, and we examine if our own position is contested, if so and it is contested by opposite direction to our proposed direction, then we can resolve this conflict by both moving to our proposed positions and we can clear that direction data from the contested map for both spaces. otherwise the position will remain contested until next time
 3 else if the proposed direction is already contested, check if it is contested by your direction, if so move into it - this means we have already been prevented from moving this way last time, and now the conflict is resolved by the priority system, clear your proposed direction from the contested map
 
 TODO 
-implement a simple pathfinding rule to move in a straight line to a global
+implement a simple pathfinding rule to move in a straight line to a goal
 then implement the above complex movement rules
 test several pathfinding scenarios
 1 2 actors meeting head on, they should be able to swap positions once they realise thhey are contesting each others' spaces
@@ -175,3 +175,32 @@ test several pathfinding scenarios
 3 4 way intersection 4 lines of actors meeting at one point, things should slow down and take turns but everyone should get through eventually 
 4 2 dotted lines, by that i mean not continuous but alternating space, actor,space, actor, 2 dotted lines meeting perpendicular - what will happen? will they neatly thread through each other or will it cause a slow down and more spaces to open up ? 
 5 same as 4 but what if the dotted lines go actor , space, space, actor, space space
+
+20250114
+made 2 creatures , made them walk towards a goal, they should meet in the middle and get stuck on each other
+also made collisions between creatures and - terrain, players, vehicles, other creatures
+made 2 continuous rows of creatures, one going east one going west, you can notice how one moves normally as the the leader has no creature in it's way, and the other turns from contiuous to a sort of dotted line of creatures, as the leader is at the back and the other creatures are in it's way - this is because i am updating the creatures movement in order of the index number of the creatures, which is arbitrary, when i implement the priority array properly we will be updating the creatures that intend on moving east in order of the eastern most creature, so the others will not have a creature in their way
+
+now i want to implement the more complex movement rules, like the priority arrays
+i will create a priority array class, that we pass a reference of in to each creature, i've created methods to loop through the priority arrays and to change the priority, which seems to work ok
+
+if i add an index of a creature, that wants to travel north, to the north array, then i want to sort the array, or more efficiently i want to insert the new index in the correct order. 
+the correct order will be northern most creatures first, (for the north array) 
+since the north array should be sorted from the previous update, i can make use of that to efficiently add creatures that still want to go north to the north array, creatures that were in a different array previously - east, west, stationary or south, but now want to go north will be more complex to insert into the north array
+
+often times i will process the creatures that want to go north in an order that was already largely sorted in order of most northern, because creatures that are travelling north most likely will go north again, so assuming this is true more often than not, we should use an insert sort. 
+
+so for example, i have a list of creature indexes that travelled north previously, i go through one by one, starting with the most northern, if it wants to go north again, i will add it to the now empty north array, the next one i add will be either equally northern to the ones already in the array or less northern, so i will check the last item in the north array, if this item is less northern than that (which it should be) then we add it to the end of the array, if not check the second to last item etc. until we find the correct place to insert it -  
+this only works for the north array and only if it was already empty. the east, west and stationary arrays will be sorted in ways irrelevant to northern-ness, the south array will be ordered in the opposite way to the north array, with southern most creatures appearing first in the south array, so we could maybe process the north array and south array at the same time, the south array in reverse order
+
+as for the east, west and stationary arrays, these will have to be sorted in a less efficient way
+
+so far i have 2 actors, one in the east that wants to move west and one in the west that wants to move east, they meet in the middle and are stopped by each other
+after pathfinding, they are added to priority arrays based on their intended direction of travel, at the end of the movement update these arrays are saved into an 'old' version of the array and the arrays are cleared 
+
+TODO
+instead of going through the array of creatures, in the order of their index numbers, i want to change it so that i go through based on the priority array, 
+i think i need to add the relevant x or y coord as well as the index to the priority array, to aid sorting
+i need to implement the sorting, if i do these correctly the 2 continuous rows of creatures should stay continuous
+
+
