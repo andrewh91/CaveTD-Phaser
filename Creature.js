@@ -22,43 +22,47 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPos;
         this.priorityArray=priorityArray;
     }
-    update(delta)
+    updatePathfinding(delta)
     {
         //the timing of this update will happen in the main.js 
-        this.proposedPos=this.updatePathfinding();
-        this.updatePos();
+        this.proposedPos=this.pathfinding();
+    }
+    updatePosition(delta)
+    {
+        this.move();
     }
     //for now this will just beeline to the goal, ignoring any terrain 
-    updatePathfinding()
+    pathfinding()
     {
         this.proposedPos=undefined;
         if(this.x<this.goal.x)
         {
             this.proposedPos={x:this.x+gridStep,y:this.y};
-            this.priorityArray.east.push(this.index);
+            //so the creature will store it's proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
+            this.priorityArray.addAndSort(this.priorityArray.east,{index:this.index,p:this.x},EAST);
         }
         else if(this.x>this.goal.x)
         {
             this.proposedPos={x:this.x-gridStep,y:this.y};
-            this.priorityArray.west.push(this.index);
+            this.priorityArray.addAndSort(this.priorityArray.west,{index:this.index,p:this.x},WEST);
         }
         else if(this.y<this.goal.y)
         {
             this.proposedPos={x:this.x,y:this.y+gridStep};
-            this.priorityArray.south.push(this.index);
+            this.priorityArray.addAndSort(this.priorityArray.south,{index:this.index,p:this.y},SOUTH);
         }
         else if(this.y>this.goal.y)
         {
             this.proposedPos={x:this.x,y:this.y-gridStep};
-            this.priorityArray.north.push(this.index);
+            this.priorityArray.addAndSort(this.priorityArray.north,{index:this.index,p:this.y},NORTH);
         }
         else
         {
-            this.priorityArray.stationary.push(this.index);
+            this.priorityArray.addAndSort(this.priorityArray.stationary,{index:this.index,p:undefined},STATIONARY);
         }
         return this.proposedPos;
     }
-    updatePos()
+    move()
     {
         if(this.proposedPos)
         {

@@ -203,4 +203,19 @@ instead of going through the array of creatures, in the order of their index num
 i think i need to add the relevant x or y coord as well as the index to the priority array, to aid sorting
 i need to implement the sorting, if i do these correctly the 2 continuous rows of creatures should stay continuous
 
+20250123
+made some changes, when adding a creature we should add it to the priority array, even though it does not have a proposed position yet, just add it as stationary, 
+then loop through all the priority arrays to make one large array , called concat array,  of the items in order, i've done slice to ensure this is by value
+then in the update method i will loop through the concat array to do pathfinding
+pathfinding is currently just moving towards a preset goal
+because we are doing this in the priority array, the northernmost creature from last update will be the first one to be processed this time, and therefore we can implement an efficient sorting method as we can assume the array is largely already sorted
+so each pathfinding update will insert the creature in the correct position in the priority array
+once we have looped through all the creatures and updated pathfinding, they will have been added to different priority arrays, so concat all the priority arrays again
+and then loop through the priority arrays to updatePosition
 
+i need to test my addAndSort method in priorityArray to make sure it works and is efficient, especially considering how the priorityArray changes the order of priority
+
+this seems to work as intended, so the 2 continuous lines of creatures now move without breaking up into a dotted line of creatures
+
+TODO 
+test out how this copes with 2 lines of creatures that collide with each other

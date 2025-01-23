@@ -53,26 +53,8 @@ class Game extends Phaser.Scene
         //one player by default
         this.addPlayer(mapOffSetX+gridStep,mapOffSetY);
         priorityArray=new PriorityArray();
-        creatureIndex=-1;
-        //these 2 creatures are on the top row and should hit each other 
-        this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
-        creatures[0].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
-        this.addCreature(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
-        creatures[1].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
-        //this is a continuous row of creatures that go east, notice that they get in each others way
-        this.addCreature(mapOffSetX+gridStep*3,mapOffSetY+gridStep*10);
-        creatures[2].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
-        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*10);
-        creatures[3].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
-        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*10);
-        creatures[4].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
-        //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
-        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*11);
-        creatures[5].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*15,mapOffSetY+gridStep*11);
-        creatures[6].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*16,mapOffSetY+gridStep*11);
-        creatures[7].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        this.setUpCreatures();
+
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
@@ -232,10 +214,20 @@ class Game extends Phaser.Scene
         }
         else
         {
-            for(let i = 0;i<creatures.length;i++)
+            //this will clear the priority arrays but not the concat array
+            priorityArray.clear();
+            //update the pathfinding for all the creatures, this will give them a proposedPosition and add them to one of the 5 priority arrays. the first time this is run the creatures will all be in the stationary part of the priority array, but after that we will run through these in priority order.
+            for(let n = 0 ; n < priorityArray.concat.length ; n ++)
             {
-                creatures[i].update(delta);
+                creatures[priorityArray.concat[n].index].updatePathfinding(delta);
             } 
+            //once the pathfinding is complete all creatures' index numbers will be added to the 5 priority arrays, this method will concat all index numbers into one big array
+            priorityArray.loopThroughAll();
+            //go through all the creatures and update their position, in order of the priority array
+            for(let n = 0 ; n < priorityArray.concat.length ; n ++)
+            {
+                creatures[priorityArray.concat[n].index].updatePosition(delta);
+            }
             //after each creature has moved, clear the priority array and reset the timing of the updates for creature movement
             priorityArray.clear();
             priorityArray.incrementPriority();
@@ -265,6 +257,33 @@ class Game extends Phaser.Scene
         let c = new Creature(this, x,y, 'dot',creatureIndex,incrementColour(creatureIndex,3),mapData,priorityArray);
         creatures.push(c);
         mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
+        //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
+        priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
+    }
+    setUpCreatures()
+    {
+        creatureIndex=-1;
+        //these 2 creatures are on the top row and should hit each other 
+        this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
+        creatures[0].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
+        this.addCreature(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
+        creatures[1].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
+        //this is a continuous row of creatures that go east, notice that they get in each others way
+        this.addCreature(mapOffSetX+gridStep*3,mapOffSetY+gridStep*10);
+        creatures[2].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*10);
+        creatures[3].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*10);
+        creatures[4].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
+        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*11);
+        creatures[5].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*15,mapOffSetY+gridStep*11);
+        creatures[6].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*16,mapOffSetY+gridStep*11);
+        creatures[7].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        //once we added all the creatures loopThroughAll in the priority array to set teh concat array
+        priorityArray.loopThroughAll();
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something
