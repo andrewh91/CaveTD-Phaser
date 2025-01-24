@@ -10,6 +10,11 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     this.playerIndex=-1;
     this.vehicleIndex=-1;
     this.creatureIndex=-1;
+    //i want 4 values for contested
+    this.contestedNorth=false;
+    this.contestedSouth=false;
+    this.contestedEast=false;
+    this.contestedWest=false;
     //gridstep is a global variable
     this.setScale(gridStep);
     this.setTint(colour);

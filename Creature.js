@@ -2,7 +2,7 @@ import Helper from './Helper.js';
 export default class Creature extends Phaser.GameObjects.Sprite 
 {    
     //this many milliseconds must pass before the player is allowed to make a move
-    static playerMoveTimerStep=320;
+    static playerMoveTimerStep=500;
     static playerMoveTimer=Creature.playerMoveTimerStep;
     constructor(scene, x, y, texture,index,colour,map,priorityArray) 
     {
@@ -80,9 +80,77 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         {
                             this.moveCreature(this.proposedPos);
                         }
+                        //if the proposed position does already have a creature on it,
+                        else
+                        {
+                            //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
+                            let dir = this.proposedDirection();
+                            let opp = this.oppositeDirection(dir);
+                            // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
+                            if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
+                            {
+                                this.swapCreatureWith(this.proposedPos);
+                            }
+                            // if not already contested, then mark it as contested by the direction we wanted to move in
+                            else
+                            {
+                                this.map.setContested(Helper.translatePosToMapPos(this.proposedPos),dir);
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+    kill()
+    {
+        //if the creature is destroyed we must clear it's contested data or else creatures could end up teleporting
+        this.map.clearContested({x:this.x,y:this.y});
+    }
+    proposedDirection()
+    {
+        if(this.proposedPos.x-this.x==-1*gridStep)
+        {
+            return WEST;
+        }
+        else if(this.proposedPos.x-this.x==1*gridStep)
+        {
+            return EAST;
+        }
+        else if(this.proposedPos.y-this.y==-1*gridStep)
+        {
+            return NORTH;
+        }
+        else if(this.proposedPos.y-this.y==1*gridStep)
+        {
+            return SOUTH;
+        }
+        else
+        {
+            STATIONARY;
+        }
+    }
+    oppositeDirection(d)
+    {
+        if(d==EAST)
+        {
+            return WEST;
+        }
+        else if(d==WEST)
+        {
+            return EAST;
+        }
+        else if(d==SOUTH)
+        {
+            return NORTH;
+        }
+        else if(d=NORTH)
+        {
+            return SOUTH;
+        }
+        else
+        {
+            STATIONARY;
         }
     }
     moveCreature(v)
@@ -94,6 +162,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
         Helper.centreText(this);
         //update the new position of the creature in the map
         this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+        this.map.clearContested(Helper.translatePosToMapPos(v));
+    }
+    swapCreatureWith(v)
+    {
+        //this creature wants to move to the given position but it is occupied by a creature that wants to move to this creature's position, so we can swap them
+        //save the other creature's index
+        let creatureBIndex = this.map.getCreatureIndex(Helper.translatePosToMapPos(v));
+        //save this creature's position
+        let creatureAPos = {x:this.x,y:this.y};
+        //set creature A's map pos to store the creature B's index
+        this.map.setCreature(Helper.translatePosToMapPos(creatureAPos),creatureBIndex);
+        //set new location to hold the creature A's index
+        this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+        //update creature A's position
+        this.x=v.x;
+        this.y=v.y;
+        Helper.centreText(this);
+        //update creatureB's position, we don't have access to that, just let the scene do it 
+        this.scene.updateCreaturePos(creatureBIndex,creatureAPos);
+        this.map.clearContested(Helper.translatePosToMapPos(v));
+        this.map.clearContested(Helper.translatePosToMapPos(creatureAPos));
     }
     setGoal(v)
     {

@@ -95,6 +95,89 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].creatureIndex;
     }
+    //we take the map coord and the direction a creature is intending to travel into that map coord from, this will return true if that coord is already contested from the opposite direction and false otherwise
+    isContestedFromOpposite(v,dir)
+    {
+        if(dir==NORTH)
+        {
+            return this.getContestedSouth(v);
+        }
+        else if(dir==SOUTH)
+        {
+            return this.getContestedNorth(v);
+        }
+        else if(dir==EAST)
+        {
+            return this.getContestedWest(v);
+        }
+        else if(dir==WEST)
+        {
+            return this.getContestedEast(v);
+        }
+        else
+        {
+            //if the dir is not one of these 4, it must be STATIONARY, there is no opposite direction to STATIONARY so return false
+            return false;
+        }
+    }
+    getContestedNorth(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].contestedNorth;
+    }
+    getContestedSouth(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].contestedSouth;
+    }
+    getContestedWest(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].contestedWest;
+    }
+    getContestedEast(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].contestedEast;
+    }
+    setContested(v,dir)
+    {
+        if(dir==SOUTH)
+        {
+            this.setContestedSouth(v);
+        }
+        else if(dir==NORTH)
+        {
+            this.setContestedNorth(v);
+        }
+        else if(dir==WEST)
+        {
+            this.setContestedWest(v);
+        }
+        else if(dir==EAST)
+        {
+            this.setContestedEast(v);
+        }
+    }
+    setContestedNorth(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedNorth=true;
+    }
+    setContestedSouth(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedSouth=true;
+    }
+    setContestedWest(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedWest=true;
+    }
+    setContestedEast(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedEast=true;
+    }
+    clearContested(v)
+    {        
+        this.tiles[this.getIndexFromCoords(v)].contestedNorth=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedSouth=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedEast=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedWest=false;
+    }
     isWall(v)
     {
         //path is 0, rubble is 1, a wall is 2 or more

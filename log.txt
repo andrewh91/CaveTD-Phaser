@@ -219,3 +219,30 @@ this seems to work as intended, so the 2 continuous lines of creatures now move 
 
 TODO 
 test out how this copes with 2 lines of creatures that collide with each other
+
+20250124
+if 2 lines of creatures move into each others path:
+at 90 degree angle -which ever line got there first will go first and the other will be obsturcted and wait until it's clear,
+at 90 degree angle -if there is a broken line of creatures, the obstructed line might take advantage of that gap and move into it, but only if the priority array lets them move before the other line
+if they meet head on, 180 degree angle- they will be obstructed and stay that way 
+4 creatures meet in a intersection, whichever has priority moves into it first and they all get stuck
+
+so i want a more involved way to handle these conflicts that arise when multiple creatures want to move to the same space
+
+here is how i previously described the contested idea working 
+when trying to move a creature to its proposed position, there are 3 things that could happen;
+1 if the creature's proposed position is free of creatures and is not contested it moves into that position
+2 else if the direction is blocked by a creature then that proposed position is marked as contested on the map, with reference to the direction we want to move, and we examine if our own position is contested, if so and it is contested by opposite direction to our proposed direction, then we can resolve this conflict by both moving to our proposed positions and we can clear that direction data from the contested map for both spaces. otherwise the position will remain contested until next time
+3 else if the proposed direction is already contested, check if it is contested by your direction, if so move into it - this means we have already been prevented from moving this way last time, and now the conflict is resolved by the priority system, clear your proposed direction from the contested map
+
+so i'll start by adding a contested variable to the map, think i need 4 actually
+if the creature tries to move to a space but there is a creature already there;
+it will test if the current position is already contested by the opposite direction, if so that means the creature that is blocking us from getting to our proposed position - is being blocked from it's proposed position by us, so we can swap these 2 creatures to resolve the conflict
+then we clear that contested data, in fact we clear the contested data for any map position that a creature moves into or dies in, i.e a space that is vacated 
+
+that should solve head on collisions but i also want the contested method to allow a line of creatures to stop to let another creature past, 
+
+this seems to work ok, 
+
+TODO I think i solved the head on collisions, but i need to start the solution for when one line intersects another 
+ - before moving check if a space is contested, if so that means a creature with higher priority has been trying to move there before you so you should wait

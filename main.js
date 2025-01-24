@@ -265,25 +265,56 @@ class Game extends Phaser.Scene
         creatureIndex=-1;
         //these 2 creatures are on the top row and should hit each other 
         this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
-        creatures[0].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
         this.addCreature(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
-        creatures[1].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
-        //this is a continuous row of creatures that go east, notice that they get in each others way
-        this.addCreature(mapOffSetX+gridStep*3,mapOffSetY+gridStep*10);
-        creatures[2].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
-        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*10);
-        creatures[3].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
-        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*10);
-        creatures[4].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*10});
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
+        //this is a continuous row of creatures that go east, notice that they get in each others way (without the priority array)
+        this.addCreature(mapOffSetX+gridStep*3,mapOffSetY+gridStep*16);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
+        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*16);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
+        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*16);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
         //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
-        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*11);
-        creatures[5].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*15,mapOffSetY+gridStep*11);
-        creatures[6].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*16,mapOffSetY+gridStep*11);
-        creatures[7].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*16);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
+        this.addCreature(mapOffSetX+gridStep*15,mapOffSetY+gridStep*16);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
+        this.addCreature(mapOffSetX+gridStep*16,mapOffSetY+gridStep*16);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
+        //a dotted line moving down
+        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*1);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*3);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*5);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
+        //a dotted line moving east
+        this.addCreature(mapOffSetX+gridStep*0,mapOffSetY+gridStep*7);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
+        this.addCreature(mapOffSetX+gridStep*2,mapOffSetY+gridStep*7);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
+        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*7);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
+        //4 creatures colliding from 4 directions
+        this.addCreature(mapOffSetX+gridStep*17,mapOffSetY+gridStep*11);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*17,y:mapOffSetY+gridStep*17});
+        this.addCreature(mapOffSetX+gridStep*17,mapOffSetY+gridStep*17);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*17,y:mapOffSetY+gridStep*11});
+        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*14);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*14});
+        this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*14);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*14,y:mapOffSetY+gridStep*14});
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array
         priorityArray.loopThroughAll();
+    }
+    //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here
+    updateCreaturePos(id,v)
+    {
+        creatures[id].x = v.x;      
+        creatures[id].y = v.y;
+        Helper.centreText(creatures[id]);
+        
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something
