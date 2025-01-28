@@ -305,6 +305,26 @@ class Game extends Phaser.Scene
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*14});
         this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*14);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*14,y:mapOffSetY+gridStep*14});
+
+        //a continuous line of creatures going down
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*1);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*2);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*3);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*4);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*5);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*6);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*7);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        //one creature trying to go across
+        this.addCreature(mapOffSetX+gridStep*26,mapOffSetY+gridStep*7);
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*7});
+
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array
         priorityArray.loopThroughAll();
     }

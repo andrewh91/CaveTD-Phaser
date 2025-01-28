@@ -95,6 +95,59 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].creatureIndex;
     }
+    //return false if contested by our direction, or no direction, returns true if not contested by our direction and is contested by another direction  
+    isContestedExcluding(v,dir)
+    {
+        switch(dir)
+        {
+            //if we are going north...
+            case NORTH:
+                //...and the proposed position is already contested by north...
+                if(this.getContestedNorth(v))
+                {
+                    //...then return false, and we can move there
+                    return false;
+                }
+                else if(this.getContestedEast(v)||this.getContestedSouth(v)||this.getContestedWest(v))
+                {
+                    //else  if it's contested by another direction, return true so that we do not move there
+                    return true;
+                }
+                break;
+            case SOUTH:
+                if(this.getContestedSouth(v))
+                {
+                    return false;
+                }
+                else if (this.getContestedNorth(v)||this.getContestedEast(v)||this.getContestedWest(v))
+                {
+                    return true;
+                }
+                break;
+            case EAST:
+                if(this.getContestedEast(v))
+                {
+                    return false;
+                }
+                else if (this.getContestedNorth(v)||this.getContestedSouth(v)||this.getContestedWest(v))
+                {
+                    return true;
+                }
+                break;
+            case WEST:
+                if(this.getContestedWest(v))
+                {
+                    return false;
+                }
+                else if (this.getContestedNorth(v)||this.getContestedEast(v)||this.getContestedSouth(v))
+                {
+                    return true;
+                }
+                break;
+            default:
+                return false;
+        }
+    }
     //we take the map coord and the direction a creature is intending to travel into that map coord from, this will return true if that coord is already contested from the opposite direction and false otherwise
     isContestedFromOpposite(v,dir)
     {

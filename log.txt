@@ -246,3 +246,19 @@ this seems to work ok,
 
 TODO I think i solved the head on collisions, but i need to start the solution for when one line intersects another 
  - before moving check if a space is contested, if so that means a creature with higher priority has been trying to move there before you so you should wait
+
+20250128
+so i need to do the logic for if there is no creature in the proposed position, but it is contested- 
+if it's contested by our direction then we can move, if it is contested by another direction then we should wait and that other creature will move instead, 
+this should result in a congo line of creatures allowing creatures moving across the line to interrupt the line
+
+i made a really messy method called isContestedExcluding 
+i've been in 2 or 3 minds how to handle the contested logic, i ended up going for 4 booleans for each tile, but that doesn't lend itself particularly well to this method
+
+this seems to work, and i think i've implemented it as designed, so if it doesn't work i think that will be back to the drawing board on the logic front. 
+
+so that's a milestone, implemented the movement system for creatures, now i can implement more complex pathfinding and it should still work the same way
+
+TODO try more complex pathfinding
+
+ 

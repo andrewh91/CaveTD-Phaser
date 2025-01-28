@@ -75,17 +75,26 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     //if the proposed position is a path - and not a wall or rubble
                     if(this.map.isPath(Helper.translatePosToMapPos(this.proposedPos)))
                     {             
+                        //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
+                        let dir = this.proposedDirection();
                         //if the proposed position does not already have a creature on it
                         if(this.map.getCreatureIndex(Helper.translatePosToMapPos(this.proposedPos))==-1)
                         {
-                            this.moveCreature(this.proposedPos);
+                            //even if the proposed position has no creature on it we should still...
+                            ///...check if the proposed position is contested, 
+                            //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
+                            if(this.map.isContestedExcluding(Helper.translatePosToMapPos(this.proposedPos),dir))
+                            {
+                                //do not move
+                            }
+                            else
+                            {
+                                this.moveCreature(this.proposedPos);
+                            }
                         }
                         //if the proposed position does already have a creature on it,
                         else
                         {
-                            //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
-                            let dir = this.proposedDirection();
-                            let opp = this.oppositeDirection(dir);
                             // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
                             if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
                             {
