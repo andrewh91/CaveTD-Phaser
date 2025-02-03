@@ -14,6 +14,15 @@ var createPlayerFlag=false;
 var ui;
 var colourArray=[0xff0000,0x00ff00,0x0000ff ];
 var selectedPlayer;
+var pathfindingUpdateCounter=1;
+var pathfindingUpdateMax=4;
+var movementUpdateCounter=1;
+var movementUpdateMax=4;
+var pathfindingN=0;
+var movementN=0;
+var pathfindingSegmentSize;
+var movementSegmentSize;
+
 
 var latestKey;
 import UIScene from './uiScene.js';
@@ -214,24 +223,69 @@ class Game extends Phaser.Scene
         }
         else
         {
-            //this will clear the priority arrays but not the concat array
-            priorityArray.clear();
-            //update the pathfinding for all the creatures, this will give them a proposedPosition and add them to one of the 5 priority arrays. the first time this is run the creatures will all be in the stationary part of the priority array, but after that we will run through these in priority order.
-            for(let n = 0 ; n < priorityArray.concat.length ; n ++)
+            //i've split the pathfinding and movement updates into segments, this way instead of doing all pathfinding and movements after every x seconds, it does a quarter of the pathfinding every x/8 seconds and after doing that 4 times, it does a quarter of the movement every x/8 seconds, so everythign is still happening in the same order, but not all at once, in theory i think this would result in a better performance but i don't know yet, you can increase the pathfindingUpdateMax and movementUpdateMax value to have it perform even more frequently
+            //if this is the first segment of the update
+            if(pathfindingUpdateCounter==1)
             {
-                creatures[priorityArray.concat[n].index].updatePathfinding(delta);
-            } 
-            //once the pathfinding is complete all creatures' index numbers will be added to the 5 priority arrays, this method will concat all index numbers into one big array
-            priorityArray.loopThroughAll();
-            //go through all the creatures and update their position, in order of the priority array
-            for(let n = 0 ; n < priorityArray.concat.length ; n ++)
-            {
-                creatures[priorityArray.concat[n].index].updatePosition(delta);
+                //this will clear the priority arrays but not the concat array
+                priorityArray.clear();
+                //we will loop over the creatures stored in the priorityArray.concat, but we only want to do a fraction of it per segmented update, so divide that array size into equal chunks - so if there are 17 creatures and the pathfindingUpdateMax is 4, then that's 4 creatures per pathfinding update segment - that would leave 1 creature as a remainder don't worry about any remainder that is handled later
+                pathfindingSegmentSize = Math.floor(priorityArray.concat.length/pathfindingUpdateMax);
+                pathfindingN=0;
             }
-            //after each creature has moved, clear the priority array and reset the timing of the updates for creature movement
-            priorityArray.clear();
-            priorityArray.incrementPriority();
-            Creature.playerMoveTimer=Creature.playerMoveTimerStep;
+            //if we have not reached the end of the pathfinding update segment yet then loop through the segment size
+            if(pathfindingUpdateCounter<pathfindingUpdateMax)
+            {
+                //update the pathfinding for all the creatures, this will give them a proposedPosition and add them to one of the 5 priority arrays. the first time this is run the creatures will all be in the stationary part of the priority array, but after that we will run through these in priority order.
+                for( ; pathfindingN < pathfindingSegmentSize*pathfindingUpdateCounter ; pathfindingN ++)
+                {
+                    creatures[priorityArray.concat[pathfindingN].index].updatePathfinding(delta);
+                } 
+            }
+            //else if we have reached the end of the pathfinding update segment then we should loop through the full priorityArray.concat.length, because there might be a few creatures left over as a remainder
+            else if(pathfindingUpdateCounter==pathfindingUpdateMax)
+            {
+                for( ; pathfindingN < priorityArray.concat.length ; pathfindingN ++)
+                {
+                    creatures[priorityArray.concat[pathfindingN].index].updatePathfinding(delta);
+                } 
+            }
+            //if we have incremented past the pathfinding update max then we are finished pathfinding, and are onto the movement updates now, it's a similar process, set up the segment size, then loop through, at the end of all the movement segemnts we reset the values so that we will start again at the pathfinding segment next time
+            else 
+            {
+                if(movementUpdateCounter==1)
+                {
+                    //once the pathfinding is complete all creatures' index numbers will be added to the 5 priority arrays, this method will concat all index numbers into one big array
+                    priorityArray.loopThroughAll();
+                    movementSegmentSize = Math.floor(priorityArray.concat.length/movementUpdateMax);
+                    movementN=0;
+                }
+                if(movementUpdateCounter<movementUpdateMax)
+                {
+                    //go through all the creatures and update their position, in order of the priority array
+                    for( ; movementN < movementSegmentSize*movementUpdateCounter ; movementN ++)
+                    {
+                        creatures[priorityArray.concat[movementN].index].updatePosition(delta);
+                    }
+                }
+                else if(movementUpdateCounter==movementUpdateMax)
+                {
+                    //go through all the creatures and update their position, in order of the priority array
+                    for( ; movementN < priorityArray.concat.length ; movementN ++)
+                    {
+                        creatures[priorityArray.concat[movementN].index].updatePosition(delta);
+                    }
+                    //after each creature has moved, clear the priority array and reset the timing of the updates for creature movement
+                    priorityArray.clear();
+                    priorityArray.incrementPriority();
+                    //reset these to 0, they will be incremented to 1 very shortly - before they are used again
+                    pathfindingUpdateCounter=0;
+                    movementUpdateCounter=0;
+                }
+                movementUpdateCounter++;
+            }
+            Creature.playerMoveTimer=Creature.playerMoveTimerStep/(pathfindingUpdateMax+movementUpdateMax);
+            pathfindingUpdateCounter++;
         }
         
     }

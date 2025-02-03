@@ -34,6 +34,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
+        return this.beeline();
+    }
+    beeline()
+    {
         this.proposedPos=undefined;
         if(this.x<this.goal.x)
         {

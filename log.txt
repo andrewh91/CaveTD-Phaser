@@ -261,4 +261,13 @@ so that's a milestone, implemented the movement system for creatures, now i can 
 
 TODO try more complex pathfinding
 
+20250203
+currently, a timer ticks down then all pathfinding and movement is calculated in one go for all creatures, 
+could i instead share the load, doing a fraction of the work but more frequently? 
+i've amended the update method to work on the pathfinding and movement in segments, currently 8 segments, so the update occurs 8 times more often, but the first 4 times it just does a quarter of the pathfinding, then then next 4 times it does a quarter of the movements then it resets - i think this should be fine, so long as all the pathfinding occurs before any movement occurs it's basically operating the same as before, just spread out over time
+one potential pitfall of this, is i count the number of creatures at the start of the update, and only count again after each update segment has finished, so i could get an index out of bounds error if a creature is killed - however i was already minded not to remove creatures from their array when killed - instead simply mark them as dead. creatures that are newly created mid update, will simply have to wait until they are included in the array
+
+TODO pathfinding
+
+
  
