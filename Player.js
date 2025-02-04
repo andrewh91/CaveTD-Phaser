@@ -57,7 +57,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //toggle the this.moveModeDumpModeBool
                 this.toggleMode();
                 //god mode, for making maps 
-                //this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),2);
+                //this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),rubbleTerrain);
             }
             if (Phaser.Input.Keyboard.JustDown(this.cursors.shift)&&this.playerMoveTimer<=0)
             {
@@ -65,7 +65,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 
                 //god mode for making maps
                 /*{
-                this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),1);
+                this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),pathTerrain);
                 return;
                 }*/
                 //if we are not already in a vehicle

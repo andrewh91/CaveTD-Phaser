@@ -268,6 +268,22 @@ i've amended the update method to work on the pathfinding and movement in segmen
 one potential pitfall of this, is i count the number of creatures at the start of the update, and only count again after each update segment has finished, so i could get an index out of bounds error if a creature is killed - however i was already minded not to remove creatures from their array when killed - instead simply mark them as dead. creatures that are newly created mid update, will simply have to wait until they are included in the array
 
 TODO pathfinding
+20250204
 
+pathfinding will return a proposedPos vector, then later the movement will try to move there, 
+more advanced pathfinding methods can set and access the creature's memory, 
+further pathfinding methods can leave markers on the map for all creatures to see
 
- 
+first i will create a map with a maze with a few different features that i think the creatures will have to overcome.
+I'm not doing a*, as i'm not having the creatures be omniscient. the creatures will have to explore the maze, and also the maze is dynamic, the player and creatures can edit it, so you would have to recalc a* frequently anyway.
+there will be different creatures with different pathfinding methods, some will be better suited to certain challenges. 
+my maze should feature tight twisting paths, wide areas, islands, dead ends. 
+a lot of the time the creatures will just be exploring or gathering resources, some of these pathfinding methods only really make sense if the creature knows where it wants to travel to, thematically the noise and vibrations of the player's headquarters will attract them 
+now i have a maze, creature on bottom right using beeline method gets stuck on the first obstacle. 
+
+so to make beeline better i will test which direction is closest to the goal, then i will inspect that direction, if that direction is a path then set that as the proposedPos, if not choose the next closest 
+so beeline2 works better than beeline as it will try to move around an obstacle, but it will become stuck if it reaches a dead end, as it will move back and forth between the 2 spaces available to it that are closest to the goal
+
+TODO next i can try to implement some memory, have the creature remember which way it came from, and avoid moving there unless it's the only option, this will help the beeline2 moving back and forth, but probably only in a tight corridor, as now instead of moving back and forth it will just loop in a circle if it has enough space- but in a tight corridor it should do better than beeline2
+
+after that try a wall rider

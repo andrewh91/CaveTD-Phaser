@@ -34,7 +34,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
-        return this.beeline();
+        let proposedPathfindingPosition = this.beeline2();
+        //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
+        this.proposePathfinding();
+        return proposedPathfindingPosition;
     }
     beeline()
     {
@@ -42,29 +45,98 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(this.x<this.goal.x)
         {
             this.proposedPos={x:this.x+gridStep,y:this.y};
-            //so the creature will store it's proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
-            this.priorityArray.addAndSort(this.priorityArray.east,{index:this.index,p:this.x},EAST);
         }
         else if(this.x>this.goal.x)
         {
             this.proposedPos={x:this.x-gridStep,y:this.y};
-            this.priorityArray.addAndSort(this.priorityArray.west,{index:this.index,p:this.x},WEST);
         }
         else if(this.y<this.goal.y)
         {
             this.proposedPos={x:this.x,y:this.y+gridStep};
-            this.priorityArray.addAndSort(this.priorityArray.south,{index:this.index,p:this.y},SOUTH);
         }
         else if(this.y>this.goal.y)
         {
             this.proposedPos={x:this.x,y:this.y-gridStep};
-            this.priorityArray.addAndSort(this.priorityArray.north,{index:this.index,p:this.y},NORTH);
-        }
-        else
-        {
-            this.priorityArray.addAndSort(this.priorityArray.stationary,{index:this.index,p:undefined},STATIONARY);
         }
         return this.proposedPos;
+    }
+    //test which direction is closest to the goal. of those, return the closest to goal which is a path
+    beeline2()
+    {
+        this.proposedPos=undefined;
+        let neighbours = this.getNeighbours({x:this.x,y:this.y});
+        neighbours = this.sortNeighbours(neighbours,this.goal);
+        for( let i = 0 ; i < neighbours.length ; i ++)
+        {
+            if(this.map.isPath(Helper.translatePosToMapPos(neighbours[i])))
+            {
+                this.proposedPos=neighbours[i];
+                break;
+            }
+        }
+        return this.proposedPos;
+    }
+    //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
+    proposePathfinding()
+    {
+        let dir = this.proposedDirection();
+        switch(dir)
+        {
+            case NORTH:  
+                this.priorityArray.addAndSort(this.priorityArray.north,{index:this.index,p:this.y},NORTH);
+                break;
+            case SOUTH: 
+                this.priorityArray.addAndSort(this.priorityArray.south,{index:this.index,p:this.y},SOUTH);
+                break;
+            case EAST:    
+                this.priorityArray.addAndSort(this.priorityArray.east,{index:this.index,p:this.x},EAST);
+                break;
+            case WEST:    
+                this.priorityArray.addAndSort(this.priorityArray.west,{index:this.index,p:this.x},WEST);
+                break;
+            case STATIONARY:
+                this.priorityArray.addAndSort(this.priorityArray.stationary,{index:this.index,p:undefined},STATIONARY);
+                break;
+        }
+    }
+    //return an array of neighbouring spaces
+    getNeighbours(v)
+    {
+        let a =[];
+        a.push({x:v.x+gridStep* 0,y:v.y+gridStep*-1});//north
+        a.push({x:v.x+gridStep* 1,y:v.y+gridStep* 0});//east
+        a.push({x:v.x+gridStep* 0,y:v.y+gridStep* 1});//south
+        a.push({x:v.x+gridStep*-1,y:v.y+gridStep* 0});//west
+        return a;
+    }
+    //sort neighbours based on distance to goal, shortest first
+    sortNeighbours(neighbours,g)
+    {
+        let r = [];
+        let n = neighbours.slice();
+        //r will start off empty so push the first neighbour regardless
+        n[0].distance = Helper.dist(n[0],g);    
+        r.push(n[0]);
+        //for each of the 3 remaining neighbours
+        loop1:
+        for( let i = 1 ; i < n.length; i ++)
+        {
+            //...record the distance to the goal
+            n[i].distance = Helper.dist(n[i],g);    
+            //compare it to our sorted list 
+            for( let j = 0 ; j <r.length; j ++)
+            {
+                //if it is smaller than or equal to the number in the sorted list, add it in before that then continue the first for loop 
+                if(n[i].distance<=r[j].distance)
+                {
+                    r.splice(j,0,n[i]);
+                    continue loop1;//this will continue the first for loop so that the below code does not run
+                }                
+            }
+            //if we have looped through the sorted loop and this number is not smaller than any, then add it to teh end 
+            r.push(n[i]);
+        }
+        return r;
     }
     move()
     {

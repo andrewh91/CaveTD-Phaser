@@ -55,14 +55,15 @@ class Game extends Phaser.Scene
         this.setUpMap();
 
         vehicleIndex=-1;
-        this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*2);
-        this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*4);
+        //this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*2);
+        //this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*4);
 
         selectedPlayer=-1;
         //one player by default
         this.addPlayer(mapOffSetX+gridStep,mapOffSetY);
         priorityArray=new PriorityArray();
-        this.setUpCreatures();
+        //this.setUpCreatures();
+        this.setUpCreatures1();
 
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
@@ -153,7 +154,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[0]);
+        mapData.loadFromText(savedMaps.mapsArray[2]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -313,6 +314,13 @@ class Game extends Phaser.Scene
         mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
         priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
+    }
+    setUpCreatures1()
+    {
+        creatureIndex=-1;
+        this.addCreature(mapOffSetX+gridStep*(mapWidth-2),mapOffSetY+gridStep*(mapHeight-2));
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
+        priorityArray.loopThroughAll();
     }
     setUpCreatures()
     {

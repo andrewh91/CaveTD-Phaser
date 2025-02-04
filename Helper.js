@@ -14,4 +14,10 @@ export default class Helper
     {
         return {x:(v.x-mapOffSetX)/gridStep,y:(v.y-mapOffSetY)/gridStep};
     }
+    static dist(v1,v2)
+    {
+        let a = v1.x-v2.x;
+        let b = v1.y-v2.y;
+        return a*a + b*b;
+    }
 }
