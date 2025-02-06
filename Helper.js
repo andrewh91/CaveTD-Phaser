@@ -20,4 +20,15 @@ export default class Helper
         let b = v1.y-v2.y;
         return a*a + b*b;
     }
+    static vectorEquals(v1,v2)
+    {
+        if(v1!=undefined&&v2!=undefined&&v1.x==v2.x&&v1.y==v2.y)
+        {
+            return true;
+        }
+        else 
+        {
+            return false
+        }
+    }
 }

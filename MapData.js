@@ -234,16 +234,28 @@ export default class MapData
     isWall(v)
     {
         //path is 0, rubble is 1, a wall is 2 or more
+        if(this.tiles[this.getIndexFromCoords(v)]==undefined)
+        {
+            return false;
+        }
         return this.tiles[this.getIndexFromCoords(v)].terrain>=wallTerrain;
     }
     isRubble(v)
     {
         //rubble is exactly 1
+        if(this.tiles[this.getIndexFromCoords(v)]==undefined)
+        {
+            return false;
+        }
         return this.tiles[this.getIndexFromCoords(v)].terrain==rubbleTerrain;
     }
     isPath(v)
     {
         //path is exactly 0
+        if(this.tiles[this.getIndexFromCoords(v)]==undefined)
+        {
+            return false;
+        }
         return this.tiles[this.getIndexFromCoords(v)].terrain==pathTerrain;
     }
     inBounds(v)

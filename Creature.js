@@ -21,6 +21,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.goal={x:x,y:y};
         this.proposedPos;
         this.priorityArray=priorityArray;
+        //the memory can be various things, but related to pathfinding
+        this.memory=[];
+        this.rememberTail=true;
     }
     updatePathfinding(delta)
     {
@@ -34,12 +37,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
-        let proposedPathfindingPosition = this.beeline2();
+        let proposedPathfindingPosition = this.tail3();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
     }
-    beeline()
+    beeline1()
     {
         this.proposedPos=undefined;
         if(this.x<this.goal.x)
@@ -73,6 +76,32 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.proposedPos=neighbours[i];
                 break;
             }
+        }
+        return this.proposedPos;
+    }
+    //simlar to beeline2, test which direction is closest ot he goal. of those return the closest to goal which is a path and which is not the tail - the tail being the creature's memory of where it's previous position was. if none of those options are a path, then return the tail if that is a path. the memory is going to have to be set in the move method
+    tail3()
+    {
+        this.proposedPos=undefined;
+        //get all the 4 neighbours
+        let neighbours = this.getNeighbours({x:this.x,y:this.y});
+        //sort the neighbours in order of closest to goal
+        neighbours = this.sortNeighbours(neighbours,this.goal);
+        //record the tail, the memeory should be an array, so a little error handling just incase there is no memory yet
+        let tail = this.memory.length>0?this.memory[0]:undefined;
+        //test if the 'neighbour closest to goal' is a path, if so return that as proposed position, if not check the next closest, also check that that proposed pos is not the tail 
+        for( let i = 0 ; i < neighbours.length ; i ++)
+        {
+            if(this.map.isPath(Helper.translatePosToMapPos(neighbours[i]))&& ! Helper.vectorEquals(neighbours[i],tail))
+            {
+                this.proposedPos=neighbours[i];
+                break;
+            }
+        }
+        //if the proposedPos is still undefined, then none of the 4 directions fit the criteria of; is a path and is not the tail, if so then check if the tail is a path and return that pos
+        if(this.proposedPos==undefined&&tail!=undefined&&this.map.isPath(Helper.translatePosToMapPos(tail)))
+        {
+            this.proposedPos=tail;
         }
         return this.proposedPos;
     }
@@ -240,6 +269,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
+        this.updateMemory();
         //update the old position of the creature in the map
         this.map.setCreature(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
         this.x=v.x;
@@ -248,6 +278,15 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //update the new position of the creature in the map
         this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
         this.map.clearContested(Helper.translatePosToMapPos(v));
+    }
+    //for creatures which use the memory to record the 'tail' or the prev position, 
+    updateMemory()
+    {
+        if(this.rememberTail)
+        {
+            this.memory=[];
+            this.memory.push({x:this.x,y:this.y});
+        }
     }
     swapCreatureWith(v)
     {
