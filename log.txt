@@ -296,3 +296,9 @@ to try and help the above, perhaps i can create landmarks, these are placed on t
 
 todo i should resume with my plan to do a wall rider
 i need to think about the distinction between creatures that are exploring and creatures who are trying to reach a defined goal position, these creatures should navigate in different ways. landmarks could be useful, but only at intersections - at a cross roads these landmarks or signposts could be useful
+
+20250210
+pathfinding wall runnner
+the wall runner will store the positon of the wall it has stuck to in memory, it will try to move towards the recorded position of the wall if it is now a path, else it will move to the left or right of the wall depending on this creature's preselected preference for left or right direction. in the move method i will need to set the memory to where the wall is. if there is no wall it just uses beeline2
+
+if the creature hits a wall i record the wall in the move method, i also need to update it if we already encountered a wall and are moving along it, so in teh moveCreature method if the rememberWall bool is true and we already have a memory then update the wall, i have not tested any of this yet

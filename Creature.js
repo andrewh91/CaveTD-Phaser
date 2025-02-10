@@ -23,7 +23,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.priorityArray=priorityArray;
         //the memory can be various things, but related to pathfinding
         this.memory=[];
-        this.rememberTail=true;
+        //rememberTail will be used for tail3 pathfinding
+        this.rememberTail=false;
+        //rememberWall will be used for wallRunner4 pathfinding, it will overwrite rememberTail
+        this.rememberWall=true;
+        //for wall runners, the direction can be RIGHT or LEFT
+        this.wallRunnerDirection = RIGHT;
     }
     updatePathfinding(delta)
     {
@@ -37,7 +42,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
-        let proposedPathfindingPosition = this.tail3();
+        let proposedPathfindingPosition = this.wallRunner4();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -104,6 +109,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.proposedPos=tail;
         }
         return this.proposedPos;
+    }
+    //wall runners move toward a goal until they hit a wall, then they latch onto the wall and move either left or right hugging that wall 
+    //we will record the direction of the wall in memory - will need to do that in the move method
+    wallRunner4()
+    {
+        this.proposedPos=undefined;
+        let wall = this.memory.length>0?this.memory[0]:undefined;
+        if(wall)
+        {
+            //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
+            if(this.map.isPath(Helper.translatePosToMapPos(wall)))
+            {
+                this.proposedPos=wall;
+                return this.proposedPos;
+            }
+            else
+            {
+                //otherwise if the wall is a wall, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
+                this.proposedPos = this.rightAnglePosition(wall,{x:this.x,y:this.y},this.wallRunnerDirection);
+                return this.proposedPos;
+            }
+        }
+        else
+        {
+            this.proposedPos = beeline2();
+            return this.proposedPos;
+        }
     }
     //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
     proposePathfinding()
@@ -212,6 +244,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
                             }
                         }
                     }
+                    //if the proposed position is a wall set the memory to record that wall
+                    else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
+                    {
+                        this.updateMemoryWall(this.proposedPos);
+                    }
                 }
             }
         }
@@ -267,6 +304,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
             STATIONARY;
         }
     }
+    //for the wall runner, if it hits a wall it can go left or right along that wall, so this method will take the location of the wall as an argument and the creature position, and the direction (LEFT or RIGHT) and will return the position to go to
+    //so if creature at position v hits wall and wants to turn RIGHT this will give the position it wants to end up at 
+    rightAnglePosition(wall,v,direction)
+    {
+
+        let x = wall.x-v.x;
+        let y = wall.y-v.y;
+        let o = y;
+        //direction will be 1 or -1, which is RIGHT or LEFT
+        x=direction*y;
+        y=direction*o;
+        return {x:v.x+x,y:v.y+y};
+    }
     moveCreature(v)
     {
         this.updateMemory();
@@ -286,6 +336,26 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.memory=[];
             this.memory.push({x:this.x,y:this.y});
+        }
+        if(this.rememberWall&&this.memory.length>0)
+        {
+            let wall = this.memory[0];
+            //turn the wall from a position like 4,6 to a direciton from the creature's current positon like, -1,0
+            wall.x=wall.x-this.x;
+            wall.y=wall.y-this.y;
+            //now turn the wall back into a position by adding that direction to the new position 
+            wall.x=wall.x+v.x;
+            wall.y=wall.y+v.y;
+            this.memory=[];
+            this.memory.push(wall);
+        }
+    }
+    updateMemoryWall(v)
+    {
+        if(this.rememberWall)
+        {
+            this.memory=[];
+            this.memory.push(v);
         }
     }
     swapCreatureWith(v)
