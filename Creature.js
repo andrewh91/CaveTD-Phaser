@@ -115,7 +115,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     wallRunner4()
     {
         this.proposedPos=undefined;
-        let wall = this.memory.length>0?this.memory[0]:undefined;
+        let wall = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
         if(wall)
         {
             //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
@@ -133,7 +133,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         else
         {
-            this.proposedPos = beeline2();
+            this.proposedPos = this.beeline1();
             return this.proposedPos;
         }
     }
@@ -311,9 +311,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         let x = wall.x-v.x;
         let y = wall.y-v.y;
-        let o = y;
+        let o = x;
         //direction will be 1 or -1, which is RIGHT or LEFT
-        x=direction*y;
+        x=direction*y*-1;
         y=direction*o;
         return {x:v.x+x,y:v.y+y};
     }
@@ -339,15 +339,29 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         if(this.rememberWall&&this.memory.length>0)
         {
-            let wall = this.memory[0];
-            //turn the wall from a position like 4,6 to a direciton from the creature's current positon like, -1,0
-            wall.x=wall.x-this.x;
-            wall.y=wall.y-this.y;
-            //now turn the wall back into a position by adding that direction to the new position 
-            wall.x=wall.x+v.x;
-            wall.y=wall.y+v.y;
-            this.memory=[];
-            this.memory.push(wall);
+            let wall = Object.assign({}, this.memory[0]);
+            //if the creature has just moved on top of the wall then it must have turned a corner
+            if(Helper.vectorEquals(wall,this.proposedPos))
+            {
+                // get the velocity we are about to move 
+                let d = {x:wall.x-this.x,y:wall.y-this.y};
+                //times that by the following and the creature's preferred direction and move in the other axis to get the new wall position
+                wall.y=wall.y+(d.x*-1*this.wallRunnerDirection);
+                wall.x=wall.x+(d.y*+1*this.wallRunnerDirection);
+                this.memory=[];
+                this.memory.push(wall);
+            }
+            else
+            {
+                //turn the wall from a position like 4,6 to a direciton from the creature's current positon like, -1,0
+                wall.x=wall.x-this.x;
+                wall.y=wall.y-this.y;
+                //now turn the wall back into a position by adding that direction to the new position 
+                wall.x=wall.x+this.proposedPos.x;
+                wall.y=wall.y+this.proposedPos.y;
+                this.memory=[];
+                this.memory.push(wall);
+            }
         }
     }
     updateMemoryWall(v)

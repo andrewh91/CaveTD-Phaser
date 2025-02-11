@@ -302,3 +302,9 @@ pathfinding wall runnner
 the wall runner will store the positon of the wall it has stuck to in memory, it will try to move towards the recorded position of the wall if it is now a path, else it will move to the left or right of the wall depending on this creature's preselected preference for left or right direction. in the move method i will need to set the memory to where the wall is. if there is no wall it just uses beeline2
 
 if the creature hits a wall i record the wall in the move method, i also need to update it if we already encountered a wall and are moving along it, so in teh moveCreature method if the rememberWall bool is true and we already have a memory then update the wall, i have not tested any of this yet
+
+need to fix the updateMemory method for when it goes around a corner, it sets the wall to like -50 or something 
+
+20250211
+fixed the wallRunner4 method, it will now beeline1 until it hits a wall, then it uses it's memory to store the position of the wall, and moves to the left or right (depending on this creature's saved direction preference) then continuously keeps track of the wall it is attached to - even around corners. such that if it hits an island it will never leave it. 
+
