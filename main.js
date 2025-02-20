@@ -318,8 +318,13 @@ class Game extends Phaser.Scene
     setUpCreatures1()
     {
         creatureIndex=-1;
+/*
         this.addCreature(mapOffSetX+gridStep*(mapWidth-2),mapOffSetY+gridStep*(mapHeight-2));
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
+*/
+        this.addCreature(mapOffSetX+gridStep*10,mapOffSetY+gridStep*(mapHeight-2));
+        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
+
         priorityArray.loopThroughAll();
     }
     setUpCreatures()
@@ -393,10 +398,7 @@ class Game extends Phaser.Scene
     //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here
     updateCreaturePos(id,v)
     {
-        creatures[id].x = v.x;      
-        creatures[id].y = v.y;
-        Helper.centreText(creatures[id]);
-        
+        creatures[id].moveCreature(v);        
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something

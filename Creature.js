@@ -19,6 +19,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.text = scene.add.text(this.x, this.y, 'c'+this.index, { fontSize: '20px', fill: '#fff'});
         Helper.centreText(this);
         this.goal={x:x,y:y};
+        this.oldGoal={x:undefined,y:undefined};
+        //we may start tunnelling if we change direction, that's assuming that we changed direction due to hitting a wall, if we changed direction due to getting a new goal, then we set this flag so that we ignore that change in direction for tunnelling purposes
+        this.newGoal=false;
         this.proposedPos;
         this.priorityArray=priorityArray;
         //the memory can be various things, but related to pathfinding
@@ -27,6 +30,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.rememberTail=false;
         //rememberWall will be used for wallRunner4 pathfinding, it will overwrite rememberTail
         this.rememberWall=true;
+        //use this to store the previous position, we will update this in the move method and the swapCreatureWith method 
+        this.memoryDirection=STATIONARY;
+        this.potentialShortcutMode=false;
+        this.potentialTunnelStartPos = {x:undefined,y:undefined};
+        this.shortcutMode=false;
+        this.potentialShortcutViable=false;
+        this.cancelMove=false;
+        this.encounteredWall=false;
+
+        this.distToPotentialTunnelStartPos=0;
         //for wall runners, the direction can be RIGHT or LEFT
         this.wallRunnerDirection = RIGHT;
     }
@@ -42,7 +55,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
-        let proposedPathfindingPosition = this.wallRunner4();
+        //if the creature finds a tunnel to dig it will cancel it's current move, this happens in the move method - just before it moves, when we get to the pathfinding again - like here - we can reset this to false. 
+        this.cancelMove=false;
+        let proposedPathfindingPosition = this.wallRunnerDigger5();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -137,9 +152,58 @@ export default class Creature extends Phaser.GameObjects.Sprite
             return this.proposedPos;
         }
     }
+    //same as wallRunner4 but if the this.shortcutMode is true then we can dig
+    wallRunnerDigger5()
+    {
+        this.encounteredWall=false;
+        this.proposedPos=undefined;
+        let wall = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
+        if(this.shortcutMode)
+        {
+            this.proposedPos = this.beelineDigger6();
+            return this.proposedPos;  
+        }
+        else if(wall)
+        {
+            //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
+            if(this.map.isPath(Helper.translatePosToMapPos(wall)))
+            {
+                this.proposedPos=wall;
+                return this.proposedPos;
+            }
+            else
+            {
+                this.encounteredWall=true;
+                //otherwise if the wall is a wall, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
+                this.proposedPos = this.rightAnglePosition(wall,{x:this.x,y:this.y},this.wallRunnerDirection);
+                return this.proposedPos;
+            }
+        }
+        else
+        {
+            this.proposedPos = this.beeline1();
+            return this.proposedPos;
+        } 
+    }
+    beelineDigger6()
+    {
+        this.proposedPos=undefined;
+        let neighbours = this.getNeighbours({x:this.x,y:this.y});
+        neighbours = this.sortNeighbours(neighbours,this.goal);
+        for( let i = 0 ; i < neighbours.length ; i ++)
+        {
+            if(this.shortcutMode||this.map.isPath(Helper.translatePosToMapPos(neighbours[i])))
+            {
+                this.proposedPos=neighbours[i];
+                break;
+            }
+        }
+        return this.proposedPos;
+    }
     //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
     proposePathfinding()
     {
+        
         let dir = this.proposedDirection();
         switch(dir)
         {
@@ -209,8 +273,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //if the proposed position does not already have a player on it or a vehicle
                 if(this.map.getPlayerIndex(Helper.translatePosToMapPos(this.proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(this.proposedPos))==-1))
                 {
-                    //if the proposed position is a path - and not a wall or rubble
-                    if(this.map.isPath(Helper.translatePosToMapPos(this.proposedPos)))
+                    //if the proposed position is a path - and not a wall or rubble, or this.shortcutMode is active
+                    if(this.map.isPath(Helper.translatePosToMapPos(this.proposedPos))||this.shortcutMode)
                     {             
                         //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
                         let dir = this.proposedDirection();
@@ -260,7 +324,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     proposedDirection()
     {
-        if(this.proposedPos.x-this.x==-1*gridStep)
+        if(this.proposedPos==undefined )
+        {
+            return STATIONARY;
+        }
+        else if(this.proposedPos.x-this.x==-1*gridStep)
         {
             return WEST;
         }
@@ -278,7 +346,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         else
         {
-            STATIONARY;
+            return STATIONARY;
         }
     }
     oppositeDirection(d)
@@ -319,19 +387,93 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
-        this.updateMemory();
-        //update the old position of the creature in the map
-        this.map.setCreature(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
-        this.x=v.x;
-        this.y=v.y;
-        Helper.centreText(this);
-        //update the new position of the creature in the map
-        this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+        this.updateMemory(v);
+        //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
+        if(this.map.getCreatureIndex(Helper.translatePosToMapPos({x:this.x,y:this.y}))==this.index)
+        {
+            this.map.setCreature(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
+        }
+        if(this.cancelMove==false)
+        {    
+            this.x=v.x;
+            this.y=v.y;
+            Helper.centreText(this);
+            //update the new position of the creature in the map
+            this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+        }
         this.map.clearContested(Helper.translatePosToMapPos(v));
+        //TODO delete this, this is just for testing
+        this.map.setTerrain(Helper.translatePosToMapPos(v),0);
     }
-    //for creatures which use the memory to record the 'tail' or the prev position, 
-    updateMemory()
+    //for creatures which use the memory to record the 'tail' or the prev position etc
+    updateMemory(v)
     {
+        this.newGoal=false;
+        //when trying to tunnel, we might set the goal to the start of the tunnel, if the proposed position is to then visit that goal, change the goal back to the old goal 
+        if(Helper.vectorEquals({x:v.x,y:v.y},this.goal))
+        {
+            this.goal=this.oldGoal;
+            this.potentialTunnelStartPos = {x:undefined,y:undefined};
+            console.log('clear');
+            this.newGoal=true;
+            this.shortcutMode=false;
+        }
+        //if we set a potentialTunnelStartPos, and then for example we travel in a straight line up, then back down, due to walls, the proposedpos will be to revisit the potentialTunnelStartPos, in this case cancel the tunnel
+        else if(Helper.vectorEquals({x:v.x,y:v.y},this.potentialTunnelStartPos))
+        {
+            this.potentialTunnelStartPos = {x:undefined,y:undefined};
+            console.log('clear');
+            this.newGoal=true;
+            this.shortcutMode=false;
+            this.potentialShortcutMode=false;
+            this.potentialShortcutViable=false;
+        }
+        
+        let oldMemoryDirection = this.memoryDirection;
+        //record the previous position
+        this.memoryDirection=this.proposedDirection();
+     
+        //if we have set a potentialTunnelStartPos, record the distance to that pos
+        if(this.potentialShortcutMode)
+        {
+            let oldDistToPotentialTunnelStartPos = this.distToPotentialTunnelStartPos;
+            this.distToPotentialTunnelStartPos = Helper.dist({x:v.x,y:v.y},this.potentialTunnelStartPos);
+            //if we are moving further away 
+            if(this.distToPotentialTunnelStartPos - oldDistToPotentialTunnelStartPos>=0)
+            {
+                //if we move away after previously moving closer, then we found a shortcut
+                if(this.potentialShortcutViable)
+                {
+                    this.shortcutMode=true;
+                    this.cancelMove=true;
+                    this.oldGoal=this.goal;
+                    this.goal=this.potentialTunnelStartPos;
+                    console.log('move to start');
+                    this.newGoal=true;
+                    this.potentialShortcutMode=false;
+                    this.potentialShortcutViable=false;
+                    this.distToPotentialTunnelStartPos=0;
+                    if(this.rememberWall)
+                    {
+                        this.memory = [];
+                    }
+                }
+            }
+            //if we are moving closer
+            else
+            {
+                //set a flag saying shortcut viable, 
+                this.potentialShortcutViable=true;
+            }
+        }
+        //if we are changing direction, and the previous direction was not stationary and we are not currently in the shortcutMode and we did not change direction due to a new goal and we actually encountered a wall
+        else if(oldMemoryDirection!=this.memoryDirection&&oldMemoryDirection!=STATIONARY&&this.shortcutMode==false&&this.newGoal==false&&this.encounteredWall)
+        {
+            //enter potential shortcutmode and set the potential tunnel start pos
+            this.potentialShortcutMode=true;
+            this.potentialTunnelStartPos={x:this.x,y:this.y};
+            console.log(this.potentialTunnelStartPos);
+        }
         if(this.rememberTail)
         {
             this.memory=[];
@@ -340,7 +482,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(this.rememberWall&&this.memory.length>0)
         {
             let wall = Object.assign({}, this.memory[0]);
-            //if the creature has just moved on top of the wall then it must have turned a corner
+            //if the creature has just moved to the wall then it must have turned a corner
             if(Helper.vectorEquals(wall,this.proposedPos))
             {
                 // get the velocity we are about to move 
@@ -372,6 +514,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.memory.push(v);
         }
     }
+    //v is the proposed pos
     swapCreatureWith(v)
     {
         //this creature wants to move to the given position but it is occupied by a creature that wants to move to this creature's position, so we can swap them
@@ -379,18 +522,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         let creatureBIndex = this.map.getCreatureIndex(Helper.translatePosToMapPos(v));
         //save this creature's position
         let creatureAPos = {x:this.x,y:this.y};
-        //set creature A's map pos to store the creature B's index
-        this.map.setCreature(Helper.translatePosToMapPos(creatureAPos),creatureBIndex);
-        //set new location to hold the creature A's index
-        this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
-        //update creature A's position
-        this.x=v.x;
-        this.y=v.y;
-        Helper.centreText(this);
-        //update creatureB's position, we don't have access to that, just let the scene do it 
+        //use the moveCreature method to update creatureB's position, we don't have access to that, just let the scene do it 
         this.scene.updateCreaturePos(creatureBIndex,creatureAPos);
-        this.map.clearContested(Helper.translatePosToMapPos(v));
-        this.map.clearContested(Helper.translatePosToMapPos(creatureAPos));
+        this.moveCreature(this.proposedPos);
     }
     setGoal(v)
     {

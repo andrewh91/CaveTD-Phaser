@@ -308,3 +308,38 @@ need to fix the updateMemory method for when it goes around a corner, it sets th
 20250211
 fixed the wallRunner4 method, it will now beeline1 until it hits a wall, then it uses it's memory to store the position of the wall, and moves to the left or right (depending on this creature's saved direction preference) then continuously keeps track of the wall it is attached to - even around corners. such that if it hits an island it will never leave it. 
 
+an upgrade to this method would be to break from the wall in some circumstances, like if we have revisted the place we entered the wall originally
+
+20250220
+If creature changes direction, set a flag for potentialShortcut mode. Record the position, every time it moves, for the next (n) times, test the distance to that recorded point and store in the creature's memory array. If the distance is greater than last time keep going. If the distance is smaller then there is potential to dig a short cut. If the distance is smaller than the previous distance (x) times in a row then we will decide to dig a short cut, but let's wait until the distance is larger than the previous distance before we start. When we do start, then set that recorded position as the goal, and set a tunnel flag so we make a beeline to that position, digging through rock as necessary. 
+The (n) and (x) values should scale with the amount of rubble this creature can carry at any one time.
+
+when a creature digs it will remove 1 value from that terrain, turning wall to rubble or rubble to path,for now i will just alter the value, but that would mean the material disappeared, i want it to be towed behind the creature instead in a trailer, each trailer can carry 2 material, so if the creature dies that material lands there and will be a wall or rubble in that position
+
+so my wall runner now needs to store the position of the wall as well as the direction it previously travelled in
+which means i need a better way to store the memory, or at least several memory arrays
+
+i don't know why i didn't do this already, but swapCreatureWith should use the moveCreature method, i just need to make sure it does not overwrite the map's creature index at the previous position
+
+so now in the updateMemory method i can record the previous direction travelled in
+if the direction changes then set potentialShortcutMode to true. 
+if potentialShortcutMode is true, record the distance to the potentialTunnelStartPos
+if the creature moves closer to the potentialTunnelStartPos, then set a flag, now while that flag is true - if we move further away from the potentialTunnelStartPos we have found the end of our tunnel, now we can dig from here to the potentialTunnelStartPos. the way to go about that is probably cancel the current move, set some flag to allow digging, then set the goal and run pathfinding again
+
+the wallRunner4 seems to have trouble with tiles that are out of bounds
+just make a wall around the whole map, 
+TODO, make the wall on the edge of the map indestructible 
+
+need to test this, doesn't seem to work correctly, the cancel move does not seem to work, so we move one space away from the tunnel finish position before digging, seem to be moving diagonally also
+
+it seems that i should be checking the distance between the proposed position and teh tunnel start instead of the current position
+
+and i think i should clear the memory of the wall 
+
+i was assuming changing direction meant we hit a wall, but for the wall runner you might just be going around a corner, so this is falsely thinking that is a tunnelstart, i was trying to avoid this but i guess i'll have to flag in the pathfinding method that we have changed direiton due to encountering a wall
+
+this seems to be working now, i will now have the creature turn walls into paths as it travels over them, make sure that works then...
+TODO figure out a way to have excavated walls and rubble be towed by the creature
+actually the creature can behave quite weirdly, especially if it was moving away from the goal when it started the tunnel, as once it's dug back to the original position, it will then attempt to move towards the goal, and therefore not necessarily in the same direction as it was moving when it got distracted with digging. tbf wall runners should not really have a goal, they should be exploring, maybe instead of a goal they should use a random direction, they only follow the goal when they have no wall to cling to 
+
+so yeah, next up i want to tow material behind the creature 
