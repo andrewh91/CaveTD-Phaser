@@ -293,7 +293,7 @@ class Game extends Phaser.Scene
     addPlayer(x,y)
     {
         selectedPlayer++;
-        let p = new Player(this, x,y, 'dot',selectedPlayer,incrementColour(selectedPlayer,3),mapData);
+        let p = new Player(this, x,y, 'dot',selectedPlayer,Helper.incrementColour(selectedPlayer,3),mapData);
         players.push(p);
         //the player's index is stored at the player's position in the map, make sure to update that 
         mapData.setPlayer(Helper.translatePosToMapPos({x:p.x,y:p.y}),p.index);
@@ -301,7 +301,7 @@ class Game extends Phaser.Scene
     addVehicle(x,y)
     {
         vehicleIndex++;
-        let v = new Vehicle(this,x ,y ,'dot','rubble',vehicleIndex,incrementColour(vehicleIndex,3),mapData);
+        let v = new Vehicle(this,x ,y ,'dot','rubble',vehicleIndex,Helper.incrementColour(vehicleIndex,3),mapData);
         vehicles.push(v);
         //store the vehicle's index in the map at the vehicle's position 
         mapData.setVehicle(Helper.translatePosToMapPos({x:v.x,y:v.y}),v.index);
@@ -309,7 +309,7 @@ class Game extends Phaser.Scene
     addCreature(x,y)
     {
         creatureIndex++;
-        let c = new Creature(this, x,y, 'dot',creatureIndex,incrementColour(creatureIndex,3),mapData,priorityArray);
+        let c = new Creature(this, x,y, 'dot',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
         creatures.push(c);
         mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
@@ -426,17 +426,7 @@ function removeCamera(scene)
         drawBorders(scene);
     }
 }
-function incrementColour(i,d)
-{
-    //this should give d^3 variety of numbers - or d^3-1 if you don't want black
-    //if i == 0 then that would give colour black
-    //we could plus 1 to avoid black being first, but that would just make it the last colour instead
-    //so mod on the total number of colours
-    i=i%(d*d*d-1);
-    //then plus 1, now the incrementing colour will not be black
-    i=i+1;
-    return Math.floor((Math.floor((i/(d*d)))%d)*(256*256*256)/d +  (Math.floor((i/d)%d))*(256*256)/d +  (i%d)*(256)/d);
-}
+
 
 const config = {
     type: Phaser.AUTO,

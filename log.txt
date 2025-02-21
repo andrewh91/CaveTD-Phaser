@@ -343,3 +343,15 @@ TODO figure out a way to have excavated walls and rubble be towed by the creatur
 actually the creature can behave quite weirdly, especially if it was moving away from the goal when it started the tunnel, as once it's dug back to the original position, it will then attempt to move towards the goal, and therefore not necessarily in the same direction as it was moving when it got distracted with digging. tbf wall runners should not really have a goal, they should be exploring, maybe instead of a goal they should use a random direction, they only follow the goal when they have no wall to cling to 
 
 so yeah, next up i want to tow material behind the creature 
+
+20250221
+i've drawn a coloured sprite on the proposedPos location and the tunnel start position, 
+the creature is continuously starting a tunnel in the same location, this is just due to my map, and where i set the goal
+PROBLEMUNNESSARYTUNNELS: the creature sometimes set a tunnel then travels unimpeded in a straight line hits a lump, goes around the lump, then tunnels through the lump, but then also all the way back to the tunnel start pos, even though it's no longer digging - i will give the wall runner creature a limit to how many times it can move in potentialShortcutMode before it cancels, i should also allow it to keep track of multiple tunnel start positions
+
+i will create a whole potential tunnel class, it has its own position, own sprite, own distance to the originating creature 
+this will help me to have more than one potential tunnel, and if i sort them in order of distance to originating creature, the that should solve PROBLEMUNNESSARYTUNNELS
+
+reasonably happy with this, i need to sort out the out of bounds, amended translatePosToMapPos in the helper class 
+
+TODO so i didn't actually get around to my todo , next i want to have the creature carry material that it digs with it, it will deposit 1 material on any path it sees, i will have to change things so that creatures can travel on rubble, albeit more slowly. this creature should dig on walls only, in one turn it will turn a wall into rubble, and start towing rubble in its trailer, if it is ever adjacent to a path it will dump 1 rubble there, the trailer can carry a max of 2 rubble, the creature can have a max of 1 trailer, if there is no space on the trailer it cannot dig. if the creature dies the trailer will dump the material, so that will become rubble or a wall 

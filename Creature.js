@@ -1,4 +1,5 @@
 import Helper from './Helper.js';
+import PotentialTunnel from './PotentialTunnel.js';
 export default class Creature extends Phaser.GameObjects.Sprite 
 {    
     //this many milliseconds must pass before the player is allowed to make a move
@@ -7,7 +8,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     constructor(scene, x, y, texture,index,colour,map,priorityArray) 
     {
         super(scene, x, y, texture);
-        
+        this.texture=texture;
+        this.scene=scene;
         scene.add.existing(this);
         this.index=index;
         //pass in a reference to the map data, so we can query the map to see if there is a wall etc
@@ -32,12 +34,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.rememberWall=true;
         //use this to store the previous position, we will update this in the move method and the swapCreatureWith method 
         this.memoryDirection=STATIONARY;
-        this.potentialShortcutMode=false;
-        this.potentialTunnelStartPos = {x:undefined,y:undefined};
         this.shortcutMode=false;
-        this.potentialShortcutViable=false;
         this.cancelMove=false;
         this.encounteredWall=false;
+        this.potentialTunnelArray =[];
+
+        
+        //add a sprite so i can see where the proposed pos is 
+        this.proposedPosSprite = new Phaser.GameObjects.Sprite(scene,undefined,undefined,texture);
+        scene.add.existing(this.proposedPosSprite);
+        this.proposedPosSprite.setTint(0x00ff00);
+        this.proposedPosSprite.setScale(12);
 
         this.distToPotentialTunnelStartPos=0;
         //for wall runners, the direction can be RIGHT or LEFT
@@ -47,6 +54,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         //the timing of this update will happen in the main.js 
         this.proposedPos=this.pathfinding();
+        this.proposedPosSprite.x=this.proposedPos.x;
+        this.proposedPosSprite.y=this.proposedPos.y;
     }
     updatePosition(delta)
     {
@@ -308,12 +317,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
                             }
                         }
                     }
-                    //if the proposed position is a wall set the memory to record that wall
+                    //if the proposed position is a wall  set the memory to record that wall
                     else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
                     {
                         this.updateMemoryWall(this.proposedPos);
                     }
                 }
+            }
+            //if proposed position is not in bounds, set the memory to record that wall 
+            else 
+            {
+                this.updateMemoryWall(this.proposedPos);
             }
         }
     }
@@ -409,70 +423,76 @@ export default class Creature extends Phaser.GameObjects.Sprite
     updateMemory(v)
     {
         this.newGoal=false;
+        
         //when trying to tunnel, we might set the goal to the start of the tunnel, if the proposed position is to then visit that goal, change the goal back to the old goal 
         if(Helper.vectorEquals({x:v.x,y:v.y},this.goal))
         {
             this.goal=this.oldGoal;
-            this.potentialTunnelStartPos = {x:undefined,y:undefined};
-            console.log('clear');
             this.newGoal=true;
             this.shortcutMode=false;
+            this.killAllTunnels();
         }
-        //if we set a potentialTunnelStartPos, and then for example we travel in a straight line up, then back down, due to walls, the proposedpos will be to revisit the potentialTunnelStartPos, in this case cancel the tunnel
-        else if(Helper.vectorEquals({x:v.x,y:v.y},this.potentialTunnelStartPos))
+        //for each potentialTunnel
+        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
         {
-            this.potentialTunnelStartPos = {x:undefined,y:undefined};
-            console.log('clear');
-            this.newGoal=true;
-            this.shortcutMode=false;
-            this.potentialShortcutMode=false;
-            this.potentialShortcutViable=false;
+            //if we revisit the tunnel position, 
+            if(Helper.vectorEquals({x:v.x,y:v.y},{x:this.potentialTunnelArray[i].x,y:this.potentialTunnelArray[i].y}))
+            {
+                //cancel that tunnel 
+                //if we set a potentialTunnelStartPos, and then for example we travel in a straight line up, then back down, due to walls, the proposedpos will be to revisit the potentialTunnelStartPos, in this case cancel the tunnel 
+                this.newGoal=true;
+                this.shortcutMode=false;
+                this.potentialTunnelArray[i].kill();
+            }
         }
+        
+      
         
         let oldMemoryDirection = this.memoryDirection;
         //record the previous position
         this.memoryDirection=this.proposedDirection();
      
-        //if we have set a potentialTunnelStartPos, record the distance to that pos
-        if(this.potentialShortcutMode)
+        //if any tunnel is alive, record the distance to that pos
+        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
         {
-            let oldDistToPotentialTunnelStartPos = this.distToPotentialTunnelStartPos;
-            this.distToPotentialTunnelStartPos = Helper.dist({x:v.x,y:v.y},this.potentialTunnelStartPos);
-            //if we are moving further away 
-            if(this.distToPotentialTunnelStartPos - oldDistToPotentialTunnelStartPos>=0)
+            if(this.potentialTunnelArray[i].alive)
             {
-                //if we move away after previously moving closer, then we found a shortcut
-                if(this.potentialShortcutViable)
+                let oldDistToPotentialTunnelStartPos = this.potentialTunnelArray[i].distanceToOriginatingCreature;
+                this.potentialTunnelArray[i].distanceToOriginatingCreature = Helper.dist({x:v.x,y:v.y},{x:this.potentialTunnelArray[i].x,y:this.potentialTunnelArray[i].y});
+                //if we are moving further away 
+                if(this.potentialTunnelArray[i].distanceToOriginatingCreature - oldDistToPotentialTunnelStartPos>=0)
                 {
-                    this.shortcutMode=true;
-                    this.cancelMove=true;
-                    this.oldGoal=this.goal;
-                    this.goal=this.potentialTunnelStartPos;
-                    console.log('move to start');
-                    this.newGoal=true;
-                    this.potentialShortcutMode=false;
-                    this.potentialShortcutViable=false;
-                    this.distToPotentialTunnelStartPos=0;
-                    if(this.rememberWall)
+                    //if we move away after previously moving closer, then we found a shortcut
+                    if(this.potentialTunnelArray[i].viable)
                     {
-                        this.memory = [];
+                        this.shortcutMode=true;
+                        //we don't want to move further away, so cancel the move, next update we will move towards the tunnel pos
+                        this.cancelMove=true;
+                        //save our current goal as we are about to overwrite it
+                        this.oldGoal=this.goal;
+                        this.goal={x:this.potentialTunnelArray[i].x,y:this.potentialTunnelArray[i].y};
+                        //this newGoal boolean affects how we pathfind
+                        this.newGoal=true;
+                        this.killAllTunnels();
+                        if(this.rememberWall)
+                        {
+                            this.memory = [];
+                        }
                     }
                 }
+                //if we are moving closer
+                else
+                {
+                    //set a flag saying shortcut viable, 
+                    this.potentialTunnelArray[i].viable=true;
+                }
             }
-            //if we are moving closer
-            else
-            {
-                //set a flag saying shortcut viable, 
-                this.potentialShortcutViable=true;
-            }
+          
         }
         //if we are changing direction, and the previous direction was not stationary and we are not currently in the shortcutMode and we did not change direction due to a new goal and we actually encountered a wall
-        else if(oldMemoryDirection!=this.memoryDirection&&oldMemoryDirection!=STATIONARY&&this.shortcutMode==false&&this.newGoal==false&&this.encounteredWall)
+        if(oldMemoryDirection!=this.memoryDirection&&oldMemoryDirection!=STATIONARY&&this.shortcutMode==false&&this.newGoal==false&&this.encounteredWall)
         {
-            //enter potential shortcutmode and set the potential tunnel start pos
-            this.potentialShortcutMode=true;
-            this.potentialTunnelStartPos={x:this.x,y:this.y};
-            console.log(this.potentialTunnelStartPos);
+            this.addTunnel();
         }
         if(this.rememberTail)
         {
@@ -505,6 +525,57 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.memory.push(wall);
             }
         }
+    }
+    addTunnel()
+    {
+        //if there is an existing tunnel that is not alive (in use), then use that, loop in reverse order to help solve PROBLEMUNNESSARYTUNNELS
+        for(let i =  this.potentialTunnelArray.length-1; i >=0 ; i --)
+        {
+            if(this.potentialTunnelArray[i].alive==false)
+            {
+                this.potentialTunnelArray[i].x=this.x;
+                this.potentialTunnelArray[i].y=this.y;
+                this.potentialTunnelArray[i].distanceToOriginatingCreature=0;
+                this.potentialTunnelArray[i].viable=false;
+                this.potentialTunnelArray[i].alive=true;
+                return;
+            }
+        }
+        //otherwise add a new one, adding it to the start of the array will solve the PROBLEMUNNESSARYTUNNELS
+        this.potentialTunnelArray.splice(0,0,new PotentialTunnel(this.scene,this.x,this.y,this.texture));
+    }
+    //if any tunnel is alive return true, else return false
+    isAnyTunnelAlive()
+    {
+        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
+        {   
+            if(this.potentialTunnelArray[i].alive)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    killAllTunnels()
+    {
+        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
+        {
+            this.potentialTunnelArray[i].kill();
+        }
+    }
+    killAllTunnelsExcept(index)
+    {
+        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
+        {
+            if(i=index)
+            {
+                continue;
+            }
+            else
+            {
+                this.potentialTunnelArray[i].kill();
+            }
+        } 
     }
     updateMemoryWall(v)
     {
