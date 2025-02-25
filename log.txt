@@ -355,3 +355,16 @@ this will help me to have more than one potential tunnel, and if i sort them in 
 reasonably happy with this, i need to sort out the out of bounds, amended translatePosToMapPos in the helper class 
 
 TODO so i didn't actually get around to my todo , next i want to have the creature carry material that it digs with it, it will deposit 1 material on any path it sees, i will have to change things so that creatures can travel on rubble, albeit more slowly. this creature should dig on walls only, in one turn it will turn a wall into rubble, and start towing rubble in its trailer, if it is ever adjacent to a path it will dump 1 rubble there, the trailer can carry a max of 2 rubble, the creature can have a max of 1 trailer, if there is no space on the trailer it cannot dig. if the creature dies the trailer will dump the material, so that will become rubble or a wall 
+
+20250225
+first of all make it so that the creature can walk on rubble, rubble should slow you down, so add a flag called skipMovement
+altered the pathfinding to check for isWall == false instead of isPath == true, now update the movement to only dig if there is a wall, , that will lower a wall into rubble,
+now i will have that rubble be carried in a trailer behind the creature, i will make a trailer class
+
+i've realised that if you carry a trailer of rubble over more rubble, then kill that creature the rubble could drop ontop of the other rubble to make a wall, meaning that if we carried 2 rubble that would make a level 3 wall which i want to avoid 
+
+i've created trailer class, it can call a method of the scene class which will drop the rubble, for example when the creature is killed, or when the creature wants to deposit the rubble 
+
+the trailer is scaling weird, it's like anti aliased or something, you can change the main scene config to use pixelArt but that makes the text look worse, but i could just try and get a different font 
+
+ok so now my creature can walk on rubble, can dig walls, and carry them in a series of trailers behind it. the trailers will drop the rubble when killed which will turn path to rubble or turn rubble to wall. also the creature can choose to drop the rubble at its location, through testing this i've noticed that the kill method of the creature needs updating 

@@ -47,6 +47,7 @@ class Game extends Phaser.Scene
         this.load.setBaseURL();
         this.load.image('dot', 'dot.png');
         this.load.image('rubble', 'dot.png');
+        this.load.image('trailer', 'trailer.png');
     }   
     create ()
     {
@@ -309,7 +310,7 @@ class Game extends Phaser.Scene
     addCreature(x,y)
     {
         creatureIndex++;
-        let c = new Creature(this, x,y, 'dot',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
+        let c = new Creature(this, x,y, 'dot','trailer',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
         creatures.push(c);
         mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
@@ -400,6 +401,12 @@ class Game extends Phaser.Scene
     {
         creatures[id].moveCreature(v);        
     }
+    //sometimes trailers containing rubble will be destroyed - when the creature dies- and the rubble should be added to the map at the trailer position 
+    addTrailerRubble(v)
+    {
+        let terrain = mapData.getTerrain(Helper.translatePosToMapPos(v));
+        mapData.setTerrain(Helper.translatePosToMapPos(v),terrain+1);
+    }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something
 function addCamera(scene,x,y)
@@ -432,7 +439,8 @@ const config = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
-    scene: [Game, UIScene]
+    scene: [Game, UIScene],
+    pixelArt: true
     
 };
 

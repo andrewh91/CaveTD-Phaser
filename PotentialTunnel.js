@@ -1,12 +1,11 @@
 export default class PotentialTunnel extends Phaser.GameObjects.Sprite 
 {    
-    constructor(scene, x, y, texture,index) 
+    constructor(scene, x, y, texture) 
     {
         super(scene, x, y, texture);
         
         scene.add.existing(this);
-        this.index=index;
-        this.setScale(10);
+        this.setScale(5);
         this.setTint(0xff0000);
         this.distanceToOriginatingCreature=0;
         this.alive=true;

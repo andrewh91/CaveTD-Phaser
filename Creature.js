@@ -1,14 +1,16 @@
 import Helper from './Helper.js';
 import PotentialTunnel from './PotentialTunnel.js';
+import Trailer from './Trailer.js';
 export default class Creature extends Phaser.GameObjects.Sprite 
 {    
     //this many milliseconds must pass before the player is allowed to make a move
     static playerMoveTimerStep=500;
     static playerMoveTimer=Creature.playerMoveTimerStep;
-    constructor(scene, x, y, texture,index,colour,map,priorityArray) 
+    constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray) 
     {
         super(scene, x, y, texture);
         this.texture=texture;
+        this.trailerTexture=trailerTexture;
         this.scene=scene;
         scene.add.existing(this);
         this.index=index;
@@ -39,16 +41,20 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.encounteredWall=false;
         this.potentialTunnelArray =[];
 
+        this.trailerArray=[];
+
         
         //add a sprite so i can see where the proposed pos is 
         this.proposedPosSprite = new Phaser.GameObjects.Sprite(scene,undefined,undefined,texture);
         scene.add.existing(this.proposedPosSprite);
         this.proposedPosSprite.setTint(0x00ff00);
-        this.proposedPosSprite.setScale(12);
+        this.proposedPosSprite.setScale(5);
 
         this.distToPotentialTunnelStartPos=0;
         //for wall runners, the direction can be RIGHT or LEFT
         this.wallRunnerDirection = RIGHT;
+        //if walking over rubble we will walk slower, this is achieved by using this flag, if this is set to true we skip one movement and one pathfinding update
+        this.skipMovement=false;
     }
     updatePathfinding(delta)
     {
@@ -175,7 +181,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         else if(wall)
         {
             //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
-            if(this.map.isPath(Helper.translatePosToMapPos(wall)))
+            //i'm making this creature be able to walk on path and rubble, so instead of checking for a path, check the tile is not a wall
+            if(this.map.isWall(Helper.translatePosToMapPos(wall))==false)
             {
                 this.proposedPos=wall;
                 return this.proposedPos;
@@ -201,7 +208,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         neighbours = this.sortNeighbours(neighbours,this.goal);
         for( let i = 0 ; i < neighbours.length ; i ++)
         {
-            if(this.shortcutMode||this.map.isPath(Helper.translatePosToMapPos(neighbours[i])))
+            if(this.shortcutMode||this.map.isWall(Helper.translatePosToMapPos(neighbours[i]))==false)
             {
                 this.proposedPos=neighbours[i];
                 break;
@@ -274,67 +281,83 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     move()
     {
-        if(this.proposedPos)
+        //if we entered rubble this.skipMovement would be true
+        if(this.skipMovement==false)
         {
-            //if the proposed position is not outside the map
-            if(this.map.inBounds(Helper.translatePosToMapPos(this.proposedPos)))
+            if(this.proposedPos)
             {
-                //if the proposed position does not already have a player on it or a vehicle
-                if(this.map.getPlayerIndex(Helper.translatePosToMapPos(this.proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(this.proposedPos))==-1))
+                //if the proposed position is not outside the map
+                if(this.map.inBounds(Helper.translatePosToMapPos(this.proposedPos)))
                 {
-                    //if the proposed position is a path - and not a wall or rubble, or this.shortcutMode is active
-                    if(this.map.isPath(Helper.translatePosToMapPos(this.proposedPos))||this.shortcutMode)
-                    {             
-                        //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
-                        let dir = this.proposedDirection();
-                        //if the proposed position does not already have a creature on it
-                        if(this.map.getCreatureIndex(Helper.translatePosToMapPos(this.proposedPos))==-1)
-                        {
-                            //even if the proposed position has no creature on it we should still...
-                            ///...check if the proposed position is contested, 
-                            //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
-                            if(this.map.isContestedExcluding(Helper.translatePosToMapPos(this.proposedPos),dir))
-                            {
-                                //do not move
-                            }
-                            else
-                            {
-                                this.moveCreature(this.proposedPos);
-                            }
-                        }
-                        //if the proposed position does already have a creature on it,
-                        else
-                        {
-                            // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
-                            if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
-                            {
-                                this.swapCreatureWith(this.proposedPos);
-                            }
-                            // if not already contested, then mark it as contested by the direction we wanted to move in
-                            else
-                            {
-                                this.map.setContested(Helper.translatePosToMapPos(this.proposedPos),dir);
-                            }
-                        }
-                    }
-                    //if the proposed position is a wall  set the memory to record that wall
-                    else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
+                    //if the proposed position does not already have a player on it or a vehicle
+                    if(this.map.getPlayerIndex(Helper.translatePosToMapPos(this.proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(this.proposedPos))==-1))
                     {
-                        this.updateMemoryWall(this.proposedPos);
+                        //if the proposed position is a path - and not a wall or rubble, or this.shortcutMode is active
+                        //updating this so that creatures can walk on rubble an path
+                        if(this.map.isWall(Helper.translatePosToMapPos(this.proposedPos))==false||this.shortcutMode)
+                        {             
+                            //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
+                            let dir = this.proposedDirection();
+                            //if the proposed position does not already have a creature on it
+                            if(this.map.getCreatureIndex(Helper.translatePosToMapPos(this.proposedPos))==-1)
+                            {
+                                //even if the proposed position has no creature on it we should still...
+                                ///...check if the proposed position is contested, 
+                                //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
+                                if(this.map.isContestedExcluding(Helper.translatePosToMapPos(this.proposedPos),dir))
+                                {
+                                    //do not move
+                                }
+                                else
+                                {
+                                    this.moveCreature(this.proposedPos);
+                                }
+                            }
+                            //if the proposed position does already have a creature on it,
+                            else
+                            {
+                                // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
+                                if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
+                                {
+                                    this.swapCreatureWith(this.proposedPos);
+                                }
+                                // if not already contested, then mark it as contested by the direction we wanted to move in
+                                else
+                                {
+                                    this.map.setContested(Helper.translatePosToMapPos(this.proposedPos),dir);
+                                }
+                            }
+                        }
+                        //if the proposed position is a wall  set the memory to record that wall
+                        else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
+                        {
+                            this.updateMemoryWall(this.proposedPos);
+                        }
                     }
                 }
+                //if proposed position is not in bounds, set the memory to record that wall 
+                else 
+                {
+                    this.updateMemoryWall(this.proposedPos);
+                }
             }
-            //if proposed position is not in bounds, set the memory to record that wall 
-            else 
-            {
-                this.updateMemoryWall(this.proposedPos);
-            }
+        }
+        else
+        {        
+            this.skipMovement=false;
         }
     }
     kill()
     {
+        this.x=undefined;
+        this.y=undefined;
         //if the creature is destroyed we must clear it's contested data or else creatures could end up teleporting
         this.map.clearContested({x:this.x,y:this.y});
+        //get rid of the tunnel
+        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
+        {
+            this.potentialTunnelArray[i].kill();
+        }
     }
     proposedDirection()
     {
@@ -409,15 +432,49 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         if(this.cancelMove==false)
         {    
+            //update the new position of the creature in the map
+            this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+            //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
+            if(this.map.isWall(Helper.translatePosToMapPos(v))==true)
+            {
+                //...slow down the movement by skipping the next movement
+                this.skipMovement=true;
+                let terrain = this.map.getTerrain(Helper.translatePosToMapPos(v));
+                //this is where we actually dig the terrain 
+                this.map.setTerrain(Helper.translatePosToMapPos(v),terrain-1);
+                //we add a trailer to the current position - note that we have not actually updated our position yet
+                this.addTrailer();
+            }           
+            else
+            {  
+                //if we added a trailer we don't want to move the trailers
+                this.moveTrailers();
+            }
+            if(this.map.isRubble(Helper.translatePosToMapPos(v))==true)
+            {
+                //...slow down the movement by skipping the next movement
+                this.skipMovement=true;
+            }
             this.x=v.x;
             this.y=v.y;
             Helper.centreText(this);
-            //update the new position of the creature in the map
-            this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
         }
         this.map.clearContested(Helper.translatePosToMapPos(v));
-        //TODO delete this, this is just for testing
-        this.map.setTerrain(Helper.translatePosToMapPos(v),0);
+    }
+    moveTrailers()
+    {
+        for(let i = this.trailerArray.length-1 ; i >0; i --)
+        {
+            this.trailerArray[i].x=this.trailerArray[i-1].x;
+            this.trailerArray[i].y=this.trailerArray[i-1].y;
+            console.log('MOVEtrailer ' + i +' x: '+this.trailerArray[i].x+' y: '+this.trailerArray[i].y);            
+        }
+        if(this.trailerArray.length>0)
+        {
+            this.trailerArray[0].x=this.x;
+            this.trailerArray[0].y=this.y;
+            console.log('MOVEtrailer ' + 0 +' x: '+this.trailerArray[0].x+' y: '+this.trailerArray[0].y);  
+        }
     }
     //for creatures which use the memory to record the 'tail' or the prev position etc
     updateMemory(v)
@@ -576,6 +633,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.potentialTunnelArray[i].kill();
             }
         } 
+    }
+    addTrailer()
+    {
+        this.trailerArray.splice(0,0,new Trailer(this.scene,this.x,this.y,this.trailerTexture));
+        console.log('ADD trailer ' + 0 +' x: '+this.x+' y: '+this.y);  
+    }
+    killTrailer()
+    {
+        //remove the last item from the trailerArray, and run that item's kill method 
+        this.trailerArray.pop().kill();
     }
     updateMemoryWall(v)
     {

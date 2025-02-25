@@ -258,6 +258,15 @@ export default class MapData
         }
         return this.tiles[this.getIndexFromCoords(v)].terrain==pathTerrain;
     }
+    getTerrain(v)
+    {
+        //path is exactly 0
+        if(this.tiles[this.getIndexFromCoords(v)]==undefined)
+        {
+            return false;
+        }
+        return this.tiles[this.getIndexFromCoords(v)].terrain;
+    }
     inBounds(v)
     {
         return (v.x>=0&&v.x<mapWidth  && v.y>=0&&v.y<mapHeight);
