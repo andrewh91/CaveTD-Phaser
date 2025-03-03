@@ -432,6 +432,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         if(this.cancelMove==false)
         {    
+
+            //if we have moved such that the trailer is on a path, then drop 1 rubble if possible
+            this.attemptDumpTrailer();
             //update the new position of the creature in the map
             this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
             //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
@@ -642,7 +645,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
     killTrailer()
     {
         //remove the last item from the trailerArray, and run that item's kill method 
-        this.trailerArray.pop().kill();
+        this.trailerArray.pop().kill();   
+    }
+    attemptDumpTrailer()
+    {
+        if(this.trailerArray.length>0)
+        {
+            if(this.map.isPath(Helper.translatePosToMapPos({x:this.trailerArray[0].x,y:this.trailerArray[0].y}))==true)
+            {                    
+                this.killTrailer();
+            }
+        }
     }
     updateMemoryWall(v)
     {
