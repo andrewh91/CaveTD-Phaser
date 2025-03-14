@@ -368,3 +368,94 @@ i've created trailer class, it can call a method of the scene class which will d
 the trailer is scaling weird, it's like anti aliased or something, you can change the main scene config to use pixelArt but that makes the text look worse, but i could just try and get a different font 
 
 ok so now my creature can walk on rubble, can dig walls, and carry them in a series of trailers behind it. the trailers will drop the rubble when killed which will turn path to rubble or turn rubble to wall. also the creature can choose to drop the rubble at its location, through testing this i've noticed that the kill method of the creature needs updating 
+
+20250303
+this creature should dump rubble as soon as it can, done that. 
+
+20250304
+I have one wallrunner method that will explore, it won't get stuck on islands because it can dig, but if i wanted to make a creature that wall runs but can't dig i could use this;
+record the position that it first encounters a wall
+then record the distance to the goal, if this distance is shorter than the previous recorded distance, then overwrite that
+if we revisit the wall entry point, then set a flag saying we can break from the wall, 
+now while the break from wall flag is true, if we revist a position that is equal or less than the shortest point to goal then break from the wall and beeline to the goal 
+
+I have some ideas for how creatures should behave. Creatures should try to gather resources. they need to locate them, find an efficient route to them, collect them and defend the route.
+Locator, this creature should travel some distance from the nest, then pause to sort of sniff out resources, this will reveal all resources in a given radius to the creature, but not the terrain. then i should send a wall runner directly to it, i don't think i should use the digger one, just a normal wall runner which will either find a route to the resource or could record the closest point to the resource, perhaps then a different creature could dig a straight shot to it. then one the first resource has been gathered, draw a path back to the base, other creatures will then build up the wall around this path, and post guards along its length
+
+TODO 
+update the kill method of the creature 
+
+20250305
+I need to think about how i want the creatures to act. 
+creatures start at a base. 
+the base produces creatures, but requires resources.
+it might create different creatures depending on various factors. 
+it can send out creatures that explore for resources. 
+creatures will explore until they find a resource then set their goal as the base to deliver the resource. 
+terrain can be path, rubble or wall. walls can have gemstones. 
+the resource needed for a creature should be at least one rubble, and one gemstone. this means larger creatures require more rubble but just one gem.
+the creatures should have a finite lifespan, a set amount of time before they die, this is important, the base can create more creatures, but i don't want a situation where there is a potentially infinite number of creatures, and i don't want the base to magically know when a creature dies so that it can make a new one. so the idea is the base keeps track of when it last saw each creature, if it's been too long since it saw it, it must be dead, if it was killed by the player then the base still waits until it would have died of old age. if the creature revisits the base, then it's life is extended. also when the creatures die they drop their gem, if that is returned to the base, then the base knows the creature died. perhaps when a creature is born, it is assigned a cardinal direction, this way when it dies we can know which direction it initially went and therfore where to send the back up units to investigate. 
+also the base can only create new creatures if it has enough gems and rubble, so it needs to keep a store of these, these should be guarded too
+creatures will pathfind in different ways and will have different abilities. 
+if a creature returns to base with low health - it has been attacked, so the base should create some stronger creatures which follow it back to where it was attacked and look for the threat
+
+exploring:
+the base can send various types of creatures which pathfind differently. send in each cardinal direction 
+wallrunners, which i've largely already coded, with and without digging ability 
+signposters, these guys are good for exploring corridor mazes with lots of branching paths, they will leave signposts on the terrain which can be read by others, so when they reach a fork they can say, i went left, so the next one that reaches the fork can go right. if the creature doubles back to the fork it can say it was a dead end. 
+I also want to make one that pauses to scan a radius of its surroundings, then use the knowledge to navigate
+
+if a signposter goes down a narrow corridor which is a dead end it will know that is a dead end, as it will reach the end. but if it goes down a narrow corridor that opens up into a large cavity, then it will not know that is a dead end. it will know that it reached the end of a corridor, maybe at that point it could become a wall runner, and explore the cavity, it should mark the point it exited the corridor and its timer at that time, so that if it returns to the start point of the cavity it can record how large the cavity is based on the difference between current time and that recorded time. we have only gone around the edge of this cavity so maybe now we should try to explore the interior of the cavity, perhaps a unit can be brought in that can methodically cover every tile, or a unit that can send out a pulse that slowly builds up a picture of the cavity, to see if there are any walls there. 
+
+pheremones, i could add a counter for each cardinal direction to each tile, everytime a creature travels that direction increase the counter by one. if we see lots of creatures travelling on a path, but none coming back the other way, maybe they should send stronger units to check it out, as they may be getting killed by enemies, or they may be starving to death, or they may just be circling round
+
+ok new idea. 
+a base. sends out creatures. 
+there are 8 directions to send creatures in, these creatures will be colour coded. 
+compass colour
+north   red
+ne      orange
+east    yellow
+se      cyan
+south   blue
+sw      dark blue
+west    purple
+nw      magenta
+
+the creatures will be signposters, if they hit something, they change direction to get around that object and signpost that, if another creature, of the same compass colour hits the same object, it will check the sign, and choose the other option to navigate around the object. 
+the creatures will carry a resource back to base if it finds one. the creatures have a lifespan, so around the mid way point they will head back to base to renew their lifspan. if a creature encounters a dead end corridor it will mark the start of that corridor as a dead end. if a creature encounters dead end signpost it will not travel that way. 
+if a creature returns to base early because all the avenues are dead ends, the base might create a new type of creature to reshape the map, this new creature will choose to travel down dead ends, changing that dead end sign to a tunnel sign, and it will dig at the end of the dead end, now regular creatures will see a tunnel sign and go down it, picking up any rubble and carrying it up the tunnel out of the way.
+there needs to be an alternative reason to create digging units, as regular creatures can be tricked into not realising a nonnarrow corridor is a dead end, maybe just if a creature reports to base that it used a deadend. i also want the compass coloured creatures to sort of be incentived to stay in their compass section  
+
+
+creatures are made out of gems and rubble. will drop both if they die. 
+
+20250310
+before i do the signposters, i want to do explorers. 
+explorers will be given an initial goal direction to explore similar to the signposters, one of 8 directions. the explorer will examine the 4 adjacent tiles in the map data and make an array of unexplored tiles, it will pick one of these tiles with a preference for one that is the goal direction. once it moves it sets that tile as explored using an incrementing number, so long as that tile was not already explroed.  
+if an explorer finds a resource it picks it up, now it should try and follow the explored tiles back again, it will examine the 4 adjacent tiles, and their explored number, it will pick the lowest explored number. it sets the location of the resource with a resource origin marker, now every tile it moves into it will mark with a resource marker pheremone. the creature should follow the same path back to the base as it took to the resource, if not similar but taking a shortcut if it ended up backtracking a bit. 
+if there are 2 explorers they might confuse each other a bit as they would not know who placed the explored number, but i don't think this would matter, if the creature is returning to base an finds a lower explored number it should take that path instead, so i think this might work quite well. if we are returning to base and there is no adjacent tile with a explored path number lower than the one we are already on, then maybe the map was edited, we should instead go to an unexplored path- prioritising the goal direction (the base), or an explored path with the second to highest number -if so set a marker to say we are backtracking - this to prevent us just going back and forth in the deadend. when this marker is active we should be prioritising an unexplored path, then a second highest explored path number 
+
+20250312
+making the explorer creature, 
+i need to make an explored map, this will either be 0 for unexplored, or an explored number, additionally it can have a resource marker bool
+explored numbers will increase with each update the creature is alive, so as a general rule low numbers will be near the base, high numbers move away from the base
+pathfinding pseudo code is ;
+when we pick up a resource, delete the memory of our tail 
+
+if we are carrying a resource, 
+return a list of any adjacent tiles that have a resource marker, set the proposed move to the one that has the lowest explore number so long as it is not our 'tail', if it is our tail set the proposed move as the next lowest resource marker. if we have a proposed move, then break out of this. 
+if we still have no proposed move then return list of adjacent tiles that are explored, set proposed move to the one with the lowest explore number , if so break , otherwise return a list of the adjacent tiles that are unexplored, select the one in the opposite direction to the explorer direction. 
+
+if we are not carrying a resource.
+return a list of adjacent tiles that have a resource marker, set the proposed move to the one that has the highest explore number, if we do that then break. 
+if not then return a list of adjacent tiles that are unexplored, set the porposed move to one , giving priority to the explore direction, if we find one then break, if not... 
+return a list of explored tiles, choose the one that has the highest explore number
+
+20250314
+i've set up the tiles class with resource marker and exploredNumber, 
+now i want to create a method in creature class to return the 4 adjacent tiles, i need the method to return just resourceMarker tiles, just unexplored tiles, and just explored tiles, and i need them to be returned with our explorerDirection as the first tile in the array 
+i've made quite a complcated method of setting up the direction and getting the adjacent tiles, but they should be returned in a useful order, returned in order of general direction to the explorerDirection. 
+
+that i have these neighbours, i would need to test for walls etc 
+

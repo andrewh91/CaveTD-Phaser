@@ -55,6 +55,23 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.wallRunnerDirection = RIGHT;
         //if walking over rubble we will walk slower, this is achieved by using this flag, if this is set to true we skip one movement and one pathfinding update
         this.skipMovement=false;
+
+        //this will generate a vector like, 0,1 or 1,-1, or -1,0 etc  but will avoid 0,0
+        let tempx, tempy;
+        do 
+        {
+            tempx = Math.floor(Math.random() * 3 - 1); // Generates -1, 0, or 1
+            tempy = Math.floor(Math.random() * 3 - 1);
+        } 
+        while (tempx === 0 && tempy === 0); // Re-roll if both are 0
+
+        this.explorerDirectionOriginal={x:tempx,y:tempy};
+        this.explorerDirection={x:tempx,y:tempy};
+        // i want the explorerDirectionOriginal to be one of 8 possible values, so it could be {1,1}, but i don't want the creatures to actually move diagonally, so i'm going to use these bools to turn either the x or y to a 0 then toggle the bool, this way the ones that want to go diagonally north east will just switch their preference between north and east every update
+        this.explorerDirectionBoolToggle=false;
+        //this will be true if the random direction ended up being diagonal
+        this.explorerDirectionDiagonal=tempx*tempy !==0;
+
     }
     updatePathfinding(delta)
     {
@@ -72,7 +89,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         //if the creature finds a tunnel to dig it will cancel it's current move, this happens in the move method - just before it moves, when we get to the pathfinding again - like here - we can reset this to false. 
         this.cancelMove=false;
-        let proposedPathfindingPosition = this.wallRunnerDigger5();
+        let proposedPathfindingPosition = this.explorer7();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -215,6 +232,44 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
         }
         return this.proposedPos;
+    }
+    explorer7()
+    {
+        this.proposedPos=undefined;
+        //if the creature is going diagonal
+        if(this.explorerDirectionDiagonal)
+        {
+            //make either the x or y value a zero, depending on if the toggle bool is true or false, then toggle the toggle bool
+            this.explorerDirection = this.explorerDirectionBoolToggle==true?{x:0,y:this.explorerDirectionOriginal.y}:{x:this.explorerDirectionOriginal.x,y:0};
+            this.explorerDirectionAlt = this.explorerDirectionBoolToggle==true?{x:this.explorerDirectionOriginal.x,y:0}:{x:0,y:this.explorerDirectionOriginal.y};
+            this.explorerDirectionBoolToggle= !this.explorerDirectionBoolToggle;
+        }
+        //this is the adjacent 4 tiles, the first tile should be in the direction of the explorerDirection, then the one clockwise, then anti clockwise, then opposite the explorerDirection
+        let neighbours = this.getAdjacent();
+
+    }
+    //this method is used in the explorer7 pathfinding, we don't just want to get the adjacent, we want to return them in order of the creature's preference
+    getAdjacent()
+    {
+        let neighbourArray=[];
+        let currentPos={x:this.x,y:this.y};
+        //this is to prevent weird behaviour when the original direction was diagonal, we vary the diagonal directions, so that if the explorerDirection is north east, we swap between preferring north then east each update, but if you went clockwise from east you would be giving preference to south over north, so use the alt direction like this 
+        if(this.explorerDirectionAlt)
+        {
+            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirection));
+            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirectionAlt));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirectionAlt)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
+        }
+        else
+        {
+            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirection));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getClockwiseDirection(this.explorerDirection)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getAntiClockwiseDirection(this.explorerDirection)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
+        }
+
+        this.map.isWall(Helper.translatePosToMapPos(this.proposedPos))
     }
     //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
     proposePathfinding()

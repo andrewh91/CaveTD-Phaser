@@ -41,6 +41,60 @@ export default class Helper
             return false
         }
     }
+    static vectorPlus(v1,v2)
+    {
+        return {x:v1.x+v2.x,y:v1.y+v2.y};
+    }
+    //if you pass in a compass point vector like {0,1} or {-1,0} etc it will give you the next compass point vector going clockwise
+    static getClockwiseDirection(v1)
+    {
+        let x = v1.x;
+        let y = v1.y;
+        //if the x value is 0
+        if(x==0)
+        {
+            //then the x value become the inverse of the y value, so if y s 1 x wil now be -1
+            x=-y;
+            //then y become 0
+            y=0;
+        }
+        //else y value must be 0
+        else 
+        {
+            //then the y value become the x value, so if x is 1 y wil now be 1
+            y=x;
+            //then x become 0
+            x=0;
+        }
+        return {x:x,y:y};
+    }
+    
+    static getAntiClockwiseDirection(v1)
+    {
+        let x = v1.x;
+        let y = v1.y;
+        //if the x value is 0
+        if(x==0)
+        {
+            //then the x value become the y value, so if y s 1 x wil now be 1
+            x=y;
+            //then y become 0
+            y=0;
+        }
+        //else y value must be 0
+        else 
+        {
+            //then the y value become the inverse of the x value, so if x is 1 y wil now be -1
+            y=-x;
+            //then x become 0
+            x=0;
+        }
+        return {x:x,y:y};
+    }
+    static getOppositeDirection(v1)
+    {
+        return {x:v1.x*-1,y:v1.y*-1};
+    }
     static incrementColour(i,d)
     {
         //this should give d^3 variety of numbers - or d^3-1 if you don't want black
