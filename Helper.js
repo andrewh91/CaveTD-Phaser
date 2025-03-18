@@ -106,4 +106,13 @@ export default class Helper
         i=i+1;
         return Math.floor((Math.floor((i/(d*d)))%d)*(256*256*256)/d +  (Math.floor((i/d)%d))*(256*256)/d +  (i%d)*(256)/d);
     }
+    static reverseArray(a)
+    {
+        let b=[];
+        for(let i = 0; i<a.length ; i++)
+        {
+            b.splice(0,0,a[i]);
+        }
+        return b;
+    }
 }

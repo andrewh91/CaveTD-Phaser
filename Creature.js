@@ -31,9 +31,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //the memory can be various things, but related to pathfinding
         this.memory=[];
         //rememberTail will be used for tail3 pathfinding
-        this.rememberTail=false;
+        this.rememberTail=true;
         //rememberWall will be used for wallRunner4 pathfinding, it will overwrite rememberTail
-        this.rememberWall=true;
+        this.rememberWall=false;
         //use this to store the previous position, we will update this in the move method and the swapCreatureWith method 
         this.memoryDirection=STATIONARY;
         this.shortcutMode=false;
@@ -71,6 +71,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.explorerDirectionBoolToggle=false;
         //this will be true if the random direction ended up being diagonal
         this.explorerDirectionDiagonal=tempx*tempy !==0;
+        //the explorer pathfinding will use this 
+        this.carryingResource=false;
 
     }
     updatePathfinding(delta)
@@ -89,7 +91,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         //if the creature finds a tunnel to dig it will cancel it's current move, this happens in the move method - just before it moves, when we get to the pathfinding again - like here - we can reset this to false. 
         this.cancelMove=false;
-        let proposedPathfindingPosition = this.explorer7();
+        let proposedPathfindingPosition = this.wallRunnerDigger5();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -198,8 +200,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         else if(wall)
         {
             //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
-            //i'm making this creature be able to walk on path and rubble, so instead of checking for a path, check the tile is not a wall
-            if(this.map.isWall(Helper.translatePosToMapPos(wall))==false)
+            //i'm making this creature be able to walk on path and rubble
+            if(this.map.isPath(Helper.translatePosToMapPos(wall))==true||this.map.isRubble(Helper.translatePosToMapPos(wall))==true)
             {
                 this.proposedPos=wall;
                 return this.proposedPos;
@@ -207,7 +209,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             else
             {
                 this.encounteredWall=true;
-                //otherwise if the wall is a wall, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
+                //otherwise if the wall is a wall -or the imapassable edge, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
                 this.proposedPos = this.rightAnglePosition(wall,{x:this.x,y:this.y},this.wallRunnerDirection);
                 return this.proposedPos;
             }
@@ -225,7 +227,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         neighbours = this.sortNeighbours(neighbours,this.goal);
         for( let i = 0 ; i < neighbours.length ; i ++)
         {
-            if(this.shortcutMode||this.map.isWall(Helper.translatePosToMapPos(neighbours[i]))==false)
+            if(this.shortcutMode||this.map.isPath(Helper.translatePosToMapPos(neighbours[i]))==true)
             {
                 this.proposedPos=neighbours[i];
                 break;
@@ -246,8 +248,62 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         //this is the adjacent 4 tiles, the first tile should be in the direction of the explorerDirection, then the one clockwise, then anti clockwise, then opposite the explorerDirection
         let neighbours = this.getAdjacent();
+        //if the creature is carrying a resource...
+        if(this.carryingResource)
+        {
+            //the neighbours are sorted by the exploreDirection, but if i has a resource i want to go back to the base, so reverse this sorted order
+            let neighboursReversed = Helper.reverseArray(neighbours);
+            //get a list of the neighbours with a resource marker 
+            let resourceNeighbours=this.refineAdjacent(neighboursReversed,true);
+            if(resourceNeighbours.length>0)
+            {
+                //of those neighbours that have resource markers, sort them by lowest explored number
+                let resourceNeighboursByLowestExploredNumber = sortAdjacentLowestExploredNumber(resourceNeighbours);
+                //now set our proposedPos as the neighbour with the lowestExploredNumber - that is not our tail and if that is not a wall
+                for(let i = 0 ; i < resourceNeighboursByLowestExploredNumber.length; i ++)
+                {
+                    if(Helper.vectorEquals(this.memory[0],resourceNeighboursByLowestExploredNumber[i]))
+                    {
+                        if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighboursByLowestExploredNumber[i]))==false)
+                        {
+                            this.proposedPos=resourceNeighboursByLowestExploredNumber[i];
+                            return this.proposedPos;
+                        }
+                    }
+                }
+            }
+            //if there are no neighbours with resource markers...
+            else
+            {
+                //set proposed move to the neighbour with lowest explored number   
+                let neighboursByLowestExploredNumber=sortAdjacentLowestExploredNumber(neighboursReversed);
+                for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
+                {
+                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    {
+                        this.proposedPos = neighboursByLowestExploredNumber[i];
+                        return this.proposedPos;
+                    }
+                }
+                //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored, so get one that is unexplored. 
+                for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
+                {
+                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    {
+                        this.proposedPos = neighboursByLowestExploredNumber[i];
+                        return this.proposedPos;
+                    }
+                }
+            }
+        }
+        //else if the creature is not carrying a resource
+        else
+        {
+
+        }
 
     }
+    
     //this method is used in the explorer7 pathfinding, we don't just want to get the adjacent, we want to return them in order of the creature's preference
     getAdjacent()
     {
@@ -268,8 +324,67 @@ export default class Creature extends Phaser.GameObjects.Sprite
             neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getAntiClockwiseDirection(this.explorerDirection)));
             neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
         }
-
-        this.map.isWall(Helper.translatePosToMapPos(this.proposedPos))
+        return neighbourArray;
+    }
+    //this should be used with the getAdjacent method's returned array, 
+    refineAdjacent(neighbours,hasResourceMarker)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that have a resource marker, so go through my adjacents and eliminate any that don't have a resource marker 
+        if(hasResourceMarker)
+        {
+            //do this in reverse order since i'm altering the array as i go through it
+            for(let i = arguments.length-1 ; i >-1 ; i -- )
+            {
+                if(this.map.getIndexFromCoords(a[i]).resourceMarker==false)
+                {
+                    //so we are removing the neighbours that do not have a resource marker
+                    a.splice(i,1);
+                }
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < neighbourArray.length; i ++ )
+        {
+            returnArray.push(this.map.getIndexFromCoords(neighbourArray[i]));
+        }
+        return returnArray;
+    }
+    sortAdjacentLowestExploredNumber(neighbours)
+    {
+        let min = mapWidth*mapHeight;
+        let returnArray=[];
+        neighboursLoop:
+        for(let i = 0 ; i < neighbours.length ; i ++)
+        {
+            let exploredNumber1=this.map.getIndexFromCoords(neighbourArray[i]).exploredNumber;
+            //sort the neighbours into a new array based on lowest exploredNumber
+            if(exploredNumber1==-1)
+            {
+                //got to next neighbour in neighboursLoop for loop
+                continue neighboursLoop;
+            }
+            else
+            {
+                neighboursReturnLoop:
+                for(let j = 0 ; j < returnArray.length ; j ++)
+                {
+                    let exploredNumber2 =this.map.getIndexFromCoords(neighbourArray[j]).exploredNumber;
+                    if(exploredNumber1<exploredNumber2 && exploredNumber2!=-1)
+                    {
+                        returnArray.splice(j,0,neighbours[i]);
+                        //if we add to the array then move to the next neighbour in the neighboursLoop
+                        continue neighboursLoop;
+                    }
+                }
+                //if we reach this stage we must not have added to the return array yet, so add it in now
+                returnArray.push(neighbours[i]);
+            }
+        }
+        return returnArray;
     }
     //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
     proposePathfinding()
@@ -347,44 +462,52 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     //if the proposed position does not already have a player on it or a vehicle
                     if(this.map.getPlayerIndex(Helper.translatePosToMapPos(this.proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(this.proposedPos))==-1))
                     {
-                        //if the proposed position is a path - and not a wall or rubble, or this.shortcutMode is active
-                        //updating this so that creatures can walk on rubble an path
-                        if(this.map.isWall(Helper.translatePosToMapPos(this.proposedPos))==false||this.shortcutMode)
-                        {             
-                            //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
-                            let dir = this.proposedDirection();
-                            //if the proposed position does not already have a creature on it
-                            if(this.map.getCreatureIndex(Helper.translatePosToMapPos(this.proposedPos))==-1)
-                            {
-                                //even if the proposed position has no creature on it we should still...
-                                ///...check if the proposed position is contested, 
-                                //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
-                                if(this.map.isContestedExcluding(Helper.translatePosToMapPos(this.proposedPos),dir))
+                        if(this.map.isEdge(Helper.translatePosToMapPos(this.proposedPos))==false)
+                        {
+                            //if the proposed position is a path - and not a wall or rubble, or this.shortcutMode is active
+                            //updating this so that creatures can walk on rubble an path
+                            if(this.map.isWall(Helper.translatePosToMapPos(this.proposedPos))==false||this.shortcutMode)
+                            {             
+                                //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
+                                let dir = this.proposedDirection();
+                                //if the proposed position does not already have a creature on it
+                                if(this.map.getCreatureIndex(Helper.translatePosToMapPos(this.proposedPos))==-1)
                                 {
-                                    //do not move
+                                    //even if the proposed position has no creature on it we should still...
+                                    ///...check if the proposed position is contested, 
+                                    //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
+                                    if(this.map.isContestedExcluding(Helper.translatePosToMapPos(this.proposedPos),dir))
+                                    {
+                                        //do not move
+                                    }
+                                    else
+                                    {
+                                        this.moveCreature(this.proposedPos);
+                                    }
                                 }
+                                //if the proposed position does already have a creature on it,
                                 else
                                 {
-                                    this.moveCreature(this.proposedPos);
+                                    // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
+                                    if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
+                                    {
+                                        this.swapCreatureWith(this.proposedPos);
+                                    }
+                                    // if not already contested, then mark it as contested by the direction we wanted to move in
+                                    else
+                                    {
+                                        this.map.setContested(Helper.translatePosToMapPos(this.proposedPos),dir);
+                                    }
                                 }
                             }
-                            //if the proposed position does already have a creature on it,
-                            else
+                            //if the proposed position is a wall  set the memory to record that wall
+                            else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
                             {
-                                // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
-                                if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
-                                {
-                                    this.swapCreatureWith(this.proposedPos);
-                                }
-                                // if not already contested, then mark it as contested by the direction we wanted to move in
-                                else
-                                {
-                                    this.map.setContested(Helper.translatePosToMapPos(this.proposedPos),dir);
-                                }
+                                this.updateMemoryWall(this.proposedPos);
                             }
                         }
                         //if the proposed position is a wall  set the memory to record that wall
-                        else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
+                        else if (this.map.isEdge(Helper.translatePosToMapPos(this.proposedPos)))
                         {
                             this.updateMemoryWall(this.proposedPos);
                         }

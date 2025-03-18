@@ -457,5 +457,9 @@ i've set up the tiles class with resource marker and exploredNumber,
 now i want to create a method in creature class to return the 4 adjacent tiles, i need the method to return just resourceMarker tiles, just unexplored tiles, and just explored tiles, and i need them to be returned with our explorerDirection as the first tile in the array 
 i've made quite a complcated method of setting up the direction and getting the adjacent tiles, but they should be returned in a useful order, returned in order of general direction to the explorerDirection. 
 
-that i have these neighbours, i would need to test for walls etc 
+now that i have these neighbours, i would need to test for walls etc 
 
+20250318
+made the edge of the map all impassable terrain
+
+i've done part of the pathfinding for the explorer creature, need to do the logic for when it does not have a resource. i also need to do the move method, as it will need to update the exploredNumber of the tile etc 

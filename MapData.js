@@ -9,7 +9,7 @@ export default class MapData
         this.terrainColours[pathTerrain]=0xcccccc;//light grey
         this.terrainColours[rubbleTerrain]=0x777777;//medium grey
         this.terrainColours[wallTerrain]=0x333333;//dark grey
-        this.terrainColours[wallTerrain+1]=0x000000;//black
+        this.terrainColours[impassableTerrain]=0x000000;//black
     }
     getIndexFromCoords(v)
     {
@@ -40,6 +40,31 @@ export default class MapData
         {
             this.tiles[i].terrain=parseInt(a[i]);
             this.tiles[i].setTint(this.terrainColours[parseInt(a[i])]);
+        }
+        //ensure that the edges are all impenetrable walls 
+        //top edge
+        for(let i = 0 ; i < mapWidth ; i ++)
+        {
+            this.tiles[i].terrain=impassableTerrain;
+            this.tiles[i].setTint(this.terrainColours[impassableTerrain]);
+        }
+        //bottom edge
+        for(let i = 0 ; i < mapWidth ; i ++)
+        {
+            this.tiles[mapWidth*(mapHeight-1)+i].terrain=impassableTerrain;
+            this.tiles[mapWidth*(mapHeight-1)+i].setTint(this.terrainColours[impassableTerrain]);
+        }
+        //left edge
+        for(let i = 0 ; i < mapHeight ; i ++)
+        {
+            this.tiles[i*mapWidth].terrain=impassableTerrain;
+            this.tiles[i*mapWidth].setTint(this.terrainColours[impassableTerrain]);
+        }
+        //right edge
+        for(let i = 0 ; i < mapHeight ; i ++)
+        {
+            this.tiles[i*mapWidth+(mapWidth-1)].terrain=impassableTerrain;
+            this.tiles[i*mapWidth+(mapWidth-1)].setTint(this.terrainColours[impassableTerrain]);
         }
     }
     //a wall is value 2 or higher, drilling a wall means reducing that value, if it reduces to 1 then it will become rubble
@@ -238,7 +263,17 @@ export default class MapData
         {
             return false;
         }
-        return this.tiles[this.getIndexFromCoords(v)].terrain>=wallTerrain;
+        return this.tiles[this.getIndexFromCoords(v)].terrain==wallTerrain;
+    }
+    //if the v is at the edge of the screen - note that i force map data to have impassableTerrain at the edges in the setTerrainByIndex method
+    isEdge(v)
+    {
+        //path is 0, rubble is 1, a wall is 2 , impassable wall is 3
+        if(this.tiles[this.getIndexFromCoords(v)]==undefined)
+        {
+            return false;
+        }
+        return this.tiles[this.getIndexFromCoords(v)].terrain==impassableTerrain;
     }
     isRubble(v)
     {
