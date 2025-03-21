@@ -463,3 +463,26 @@ now that i have these neighbours, i would need to test for walls etc
 made the edge of the map all impassable terrain
 
 i've done part of the pathfinding for the explorer creature, need to do the logic for when it does not have a resource. i also need to do the move method, as it will need to update the exploredNumber of the tile etc 
+
+20250321
+completed the logic for the the explorer creature when it does not have a resource, now i need to update the tiles as it moves
+
+i should make a resource, once i add the resources to the map i should flag the tile.resourceMarker to be true, that way if an explorer is adjacent to it, it will move towards it, i also need to set the resource flag of the creature, and delete it's tail so that i return to base with the resource and lays resource markers as it goes
+
+creating a resource class, it needs an index, the index will be stored on the mapData, when it is created i should mark it as a resource flag
+when the creature reaches a resource, it should change carrying resource flag to true, reduce the resource health by 1, resource will disappear if reduced to 0, now that the creature is carrying a resource, it sets a resource marker everytime it moves, 
+
+i also need to make a base which is where the creature should take the resource, so that will reset the carrying resource flag to false, it will reset the creature's exploredNumber
+
+
+
+if this creature reaches a dead end it will be stuck, it will have a preference for high exploredNumber tiles, and so will head back to the dead end once it leaves it. so maybe i should detect a dead end, and then decide to return to base, so prefer low explored numbers, then start again, it will look for resource markers first, then unexplored tiles, so it should take a different route. 
+
+i think we could detect a dead end if we go to an explored tile that is our tail, in which case set the dead end flag and start looking for the lower explored number tiles, or unexplored tiles
+
+TODO i need to either manage the resource array similar to how i manage the creature array, so that if i kill one it won't mess with how i use the index to access the array, or maybe i can just not kill them, and if i create a new resource, check if there is already a resource on that tile 
+
+TODO if we reach the base in the moveCreature method we should set 
+this.exploredDeadEnd=false; 
+
+TODO if we follow a resource marker but then the resource is depleted i need a way to remove that marker, but tht might have the side effect of deleting the marker for another resource that was using path of the same path

@@ -1,7 +1,9 @@
 var players=[];
 var vehicles=[];
 var creatures=[];
+var resources=[];
 var creatureIndex;
+var resourceIndex;
 var priorityArray;
 var vehicleIndex;
 var tiles=[];
@@ -35,6 +37,7 @@ import Tile from'./Tile.js';
 import MapData from'./MapData.js';
 import SavedMaps from './SavedMaps.js';
 import Creature from './Creature.js';
+import Resource from './Resource.js';
 import PriorityArray from './PriorityArray.js';
 class Game extends Phaser.Scene
 {
@@ -63,6 +66,7 @@ class Game extends Phaser.Scene
         //one player by default
         this.addPlayer(mapOffSetX+gridStep,mapOffSetY);
         priorityArray=new PriorityArray();
+        this.setUpResources();
         //this.setUpCreatures();
         this.setUpCreatures1();
 
@@ -316,6 +320,18 @@ class Game extends Phaser.Scene
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
         priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
     }
+    addResource(x,y)
+    {
+        resourceIndex++;
+        let r = new Resource(this, x,y, 'dot',resourceIndex);
+        resources.push(r);
+        mapData.setResourceIndex(Helper.translatePosToMapPos({x:r.x,y:r.y}),r.index);
+    }
+    setUpResources()
+    {
+        resourceIndex=-1;
+        this.addResource(mapOffSetX+gridStep*10,mapOffSetY+gridStep*(mapHeight-7));
+    }
     setUpCreatures1()
     {
         creatureIndex=-1;
@@ -323,7 +339,7 @@ class Game extends Phaser.Scene
         this.addCreature(mapOffSetX+gridStep*(mapWidth-2),mapOffSetY+gridStep*(mapHeight-2));
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
 */
-        this.addCreature(mapOffSetX+gridStep*10,mapOffSetY+gridStep*(mapHeight-2));
+        this.addCreature(mapOffSetX+gridStep*12,mapOffSetY+gridStep*(mapHeight-2));
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
 
         priorityArray.loopThroughAll();
@@ -400,6 +416,15 @@ class Game extends Phaser.Scene
     updateCreaturePos(id,v)
     {
         creatures[id].moveCreature(v);        
+    }
+    //this is just used as the resource doees not have access to the map 
+    addResourceMarkerToMap(v,b)
+    {
+        mapData.setResourceMarker(Helper.translatePosToMapPos(v),b);
+    }
+    collectResource(index)
+    {
+        resources[index].collect();
     }
     //sometimes trailers containing rubble will be destroyed - when the creature dies- and the rubble should be added to the map at the trailer position 
     addTrailerRubble(v)

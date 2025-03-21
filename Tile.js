@@ -15,11 +15,12 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     this.contestedSouth=false;
     this.contestedEast=false;
     this.contestedWest=false;
-    //these are used by thte explorer pathfinding
+    //these are used by the explorer pathfinding
     this.exploredNumber=-1;
     this.resourceMarker=false;
     //gridstep is a global variable
     this.setScale(gridStep);
     this.setTint(colour);
+    this.resourceIndex=-1;
     }
 }

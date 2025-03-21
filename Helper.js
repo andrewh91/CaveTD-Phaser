@@ -45,6 +45,10 @@ export default class Helper
     {
         return {x:v1.x+v2.x,y:v1.y+v2.y};
     }
+    static vectorMultiply(v1,v)
+    {
+        return {x:v1.x*v,y:v1.y*v};
+    }
     //if you pass in a compass point vector like {0,1} or {-1,0} etc it will give you the next compass point vector going clockwise
     static getClockwiseDirection(v1)
     {

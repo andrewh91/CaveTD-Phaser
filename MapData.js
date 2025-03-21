@@ -33,6 +33,14 @@ export default class MapData
             console.log('mapSetTerrain failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
         }
     }
+    setExploredNumber(v,n)
+    {
+        this.tiles[this.getIndexFromCoords(v)].exploredNumber = n;
+    }
+    getExploredNumber(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].exploredNumber;
+    }
     //when i build a map from a text file, i don't want to use the setTerrain method, as that requires a map coord, i just want to use the index
     setTerrainByIndex(a)
     {
@@ -119,6 +127,14 @@ export default class MapData
     getCreatureIndex(v)
     {
         return this.tiles[this.getIndexFromCoords(v)].creatureIndex;
+    }
+    getResourceIndex(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].resourceIndex;
+    }
+    getResourceMarker(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].resourceMarker;
     }
     //return false if contested by our direction, or no direction, returns true if not contested by our direction and is contested by another direction  
     isContestedExcluding(v,dir)
@@ -248,6 +264,14 @@ export default class MapData
     setContestedEast(v)
     {
         this.tiles[this.getIndexFromCoords(v)].contestedEast=true;
+    }
+    setResourceMarker(v,b)
+    {
+        this.tiles[this.getIndexFromCoords(v)].resourceMarker=b;
+    }
+    setResourceIndex(v,n)
+    {
+        this.tiles[this.getIndexFromCoords(v)].resourceIndex=n;
     }
     clearContested(v)
     {        

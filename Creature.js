@@ -73,6 +73,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.explorerDirectionDiagonal=tempx*tempy !==0;
         //the explorer pathfinding will use this 
         this.carryingResource=false;
+        //if the creature is an explorer this should be true
+        this.allowAlterExplorerNumber=true;
+        this.exploredNumber=0;
+        //if the explorer hits a dead end it should back track until it find unexplored tiles. 
+        this.exploredDeadEnd=false;
 
     }
     updatePathfinding(delta)
@@ -91,7 +96,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         //if the creature finds a tunnel to dig it will cancel it's current move, this happens in the move method - just before it moves, when we get to the pathfinding again - like here - we can reset this to false. 
         this.cancelMove=false;
-        let proposedPathfindingPosition = this.wallRunnerDigger5();
+        let proposedPathfindingPosition = this.explorer7();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -258,17 +263,28 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(resourceNeighbours.length>0)
             {
                 //of those neighbours that have resource markers, sort them by lowest explored number
-                let resourceNeighboursByLowestExploredNumber = sortAdjacentLowestExploredNumber(resourceNeighbours);
+                let resourceNeighboursByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(resourceNeighbours);
                 //now set our proposedPos as the neighbour with the lowestExploredNumber - that is not our tail and if that is not a wall
                 for(let i = 0 ; i < resourceNeighboursByLowestExploredNumber.length; i ++)
                 {
                     if(Helper.vectorEquals(this.memory[0],resourceNeighboursByLowestExploredNumber[i]))
                     {
-                        if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighboursByLowestExploredNumber[i]))==false)
+                        if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighboursByLowestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(resourceNeighboursByLowestExploredNumber[i]))==false)
                         {
                             this.proposedPos=resourceNeighboursByLowestExploredNumber[i];
+                            this.exploredDeadEnd=false;
                             return this.proposedPos;
                         }
+                    }
+                }
+                //if we have not returned, then maybe the resource neighbour, is unexplored
+                for(let i = 0 ; i < resourceNeighbours.length; i ++)
+                {
+                    if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighbours[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(resourceNeighbours[i]))==false)
+                    {
+                        this.proposedPos = resourceNeighbours[i];
+                        this.exploredDeadEnd=false;
+                        return this.proposedPos;
                     }
                 }
             }
@@ -276,21 +292,23 @@ export default class Creature extends Phaser.GameObjects.Sprite
             else
             {
                 //set proposed move to the neighbour with lowest explored number   
-                let neighboursByLowestExploredNumber=sortAdjacentLowestExploredNumber(neighboursReversed);
+                let neighboursByLowestExploredNumber=this.sortAdjacentLowestExploredNumber(neighboursReversed);
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
                     {
                         this.proposedPos = neighboursByLowestExploredNumber[i];
+                        this.exploredDeadEnd=false;
                         return this.proposedPos;
                     }
                 }
                 //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored, so get one that is unexplored. 
-                for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
+                for(let i = 0 ; i < neighboursReversed.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursReversed[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursReversed[i]))==false)
                     {
-                        this.proposedPos = neighboursByLowestExploredNumber[i];
+                        this.proposedPos = neighboursReversed[i];
+                        this.exploredDeadEnd=false;
                         return this.proposedPos;
                     }
                 }
@@ -299,9 +317,72 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //else if the creature is not carrying a resource
         else
         {
-
+            //list of neighbours that have resource marker
+            let resourceNeighbours=this.refineAdjacent(neighbours,true);
+            if(resourceNeighbours.length>0)
+            {
+                //of those neighbours that have resource markers, sort them by highest explored number
+                let resourceNeighboursByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(resourceNeighbours);
+                //find the neighbour with the highest explored number, that is not a wall and go there. 
+                for(let i = 0 ; i < resourceNeighboursByHighestExploredNumber.length; i ++)
+                {
+                    if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighboursByHighestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(resourceNeighboursByHighestExploredNumber[i]))==false)
+                    {
+                        this.proposedPos = resourceNeighboursByHighestExploredNumber[i];
+                        this.exploredDeadEnd=false;
+                        return this.proposedPos;
+                    }
+                }
+            }
+            //if we haven't returned yet there must not be a neighbour with a resource marker that we can go to, so try to go to an unexplored neighbour
+            for(let i = 0 ; i < neighbours.length; i ++)
+            {
+                if(this.map.isWall(Helper.translatePosToMapPos(neighbours[i]))==false && this.map.isEdge(Helper.translatePosToMapPos(neighbours[i]))==false && this.map.getExploredNumber(Helper.translatePosToMapPos(neighbours[i]))==-1)
+                {
+                    this.proposedPos = neighbours[i];
+                    this.exploredDeadEnd=false;
+                    return this.proposedPos;
+                }
+            }
+            //if we can't find a neighbour that is unexplored and is not a wall, see if there is a neighbour that is explored and not a wall
+            //if we have not found a dead end, look for the neighbour with the highest explored number, 
+            if(this.exploredDeadEnd==false)
+            {
+                let neighboursByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighbours);
+                for(let i = 0 ; i < neighboursByHighestExploredNumber.length; i ++)
+                {
+                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByHighestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursByHighestExploredNumber[i]))==false)
+                    {
+                        //move to the neighbour that has the highest explored number, unless it is our tail, in which case trigger the dead end flag.
+                        if(Helper.vectorEquals(neighboursByHighestExploredNumber[i],this.memory[0]))
+                        {
+                            this.exploredDeadEnd=true;
+                        }
+                        else
+                        {
+                            this.proposedPos = neighboursByHighestExploredNumber[i];
+                            return this.proposedPos;
+                        }
+                    }
+                }
+            }
+            //if the explorer has found a dead end we should still be lokoing for resource marker first, then unexplored, but failing that choose a low explored number neighbour, so that we backtrack until we find unexplored tiles
+            if(this.exploredDeadEnd==true)
+            {
+                let neighboursByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(neighbours);
+                for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
+                {
+                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    {
+                        this.proposedPos = neighboursByLowestExploredNumber[i];
+                        return this.proposedPos;
+                    }
+                }
+            }
         }
-
+        //if we still have not returned return current position, we must have been surrounded by walls or something
+        this.proposedPos = {x:this.x,y:this.y};
+        return this.proposedPos;
     }
     
     //this method is used in the explorer7 pathfinding, we don't just want to get the adjacent, we want to return them in order of the creature's preference
@@ -312,17 +393,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //this is to prevent weird behaviour when the original direction was diagonal, we vary the diagonal directions, so that if the explorerDirection is north east, we swap between preferring north then east each update, but if you went clockwise from east you would be giving preference to south over north, so use the alt direction like this 
         if(this.explorerDirectionAlt)
         {
-            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirection));
-            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirectionAlt));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirectionAlt)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(this.explorerDirection,gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(this.explorerDirectionAlt,gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getOppositeDirection(this.explorerDirectionAlt),gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getOppositeDirection(this.explorerDirection),gridStep)));
         }
         else
         {
-            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirection));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getClockwiseDirection(this.explorerDirection)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getAntiClockwiseDirection(this.explorerDirection)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(this.explorerDirection,gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getClockwiseDirection(this.explorerDirection),gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getAntiClockwiseDirection(this.explorerDirection),gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getOppositeDirection(this.explorerDirection),gridStep)));
         }
         return neighbourArray;
     }
@@ -336,9 +417,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(hasResourceMarker)
         {
             //do this in reverse order since i'm altering the array as i go through it
-            for(let i = arguments.length-1 ; i >-1 ; i -- )
+            for(let i = a.length-1 ; i >-1 ; i -- )
             {
-                if(this.map.getIndexFromCoords(a[i]).resourceMarker==false)
+                if(this.map.getResourceMarker(Helper.translatePosToMapPos(a[i]))==false)
                 {
                     //so we are removing the neighbours that do not have a resource marker
                     a.splice(i,1);
@@ -347,20 +428,55 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
         //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
-        for(let i = 0 ; i < neighbourArray.length; i ++ )
+        for(let i = 0 ; i < a.length; i ++ )
         {
-            returnArray.push(this.map.getIndexFromCoords(neighbourArray[i]));
+            returnArray.push(a[i]);
         }
         return returnArray;
     }
     sortAdjacentLowestExploredNumber(neighbours)
     {
-        let min = mapWidth*mapHeight;
         let returnArray=[];
         neighboursLoop:
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
-            let exploredNumber1=this.map.getIndexFromCoords(neighbourArray[i]).exploredNumber;
+            //store the explorednumber of the first neighbour
+            let exploredNumber1=this.map.getExploredNumber(Helper.translatePosToMapPos(neighbours[i]));
+            //if the neighbour does not actually have an explored number
+            if(exploredNumber1==-1)
+            {
+                //go to next neighbour in neighboursLoop for loop
+                continue neighboursLoop;
+            }
+            else
+            {
+                //else if it does have a exploredNumber
+                neighboursReturnLoop:
+                //compare it to any other explored numbers we've added to the return array so far
+                for(let j = 0 ; j < returnArray.length ; j ++)
+                {
+                    let exploredNumber2 =this.map.getExploredNumber(Helper.translatePosToMapPos(returnArray[j]));
+                    //if the neighbour explored number is less than any of the explored numbers in the returnarray, then add this neighbour before that, and continue the loop to the next neighbour
+                    if(exploredNumber1<exploredNumber2 && exploredNumber2!=-1)
+                    {
+                        returnArray.splice(j,0,neighbours[i]);
+                        //if we add to the array then move to the next neighbour in the neighboursLoop
+                        continue neighboursLoop;
+                    }
+                }
+                //if we reach this stage we must not have added to the return array yet, or our neighbour explored number is larger than those in the array , so add it in now at the end
+                returnArray.push(neighbours[i]);
+            }
+        }
+        return returnArray;
+    }
+    sortAdjacentHighestExploredNumber(neighbours)
+    {
+        let returnArray=[];
+        neighboursLoop:
+        for(let i = 0 ; i < neighbours.length ; i ++)
+        {
+            let exploredNumber1=this.map.getExploredNumber(Helper.translatePosToMapPos(neighbours[i]));
             //sort the neighbours into a new array based on lowest exploredNumber
             if(exploredNumber1==-1)
             {
@@ -372,8 +488,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 neighboursReturnLoop:
                 for(let j = 0 ; j < returnArray.length ; j ++)
                 {
-                    let exploredNumber2 =this.map.getIndexFromCoords(neighbourArray[j]).exploredNumber;
-                    if(exploredNumber1<exploredNumber2 && exploredNumber2!=-1)
+                    let exploredNumber2 =this.map.getExploredNumber(Helper.translatePosToMapPos(returnArray[j]));
+                    if(exploredNumber1>exploredNumber2 && exploredNumber2!=-1)
                     {
                         returnArray.splice(j,0,neighbours[i]);
                         //if we add to the array then move to the next neighbour in the neighboursLoop
@@ -530,7 +646,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.x=undefined;
         this.y=undefined;
         //if the creature is destroyed we must clear it's contested data or else creatures could end up teleporting
-        this.map.clearContested({x:this.x,y:this.y});
+        this.map.clearContested(Helper.translatePosToMapPos({x:this.x,y:this.y}));
         //get rid of the tunnel
         for(let i = 0; i < this.potentialTunnelArray.length; i ++)
         {
@@ -615,6 +731,35 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.attemptDumpTrailer();
             //update the new position of the creature in the map
             this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+            //set the explored number etc for the explorer creature
+            if(this.allowAlterExplorerNumber)
+            { 
+                if(this.carryingResource)
+                {
+                    this.scene.addResourceMarkerToMap(v,true);
+                }
+                this.exploredNumber++;
+                //we should only overwrite the explored number if this tile was unexplored, or if our explored number is lower than the current one
+                let mapExploredNumber = this.map.getResourceIndex(Helper.translatePosToMapPos(v));
+                if(this.exploredNumber<mapExploredNumber||mapExploredNumber==-1)
+                {
+                    this.map.setExploredNumber(Helper.translatePosToMapPos(v),this.exploredNumber);
+                }
+                //todo logic for picking up resource, marking the map as a resource marker, deleting tail 
+                //if there is a resource at this pos
+                let resourceIndex=this.map.getResourceIndex(Helper.translatePosToMapPos(v));
+                //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
+                this.memory[0]=v;
+                if(resourceIndex!=-1)
+                {
+                    //you can only pick up a resource if you are not already carrying one 
+                    if(this.carryingResource==false)
+                    {
+                        this.scene.collectResource(resourceIndex);
+                    }
+                    this.carryingResource=true;
+                }
+            }
             //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
             if(this.map.isWall(Helper.translatePosToMapPos(v))==true)
             {
