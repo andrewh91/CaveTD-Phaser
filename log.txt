@@ -486,3 +486,21 @@ TODO if we reach the base in the moveCreature method we should set
 this.exploredDeadEnd=false; 
 
 TODO if we follow a resource marker but then the resource is depleted i need a way to remove that marker, but tht might have the side effect of deleting the marker for another resource that was using path of the same path
+
+20250327
+i will create a base class, and a new map 
+
+vehicles and players will prevent creatures from moving, so in a way they will act as walls, the creature might attack in this instance, but maybe some creatures will not attack the player, so i will need to treat it as a wall
+
+the creatureBase will produce creatures periodically
+
+I want to draw the explorerNumber to each tile
+
+i need to test the explored movement, so instead of having random initial directions i will make it a fixed order 
+
+during testing i started to add creatures dynamically, sometimes they would not update, i think this is because i was adding them at the wrong time. during the update, the priority array gets cleared, so the contents of it could be lost if added at the wrong time. so i will edit the addCreature method to add them to a waiting room, then at the correct time in the update, the waiting room is emptied into the priority array
+
+also i should only create a creature if there is not already a creature on that space 
+
+ok so today i have created the creatureBase, 
+i've created a creature waiting room, so that creatures can be added dynamically, i've made the explored number print to each tile, which will help me test the explorer7 pathfinding, which i should do next. i should add some more resources to test all the logic

@@ -64,6 +64,23 @@ export default class Creature extends Phaser.GameObjects.Sprite
             tempy = Math.floor(Math.random() * 3 - 1);
         } 
         while (tempx === 0 && tempy === 0); // Re-roll if both are 0
+        this.dirArray=[];
+        //i don't want this to be random while testing
+        if(testing)
+        {
+            this.dirArray=[
+                {x: 0,y:-1},
+                {x: 1,y:-1},
+                {x: 1,y: 0},
+                {x: 1,y: 1},
+                {x: 0,y: 1},
+                {x:-1,y: 1},
+                {x:-1,y: 0},
+                {x:-1,y:-1}
+            ]
+            tempx = this.dirArray[this.index%8].x;
+            tempy = this.dirArray[this.index%8].y;
+        }
 
         this.explorerDirectionOriginal={x:tempx,y:tempy};
         this.explorerDirection={x:tempx,y:tempy};
@@ -78,7 +95,6 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.exploredNumber=0;
         //if the explorer hits a dead end it should back track until it find unexplored tiles. 
         this.exploredDeadEnd=false;
-
     }
     updatePathfinding(delta)
     {
@@ -748,14 +764,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //todo logic for picking up resource, marking the map as a resource marker, deleting tail 
                 //if there is a resource at this pos
                 let resourceIndex=this.map.getResourceIndex(Helper.translatePosToMapPos(v));
-                //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
-                this.memory[0]=v;
                 if(resourceIndex!=-1)
                 {
                     //you can only pick up a resource if you are not already carrying one 
                     if(this.carryingResource==false)
                     {
                         this.scene.collectResource(resourceIndex);
+                        //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
+                        this.memory[0]=v;
                     }
                     this.carryingResource=true;
                 }

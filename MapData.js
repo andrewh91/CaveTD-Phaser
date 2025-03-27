@@ -1,4 +1,4 @@
-
+import Helper from './Helper.js';
 export default class MapData
 {
     constructor()
@@ -36,6 +36,7 @@ export default class MapData
     setExploredNumber(v,n)
     {
         this.tiles[this.getIndexFromCoords(v)].exploredNumber = n;
+        this.tiles[this.getIndexFromCoords(v)].updateText('E'+('00'+n).slice(-2));
     }
     getExploredNumber(v)
     {
@@ -273,6 +274,10 @@ export default class MapData
     {
         this.tiles[this.getIndexFromCoords(v)].resourceIndex=n;
     }
+    setCreatureBaseIndex(v,c)
+    {
+        this.tiles[this.getIndexFromCoords(v)].creatureBaseIndex=c;
+    }
     clearContested(v)
     {        
         this.tiles[this.getIndexFromCoords(v)].contestedNorth=false;
@@ -325,6 +330,14 @@ export default class MapData
             return false;
         }
         return this.tiles[this.getIndexFromCoords(v)].terrain;
+    }
+    //this is for god mode only, add one to the terrain, then mod 3
+    godModeIncrementTerrain(v)
+    {
+        let t = this.getTerrain(v);
+        //there are 3 terrain types, 0 path, 1 rubble, and 2 terrain
+        t = (t + 1) % 3;
+        this.setTerrain(v,t);
     }
     inBounds(v)
     {

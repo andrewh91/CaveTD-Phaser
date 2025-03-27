@@ -47,7 +47,7 @@ export default class PriorityArray
     }
     //when pathfinding is run we will have a proposed position for the creature, we will also know which direction it intends to travel so we can add it to the relevant priority array, but we will insert it in order so that the array remains sorted, for example the north array should be sorted by most northern item first 
     //pathfinding will be run in order of priority array, that means - we can assume that some of the time the creatures will want to travel in the same direction they did last time - and if they do, then we can use that to our advantage to help sort the array
-    //so a is teh array, v is the value which will be {i:index,p:x or y}, and d which is a global constant for direction
+    //so a is teh array, v is the value which will be {i:index,p:x or y}, and d which is one of the global constants for direction
     addAndSort(a,v,d)
     {
         //if the array is empty then just add the value and return

@@ -1,8 +1,11 @@
 var players=[];
 var vehicles=[];
 var creatures=[];
+var creatureWaitingRoom=[];
+var creatureBases=[];
 var resources=[];
 var creatureIndex;
+var creatureBaseIndex;
 var resourceIndex;
 var priorityArray;
 var vehicleIndex;
@@ -39,6 +42,7 @@ import SavedMaps from './SavedMaps.js';
 import Creature from './Creature.js';
 import Resource from './Resource.js';
 import PriorityArray from './PriorityArray.js';
+import CreatureBase from './CreatureBase.js';
 class Game extends Phaser.Scene
 {
     constructor()
@@ -64,9 +68,10 @@ class Game extends Phaser.Scene
 
         selectedPlayer=-1;
         //one player by default
-        this.addPlayer(mapOffSetX+gridStep,mapOffSetY);
+        this.addPlayer(mapOffSetX+gridStep*1,mapOffSetY+gridStep*1);
         priorityArray=new PriorityArray();
         this.setUpResources();
+        this.setUpCreatureBases();
         //this.setUpCreatures();
         this.setUpCreatures1();
 
@@ -89,7 +94,7 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
             
         window.debug={
-            players: players, scene: this,uiScene:ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray
+            players: players, scene: this,uiScene:ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray,creatureBases:creatureBases
         }
     }
     onPressP()
@@ -159,7 +164,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[2]);
+        mapData.loadFromText(savedMaps.mapsArray[3]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -261,6 +266,10 @@ class Game extends Phaser.Scene
             {
                 if(movementUpdateCounter==1)
                 {
+                    
+                    //add any creatures that are waiting to be created, 
+                    this.processCreatureWaitingRoom();
+                    //if you add a creature you need to call loopThroughAll
                     //once the pathfinding is complete all creatures' index numbers will be added to the 5 priority arrays, this method will concat all index numbers into one big array
                     priorityArray.loopThroughAll();
                     movementSegmentSize = Math.floor(priorityArray.concat.length/movementUpdateMax);
@@ -311,6 +320,32 @@ class Game extends Phaser.Scene
         //store the vehicle's index in the map at the vehicle's position 
         mapData.setVehicle(Helper.translatePosToMapPos({x:v.x,y:v.y}),v.index);
     }
+    //if i add a creature mid game, it can sort of be deleted by the priority array if added at the wrong time in the update, so add them to a waiting room and then at the correct time process the waiting room 
+    addCreatureToWaitingRoom(x,y)
+    {
+        creatureWaitingRoom.push({x:x,y:y});
+    }
+    //so at the right moment in the update, we will get the length of the waiting room = (i), then in a loop remove the first creature (i) number of times
+    processCreatureWaitingRoom()
+    {
+        let tempcreature;
+        let j = 0;
+        for(let i = creatureWaitingRoom.length; i>0; i--)
+        {
+            tempcreature = creatureWaitingRoom.slice(j,j+1)[0];
+            //if there is not already a creature on that space then create a creature here
+            if(mapData.getCreatureIndex(Helper.translatePosToMapPos(tempcreature))==-1)
+            {
+                creatureWaitingRoom.splice(j,1);
+                
+                this.addCreature(tempcreature.x,tempcreature.y);
+            }
+            else
+            {
+                j++;
+            }
+        }
+    }
     addCreature(x,y)
     {
         creatureIndex++;
@@ -319,6 +354,12 @@ class Game extends Phaser.Scene
         mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
         priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
+    }
+    addCreatureBase(x,y)
+    {
+        creatureBaseIndex++;
+        let c= new CreatureBase(this,x,y,'dot',creatureBaseIndex,0x00ff00,mapData);
+        creatureBases.push(c);
     }
     addResource(x,y)
     {
@@ -332,15 +373,20 @@ class Game extends Phaser.Scene
         resourceIndex=-1;
         this.addResource(mapOffSetX+gridStep*10,mapOffSetY+gridStep*(mapHeight-7));
     }
+    setUpCreatureBases()
+    {
+        creatureBaseIndex=-1;
+        this.addCreatureBase(mapOffSetX+gridStep*15,mapOffSetY+gridStep*10);
+    }
     setUpCreatures1()
     {
         creatureIndex=-1;
 /*
-        this.addCreature(mapOffSetX+gridStep*(mapWidth-2),mapOffSetY+gridStep*(mapHeight-2));
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*(mapWidth-2),mapOffSetY+gridStep*(mapHeight-2));
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
 */
-        this.addCreature(mapOffSetX+gridStep*12,mapOffSetY+gridStep*(mapHeight-2));
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
+        //this.addCreatureToWaitingRoom(mapOffSetX+gridStep*12,mapOffSetY+gridStep*(mapHeight-2));
+        //creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
 
         priorityArray.loopThroughAll();
     }
@@ -348,65 +394,65 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
         //these 2 creatures are on the top row and should hit each other 
-        this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
-        this.addCreature(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
         //this is a continuous row of creatures that go east, notice that they get in each others way (without the priority array)
-        this.addCreature(mapOffSetX+gridStep*3,mapOffSetY+gridStep*16);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*3,mapOffSetY+gridStep*16);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
-        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*16);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*4,mapOffSetY+gridStep*16);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
-        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*16);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*16);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
         //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
-        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*16);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*14,mapOffSetY+gridStep*16);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
-        this.addCreature(mapOffSetX+gridStep*15,mapOffSetY+gridStep*16);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*15,mapOffSetY+gridStep*16);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
-        this.addCreature(mapOffSetX+gridStep*16,mapOffSetY+gridStep*16);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*16,mapOffSetY+gridStep*16);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
         //a dotted line moving down
-        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*1);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*1);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*3);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*3);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*5,mapOffSetY+gridStep*5);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*5);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
         //a dotted line moving east
-        this.addCreature(mapOffSetX+gridStep*0,mapOffSetY+gridStep*7);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*0,mapOffSetY+gridStep*7);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
-        this.addCreature(mapOffSetX+gridStep*2,mapOffSetY+gridStep*7);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*2,mapOffSetY+gridStep*7);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
-        this.addCreature(mapOffSetX+gridStep*4,mapOffSetY+gridStep*7);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*4,mapOffSetY+gridStep*7);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
         //4 creatures colliding from 4 directions
-        this.addCreature(mapOffSetX+gridStep*17,mapOffSetY+gridStep*11);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*17,mapOffSetY+gridStep*11);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*17,y:mapOffSetY+gridStep*17});
-        this.addCreature(mapOffSetX+gridStep*17,mapOffSetY+gridStep*17);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*17,mapOffSetY+gridStep*17);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*17,y:mapOffSetY+gridStep*11});
-        this.addCreature(mapOffSetX+gridStep*14,mapOffSetY+gridStep*14);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*14,mapOffSetY+gridStep*14);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*14});
-        this.addCreature(mapOffSetX+gridStep*20,mapOffSetY+gridStep*14);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*20,mapOffSetY+gridStep*14);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*14,y:mapOffSetY+gridStep*14});
 
         //a continuous line of creatures going down
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*1);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*1);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*2);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*2);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*3);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*3);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*4);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*4);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*5);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*5);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*6);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*6);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreature(mapOffSetX+gridStep*25,mapOffSetY+gridStep*7);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*7);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
         //one creature trying to go across
-        this.addCreature(mapOffSetX+gridStep*26,mapOffSetY+gridStep*7);
+        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*26,mapOffSetY+gridStep*7);
         creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*7});
 
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array

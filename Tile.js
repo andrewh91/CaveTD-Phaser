@@ -1,3 +1,4 @@
+import Helper from './Helper.js';
 export default class Tile extends Phaser.GameObjects.Sprite {
     constructor(scene, texture,index,colour,terrain) {
     super(scene, mapOffSetX+gridStep*(index%mapWidth), mapOffSetY+gridStep*Math.floor(index/mapWidth), texture);
@@ -22,5 +23,13 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     this.setScale(gridStep);
     this.setTint(colour);
     this.resourceIndex=-1;
+    this.creatureBaseIndex=-1;
+    this.text = scene.add.text(this.x, this.y, '', { fontSize: '10px', fill: '#fff'});
+    Helper.centreText(this);
+    }
+    updateText(t)
+    {
+        this.text.setText(t);
+        Helper.centreText(this);
     }
 }

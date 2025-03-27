@@ -24,7 +24,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         //if this bool is true you can move, if false you will instead dump rubble - if able
         this.moveModeDumpModeBool=true;
     }
-
+    
     //movement is like pokemon, you move one gridStep at a time
     update(delta) {
         if(this.playerMoveTimer>0)
@@ -57,7 +57,10 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //toggle the this.moveModeDumpModeBool
                 this.toggleMode();
                 //god mode, for making maps 
-                //this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),rubbleTerrain);
+                if(godMode==true)
+                {
+                    this.map.godModeIncrementTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}));
+                }
             }
             if (Phaser.Input.Keyboard.JustDown(this.cursors.shift)&&this.playerMoveTimer<=0)
             {
@@ -104,8 +107,9 @@ export default class Player extends Phaser.GameObjects.Sprite {
                             //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
                             if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
                             {
+                                //todo delete this god Mode
                                 //if the proposed position is a path - and not a wall or rubble
-                                if(this.map.isPath(Helper.translatePosToMapPos(proposedPos)))
+                                if(godMode ==true || this.map.isPath(Helper.translatePosToMapPos(proposedPos)))
                                 {             
                                     this.movePlayer(proposedPos);
                                     this.playerMoveTimer=Player.playerMoveTimerStep;

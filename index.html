@@ -25,6 +25,13 @@
         var Y = 2;
         var LEFT = -1;
         var RIGHT = 1;
+        //TODO God Mode, should turn this off. 
+        // when god mode is on, then space increments the terrain value then does mod 3
+        // when go mode is on the player can move to any space regardless of terrain
+        var godMode = false;
+        //TODO  turn testing to false, 
+        //when true the explorerDirection in the creature class will be set to one of 8 directions in a predictable order, when false it will be random
+        var testing = true;
     </script>
 
     <script type="module" src ="main.js"></script>
