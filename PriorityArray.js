@@ -26,7 +26,7 @@ export default class PriorityArray
     incrementPriority()
     {
         this.priority=(this.priority+1)%this.all.length;
-        console.log('priority= '+this.priority);
+        //console.log('priority= '+this.priority);
     }
     //this will loop through all the arrays starting with the current priority array as defined by the priority variable
     loopThroughAll()

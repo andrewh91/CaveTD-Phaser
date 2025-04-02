@@ -504,3 +504,9 @@ also i should only create a creature if there is not already a creature on that 
 
 ok so today i have created the creatureBase, 
 i've created a creature waiting room, so that creatures can be added dynamically, i've made the explored number print to each tile, which will help me test the explorer7 pathfinding, which i should do next. i should add some more resources to test all the logic
+
+20250402
+adding a debugging feature, for each camera, i am drawing to screen the x and y gird pos of the tile that the mouse is over
+next i really ought to change the way i store the x and y of the tiles etc
+currently the tile is set up with a real world position, which is like -mapOffset +gridStep*5
+instead i should just store the position as 5 and apply the offset etc when drawing it 

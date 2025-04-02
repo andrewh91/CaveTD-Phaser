@@ -16,7 +16,6 @@ var terrainColours= [];
 var cursors;
 var newCursors=[];
 var createPlayerFlag=false;
-var ui;
 var colourArray=[0xff0000,0x00ff00,0x0000ff ];
 var selectedPlayer;
 var pathfindingUpdateCounter=1;
@@ -28,9 +27,8 @@ var movementN=0;
 var pathfindingSegmentSize;
 var movementSegmentSize;
 
-
 var latestKey;
-import UIScene from './uiScene.js';
+import UIScene, { drawGridCoords } from './uiScene.js';
 import {drawBorders} from './uiScene.js';
 import Player from './player.js';
 import Helper from './Helper.js';
@@ -49,17 +47,19 @@ class Game extends Phaser.Scene
     {
         super({ key: 'game' });
     }
-    preload ()
+    preload()
     {
         this.load.setBaseURL();
         this.load.image('dot', 'dot.png');
         this.load.image('rubble', 'dot.png');
         this.load.image('trailer', 'trailer.png');
     }   
-    create ()
+    create()
     {
+        
         this.mainCamera = this.cameras.main;
-
+        
+        
         this.setUpMap();
 
         vehicleIndex=-1;
@@ -79,7 +79,9 @@ class Game extends Phaser.Scene
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
         this.scene.launch('uiScene');
-        ui=this.scene.get("uiScene");
+        this.ui;
+        this.ui=this.scene.get("uiScene");
+        this.ui.cameraTextArray=[];
         this.popupTimer=0;
         //on any button press run this record key method
         this.input.keyboard.on('keydown', (event) => {
@@ -94,17 +96,23 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
             
         window.debug={
-            players: players, scene: this,uiScene:ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray,creatureBases:creatureBases
+            players: players, scene: this,uiScene:this.ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray,creatureBases:creatureBases
+        }
+        //this will be altered in the updateMouse method
+        if(testing)
+        {
+            this.ui.cameraTextArray.push(this.ui.add.text(10,10 , 'Mouse position', { fontSize: '32px', fill: '#ff0000', wordWrap: { width: 560 } }));
+            this.ui.cameraTextArray[0].setScrollFactor(0);
         }
     }
     onPressP()
     {
-        ui.showNewPlayerDialog();
+        this.ui.showNewPlayerDialog();
         createPlayerFlag=true;
         /*make a new player at this player's position, and select it so the cursor keys move the new player*/
         let x = players[selectedPlayer].x;
         let y = players[selectedPlayer].y;
-        this.addPlayer(mapOffSetX,mapOffSetY);
+        this.addPlayer(mapOffSetX+x,mapOffSetY+y);
         selectedPlayer=players.length-1;
         addCamera(this,x,y);
     }
@@ -124,13 +132,13 @@ class Game extends Phaser.Scene
             let numberOfKeys=6;
             if(newCursors.length==numberOfKeys)
             {
-                ui.updateDialog(e.key);
+                this.ui.updateDialog(e.key);
                 newCursors.push(e.keyCode);
-                ui.updateDialog('Press any key to confirm.');
+                this.ui.updateDialog('Press any key to confirm.');
             }
             else if(newCursors.length>numberOfKeys)
             {  
-                ui.updateDialog(e.key);
+                this.ui.updateDialog(e.key);
                 newCursors.push(e.keyCode);
                 //newcursors[0] will be p as that's what we pushed to create a new player
                 cursors=(this.input.keyboard.addKeys({left:newCursors[1],right:newCursors[2],up:newCursors[3],down:newCursors[4],space:newCursors[5],shift:newCursors[6]}));
@@ -140,7 +148,7 @@ class Game extends Phaser.Scene
                 console.log(cursors);
                 newCursors=[];
                 createPlayerFlag=false;
-                ui.hideDialog();
+                this.ui.hideDialog();
             } 
             else if(newCursors.length==0)
             {
@@ -149,7 +157,7 @@ class Game extends Phaser.Scene
             }
             else
             {
-                ui.updateDialog(e.key);
+                this.ui.updateDialog(e.key);
                 newCursors.push(e.keyCode);
             }
         }
@@ -182,7 +190,7 @@ class Game extends Phaser.Scene
     }
     addPopup(text,vector,time)
     {
-        ui.updatePopupText(text,vector);
+        this.ui.updatePopupText(text,vector);
         this.popupTimer=time;
     }
     updatePopup(delta)
@@ -197,8 +205,8 @@ class Game extends Phaser.Scene
         }
         else if(this.popupTimer<0)
         {
-            ui.hidePopupText();
-            //set this to 0 just so we don't call ui.hidePopupText all the time
+            this.ui.hidePopupText();
+            //set this to 0 just so we don't call this.ui.hidePopupText all the time
             this.popupTimer=0;
         }
     }
@@ -223,6 +231,7 @@ class Game extends Phaser.Scene
     update(time,delta)
     {
         this.updatePopup(delta);
+        this.updateMouse();
         //run the player update method for each player
         for(let i = 0;i<players.length;i++)
         {
@@ -304,6 +313,10 @@ class Game extends Phaser.Scene
         }
         
     }
+    updateMouse()
+    {
+        drawGridCoords(this);
+    }
     addPlayer(x,y)
     {
         selectedPlayer++;
@@ -371,7 +384,9 @@ class Game extends Phaser.Scene
     setUpResources()
     {
         resourceIndex=-1;
+        
         this.addResource(mapOffSetX+gridStep*10,mapOffSetY+gridStep*(mapHeight-7));
+        this.addResource(mapOffSetX+gridStep*15,mapOffSetY+gridStep*4);
     }
     setUpCreatureBases()
     {
@@ -484,13 +499,19 @@ function addCamera(scene,x,y)
 {
     //add a new camera, and adjust the other cameras to fit, the default size will be changed soon enough so these figures don't matter too much
     let newCamera = scene.cameras.add(0,0,800,600).setZoom(1);
-    
+    //TODO remove this, this is just for debugging
+    if(testing)
+    {
+        let t = scene.ui.add.text(10,20 , 'Mouse position', { fontSize: '32px', fill: '#ff0000', wordWrap: { width: 560 } });
+        scene.ui.cameraTextArray.push(t);
+        t.setScrollFactor(0);
+    }
     //this is my code to organise the on screen position and size of the cameras
     manageCamera(scene);
     //target the camera at the given position
     newCamera.setScroll(x-newCamera.width/2,y-newCamera.height/2);
     console.log(newCamera);
-    //redraw the border in the ui - a red border is currently drawn around each camera
+    //redraw the border in the this.ui - a red border is currently drawn around each camera
     drawBorders(scene);
 }
 //removes the most recent extra camera - will not remove the camera if there is only one left
@@ -502,6 +523,11 @@ function removeCamera(scene)
         //once you take a camera away you need to rearrange the remaining ones and redraw the borders too
         manageCamera(scene);
         drawBorders(scene);
+        if(testing)
+        {
+            scene.ui.cameraTextArray.pop().destroy();
+        }
+        
     }
 }
 

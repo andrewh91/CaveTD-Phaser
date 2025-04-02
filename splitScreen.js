@@ -4,6 +4,7 @@ export function manageCamera(scene)
     var width = scene.scale.width;
     var height = scene.scale.height;
     redrawCameras(cameraArray,width,height);
+	redrawText(scene);
 }
 //this code was repurposed for an earlier iteration of this game that i was using just html canvas for
 /* when you add, hide, show a camera, or if you resize the window, or the user selects the option to resize the window then we should recalculate the cameras size and position */
@@ -85,4 +86,14 @@ function divide(array,index1,index2)
 function isPortrait(w,h)
 {
 	return (Math.max(w,h)==h);
+}
+function redrawText(scene)
+{
+	if(testing)
+	{
+		for(let i = 0 ; i < scene.cameras.cameras.length;i ++)
+		{
+			scene.ui.cameraTextArray[i].setPosition(scene.cameras.cameras[i].x,scene.cameras.cameras[i].y);
+		}
+	}
 }

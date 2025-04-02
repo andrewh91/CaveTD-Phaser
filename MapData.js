@@ -9,7 +9,7 @@ export default class MapData
         this.terrainColours[pathTerrain]=0xcccccc;//light grey
         this.terrainColours[rubbleTerrain]=0x777777;//medium grey
         this.terrainColours[wallTerrain]=0x333333;//dark grey
-        this.terrainColours[impassableTerrain]=0x000000;//black
+        this.terrainColours[impassableTerrain]=0x111111;//black
     }
     getIndexFromCoords(v)
     {

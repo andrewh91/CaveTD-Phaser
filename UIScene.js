@@ -83,3 +83,12 @@ export function drawBorders(scene)
         ui.uiLayer.add(ui.graphics); 
     }
 }
+//for testing purposes i want to draw the grid coords of the tile the mouse is over, to screen, for each camera
+export function drawGridCoords(scene)
+{
+    for(let i = 0 ; i < scene.ui.cameraTextArray.length;i ++)
+    {
+        scene.ui.cameraTextArray[i].setText(`X=${Math.floor((scene.input.activePointer.x-mapOffSetX/2-scene.cameras.cameras[i].x+scene.cameras.cameras[i].scrollX)/gridStep)}, Y=${Math.floor((scene.input.activePointer.y-mapOffSetY/2-scene.cameras.cameras[i].y+scene.cameras.cameras[i].scrollY)/gridStep)}`);
+        
+    }
+}
