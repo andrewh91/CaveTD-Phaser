@@ -112,7 +112,7 @@ class Game extends Phaser.Scene
         /*make a new player at this player's position, and select it so the cursor keys move the new player*/
         let x = players[selectedPlayer].x;
         let y = players[selectedPlayer].y;
-        this.addPlayer(mapOffSetX+x,mapOffSetY+y);
+        this.addPlayer(x,y);
         selectedPlayer=players.length-1;
         addCamera(this,x,y);
     }

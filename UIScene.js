@@ -88,7 +88,11 @@ export function drawGridCoords(scene)
 {
     for(let i = 0 ; i < scene.ui.cameraTextArray.length;i ++)
     {
-        scene.ui.cameraTextArray[i].setText(`X=${Math.floor((scene.input.activePointer.x-mapOffSetX/2-scene.cameras.cameras[i].x+scene.cameras.cameras[i].scrollX)/gridStep)}, Y=${Math.floor((scene.input.activePointer.y-mapOffSetY/2-scene.cameras.cameras[i].y+scene.cameras.cameras[i].scrollY)/gridStep)}`);
+        //this is the mouse pos on screen, subtract the map offset subtract the camera's position on screen (important for splitscreen) plus gridstep/2 (because tiles are drawn from the centre) all divded by gridstep
+        //so this all boils down to showing you the coord of the tile you have moused over
+        scene.ui.cameraTextArray[i].setText(`
+        X=${Math.floor((scene.input.activePointer.x-mapOffSetX-scene.cameras.cameras[i].x+scene.cameras.cameras[i].scrollX+gridStep/2)/gridStep)}, 
+        Y=${Math.floor((scene.input.activePointer.y-mapOffSetY-scene.cameras.cameras[i].y+scene.cameras.cameras[i].scrollY+gridStep/2)/gridStep)}`);
         
     }
 }

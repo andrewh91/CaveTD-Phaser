@@ -7,6 +7,9 @@ export default class Player extends Phaser.GameObjects.Sprite {
         super(scene, x, y, texture);
         
         scene.add.existing(this);
+        //the tx is a more useful way of figuring out where the player is in the world, this.x is the world coord, but this is a grid based game, and the player could be at position (60,10) in order to figure out where the player is you would need to know what the gridstep is, and that the grid does not start at 0,0, it has an offset, so (60,10) could be (2,0) tile position if the gridstep is 25 and the offset is (10,10)
+        this.tx=(this.x-mapOffSetX)/gridStep;
+        this.ty=(this.y-mapOffSetY)/gridStep;
         this.index=index;
         //pass in a reference to the map data, so we can query the map to see if there is a wall etc
         this.map=map;
@@ -36,19 +39,19 @@ export default class Player extends Phaser.GameObjects.Sprite {
             let proposedPos;
             if (this.cursors.left.isDown&&this.playerMoveTimer<=0)
             {
-                proposedPos = {x:this.x-gridStep,y:this.y};
+                proposedPos = {tx:this.tx-1,ty:this.ty};
             }
             if (this.cursors.right.isDown&&this.playerMoveTimer<=0)
             {
-                proposedPos = {x:this.x+gridStep,y:this.y};
+                proposedPos = {tx:this.tx+1,ty:this.ty};
             }
             if (this.cursors.up.isDown&&this.playerMoveTimer<=0)
             {
-                proposedPos = {x:this.x,y:this.y-gridStep};
+                proposedPos = {tx:this.tx,ty:this.ty-1};
             }
             if (this.cursors.down.isDown&&this.playerMoveTimer<=0)
             {
-                proposedPos = {x:this.x,y:this.y+gridStep};
+                proposedPos = {tx:this.tx,ty:this.ty+1};
             }
             //use the justDown method instead of isDown, this will only trigger once per key press
             if (Phaser.Input.Keyboard.JustDown(this.cursors.space)&&this.playerMoveTimer<=0)
@@ -59,7 +62,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //god mode, for making maps 
                 if(godMode==true)
                 {
-                    this.map.godModeIncrementTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}));
+                    this.map.godModeIncrementTerrain({tx:this.tx,ty:this.ty});
                 }
             }
             if (Phaser.Input.Keyboard.JustDown(this.cursors.shift)&&this.playerMoveTimer<=0)
@@ -74,7 +77,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //if we are not already in a vehicle
                 if(this.vehicleIndex==-1)
                 {
-                    let v = this.map.getVehicleIndex(Helper.translatePosToMapPos({x:this.x,y:this.y}));
+                    let v = this.map.getVehicleIndex({tx:this.tx,ty:this.ty});
                     //if there is a vehicle in our tile
                     if(v!=-1)
                     {
@@ -99,29 +102,29 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 if(this.moveModeDumpModeBool)
                 {
                     //if the proposed position is not outside the map
-                    if(this.map.inBounds(Helper.translatePosToMapPos(proposedPos)))
+                    if(this.map.inBounds(proposedPos))
                     {
                         //if the pos is not a creature
-                        if(this.map.getCreatureIndex(Helper.translatePosToMapPos(proposedPos))==-1)
+                        if(this.map.getCreatureIndex(proposedPos)==-1)
                         {
                             //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
-                            if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1||this.vehicleIndex==-1))
+                            if(this.map.getPlayerIndex(proposedPos)==-1 && (this.map.getVehicleIndex(proposedPos)==-1||this.vehicleIndex==-1))
                             {
                                 //todo delete this god Mode
                                 //if the proposed position is a path - and not a wall or rubble
-                                if(godMode ==true || this.map.isPath(Helper.translatePosToMapPos(proposedPos)))
+                                if(godMode ==true || this.map.isPath(proposedPos))
                                 {             
                                     this.movePlayer(proposedPos);
                                     this.playerMoveTimer=Player.playerMoveTimerStep;
                                 }
                                 //if the proposed position is not a path and this player is in vehicle and proposedPos is a wall, or rubble
-                                else if(this.vehicleIndex>-1 && (this.map.isWall(Helper.translatePosToMapPos(proposedPos)) || this.map.isRubble(Helper.translatePosToMapPos(proposedPos) ) ) ) 
+                                else if(this.vehicleIndex>-1 && (this.map.isWall(proposedPos) || this.map.isRubble(proposedPos ) ) ) 
                                 {
                                     //get the scene to handle this:check if the vehicle is not carrying too much to drill the wall/ or pick up the rubble
                                     if(this.scene.isVehicleRubbleCapacityFull(this.vehicleIndex)==false)
                                     {
                                         //if the scene method returns false the vehicle must be able to carry more rubble and therefore can drill or pick up rubble, so reflect the change to the terrain in the map
-                                        this.map.drillWall( Helper.translatePosToMapPos(proposedPos));
+                                        this.map.drillWall( proposedPos);
                                         this.playerMoveTimer=Player.playerMoveTimerStep;
                                     }
                                     else
@@ -144,13 +147,13 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 else
                 {
                     //if the proposed position does not contains a player and does not contain a vehicle
-                    if(this.map.getPlayerIndex(Helper.translatePosToMapPos(proposedPos))==-1&&this.map.getVehicleIndex(Helper.translatePosToMapPos(proposedPos))==-1)
+                    if(this.map.getPlayerIndex(proposedPos)==-1&&this.map.getVehicleIndex(proposedPos)==-1)
                     {
                         //get the scene to check if there is any rubble available to dump
                         if(this.scene.isVehicleRubbleCapacityEmpty(this.vehicleIndex)==false)
                         {
                             //if that returned false, there must be at least one rubble to dump, now reflect that change in the terrain in the map
-                            this.map.dumpRubble(Helper.translatePosToMapPos(proposedPos));
+                            this.map.dumpRubble(proposedPos);
                             this.playerMoveTimer=Player.playerMoveTimerStep;
                         }
                         //if there is no rubble to dump, switch back to move mode
@@ -168,12 +171,15 @@ export default class Player extends Phaser.GameObjects.Sprite {
     movePlayer(v)
     {
         //update the old position of the player in the map
-        this.map.setPlayer(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
-        this.x=v.x;
-        this.y=v.y;
+        this.map.setPlayer({x:this.tx,y:this.ty},-1);
+        this.tx=v.x;
+        this.ty=v.y;
+        let tempV=Helper.translateTilePosToWorldPos(v);
+        this.x=tempV.x;
+        this.y=tempV.y;
         Helper.centreText(this);
         //update the new position of the player in the map
-        this.map.setPlayer(Helper.translatePosToMapPos(v),this.index);
+        this.map.setPlayer(v,this.index);
         //if the player is in a vehicle  we get the scene to handle the vehicle moving
         if(this.vehicleIndex!=-1)
         {

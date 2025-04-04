@@ -13,6 +13,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.trailerTexture=trailerTexture;
         this.scene=scene;
         scene.add.existing(this);
+        //the tx is a more useful way of figuring out where the player is in the world, this.x is the world coord, but this is a grid based game, and the player could be at position (60,10) in order to figure out where the player is you would need to know what the gridstep is, and that the grid does not start at 0,0, it has an offset, so (60,10) could be (2,0) tile position if the gridstep is 25 and the offset is (10,10)
+        this.tx=(this.x-mapOffSetX)/gridStep;
+        this.ty=(this.y-mapOffSetY)/gridStep;
         this.index=index;
         //pass in a reference to the map data, so we can query the map to see if there is a wall etc
         this.map=map;
@@ -22,8 +25,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.setTint(colour);
         this.text = scene.add.text(this.x, this.y, 'c'+this.index, { fontSize: '20px', fill: '#fff'});
         Helper.centreText(this);
-        this.goal={x:x,y:y};
-        this.oldGoal={x:undefined,y:undefined};
+        this.goal={tx:tx,ty:ty};
+        this.oldGoal={tx:undefined,ty:undefined};
         //we may start tunnelling if we change direction, that's assuming that we changed direction due to hitting a wall, if we changed direction due to getting a new goal, then we set this flag so that we ignore that change in direction for tunnelling purposes
         this.newGoal=false;
         this.proposedPos;
@@ -69,21 +72,21 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(testing)
         {
             this.dirArray=[
-                {x: 0,y:-1},
-                {x: 1,y:-1},
-                {x: 1,y: 0},
-                {x: 1,y: 1},
-                {x: 0,y: 1},
-                {x:-1,y: 1},
-                {x:-1,y: 0},
-                {x:-1,y:-1}
+                {tx: 0,ty:-1},
+                {tx: 1,ty:-1},
+                {tx: 1,ty: 0},
+                {tx: 1,ty: 1},
+                {tx: 0,ty: 1},
+                {tx:-1,ty: 1},
+                {tx:-1,ty: 0},
+                {tx:-1,ty:-1}
             ]
-            tempx = this.dirArray[this.index%8].x;
-            tempy = this.dirArray[this.index%8].y;
+            tempx = this.dirArray[this.index%8].tx;
+            tempy = this.dirArray[this.index%8].ty;
         }
 
-        this.explorerDirectionOriginal={x:tempx,y:tempy};
-        this.explorerDirection={x:tempx,y:tempy};
+        this.explorerDirectionOriginal={tx:tempx,ty:tempy};
+        this.explorerDirection={tx:tempx,ty:tempy};
         // i want the explorerDirectionOriginal to be one of 8 possible values, so it could be {1,1}, but i don't want the creatures to actually move diagonally, so i'm going to use these bools to turn either the x or y to a 0 then toggle the bool, this way the ones that want to go diagonally north east will just switch their preference between north and east every update
         this.explorerDirectionBoolToggle=false;
         //this will be true if the random direction ended up being diagonal
@@ -100,8 +103,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         //the timing of this update will happen in the main.js 
         this.proposedPos=this.pathfinding();
-        this.proposedPosSprite.x=this.proposedPos.x;
-        this.proposedPosSprite.y=this.proposedPos.y;
+        let tempV = Helper.translateTilePosToWorldPos(this.proposedPos.tx);
+        this.proposedPosSprite.x=tempV.x;
+        this.proposedPosSprite.y=tempV.y;
     }
     updatePosition(delta)
     {
@@ -120,21 +124,21 @@ export default class Creature extends Phaser.GameObjects.Sprite
     beeline1()
     {
         this.proposedPos=undefined;
-        if(this.x<this.goal.x)
+        if(this.tx<this.goal.tx)
         {
-            this.proposedPos={x:this.x+gridStep,y:this.y};
+            this.proposedPos={tx:this.tx+1,ty:this.ty};
         }
-        else if(this.x>this.goal.x)
+        else if(this.tx>this.goal.tx)
         {
-            this.proposedPos={x:this.x-gridStep,y:this.y};
+            this.proposedPos={tx:this.tx-1,ty:this.ty};
         }
-        else if(this.y<this.goal.y)
+        else if(this.ty<this.goal.ty)
         {
-            this.proposedPos={x:this.x,y:this.y+gridStep};
+            this.proposedPos={tx:this.tx,ty:this.ty+1};
         }
-        else if(this.y>this.goal.y)
+        else if(this.ty>this.goal.ty)
         {
-            this.proposedPos={x:this.x,y:this.y-gridStep};
+            this.proposedPos={tx:this.tx,ty:this.ty-1};
         }
         return this.proposedPos;
     }
@@ -142,11 +146,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
     beeline2()
     {
         this.proposedPos=undefined;
-        let neighbours = this.getNeighbours({x:this.x,y:this.y});
+        let neighbours = this.getNeighbours({tx:this.tx,ty:this.ty});
         neighbours = this.sortNeighbours(neighbours,this.goal);
         for( let i = 0 ; i < neighbours.length ; i ++)
         {
-            if(this.map.isPath(Helper.translatePosToMapPos(neighbours[i])))
+            if(this.map.isPath(neighbours[i]))
             {
                 this.proposedPos=neighbours[i];
                 break;
@@ -159,7 +163,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         this.proposedPos=undefined;
         //get all the 4 neighbours
-        let neighbours = this.getNeighbours({x:this.x,y:this.y});
+        let neighbours = this.getNeighbours({tx:this.tx,ty:this.ty});
         //sort the neighbours in order of closest to goal
         neighbours = this.sortNeighbours(neighbours,this.goal);
         //record the tail, the memeory should be an array, so a little error handling just incase there is no memory yet
@@ -167,14 +171,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //test if the 'neighbour closest to goal' is a path, if so return that as proposed position, if not check the next closest, also check that that proposed pos is not the tail 
         for( let i = 0 ; i < neighbours.length ; i ++)
         {
-            if(this.map.isPath(Helper.translatePosToMapPos(neighbours[i]))&& ! Helper.vectorEquals(neighbours[i],tail))
+            if(this.map.isPath(neighbours[i])&& ! Helper.vectorEquals(neighbours[i],tail))
             {
                 this.proposedPos=neighbours[i];
                 break;
             }
         }
         //if the proposedPos is still undefined, then none of the 4 directions fit the criteria of; is a path and is not the tail, if so then check if the tail is a path and return that pos
-        if(this.proposedPos==undefined&&tail!=undefined&&this.map.isPath(Helper.translatePosToMapPos(tail)))
+        if(this.proposedPos==undefined&&tail!=undefined&&this.map.isPath(tail))
         {
             this.proposedPos=tail;
         }
@@ -189,7 +193,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(wall)
         {
             //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
-            if(this.map.isPath(Helper.translatePosToMapPos(wall)))
+            if(this.map.isPath(wall))
             {
                 this.proposedPos=wall;
                 return this.proposedPos;
@@ -197,7 +201,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             else
             {
                 //otherwise if the wall is a wall, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
-                this.proposedPos = this.rightAnglePosition(wall,{x:this.x,y:this.y},this.wallRunnerDirection);
+                this.proposedPos = this.rightAnglePosition(wall,{tx:this.tx,ty:this.ty},this.wallRunnerDirection);
                 return this.proposedPos;
             }
         }
@@ -222,7 +226,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
             //i'm making this creature be able to walk on path and rubble
-            if(this.map.isPath(Helper.translatePosToMapPos(wall))==true||this.map.isRubble(Helper.translatePosToMapPos(wall))==true)
+            if(this.map.isPath(wall)==true||this.map.isRubble(wall)==true)
             {
                 this.proposedPos=wall;
                 return this.proposedPos;
@@ -231,7 +235,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.encounteredWall=true;
                 //otherwise if the wall is a wall -or the imapassable edge, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
-                this.proposedPos = this.rightAnglePosition(wall,{x:this.x,y:this.y},this.wallRunnerDirection);
+                this.proposedPos = this.rightAnglePosition(wall,{tx:this.tx,ty:this.ty},this.wallRunnerDirection);
                 return this.proposedPos;
             }
         }
@@ -244,11 +248,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
     beelineDigger6()
     {
         this.proposedPos=undefined;
-        let neighbours = this.getNeighbours({x:this.x,y:this.y});
+        let neighbours = this.getNeighbours({tx:this.tx,ty:this.ty});
         neighbours = this.sortNeighbours(neighbours,this.goal);
         for( let i = 0 ; i < neighbours.length ; i ++)
         {
-            if(this.shortcutMode||this.map.isPath(Helper.translatePosToMapPos(neighbours[i]))==true)
+            if(this.shortcutMode||this.map.isPath(neighbours[i])==true)
             {
                 this.proposedPos=neighbours[i];
                 break;
@@ -263,8 +267,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(this.explorerDirectionDiagonal)
         {
             //make either the x or y value a zero, depending on if the toggle bool is true or false, then toggle the toggle bool
-            this.explorerDirection = this.explorerDirectionBoolToggle==true?{x:0,y:this.explorerDirectionOriginal.y}:{x:this.explorerDirectionOriginal.x,y:0};
-            this.explorerDirectionAlt = this.explorerDirectionBoolToggle==true?{x:this.explorerDirectionOriginal.x,y:0}:{x:0,y:this.explorerDirectionOriginal.y};
+            this.explorerDirection = this.explorerDirectionBoolToggle==true?{tx:0,ty:this.explorerDirectionOriginal.ty}:{x:this.explorerDirectionOriginal.tx,ty:0};
+            this.explorerDirectionAlt = this.explorerDirectionBoolToggle==true?{tx:this.explorerDirectionOriginal.tx,ty:0}:{tx:0,ty:this.explorerDirectionOriginal.ty};
             this.explorerDirectionBoolToggle= !this.explorerDirectionBoolToggle;
         }
         //this is the adjacent 4 tiles, the first tile should be in the direction of the explorerDirection, then the one clockwise, then anti clockwise, then opposite the explorerDirection
@@ -285,7 +289,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     if(Helper.vectorEquals(this.memory[0],resourceNeighboursByLowestExploredNumber[i]))
                     {
-                        if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighboursByLowestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(resourceNeighboursByLowestExploredNumber[i]))==false)
+                        if(this.map.isWall(resourceNeighboursByLowestExploredNumber[i])==false&&this.map.isEdge(resourceNeighboursByLowestExploredNumber[i])==false)
                         {
                             this.proposedPos=resourceNeighboursByLowestExploredNumber[i];
                             this.exploredDeadEnd=false;
@@ -296,7 +300,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //if we have not returned, then maybe the resource neighbour, is unexplored
                 for(let i = 0 ; i < resourceNeighbours.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighbours[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(resourceNeighbours[i]))==false)
+                    if(this.map.isWall(resourceNeighbours[i])==false&&this.map.isEdge(resourceNeighbours[i])==false)
                     {
                         this.proposedPos = resourceNeighbours[i];
                         this.exploredDeadEnd=false;
@@ -311,7 +315,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 let neighboursByLowestExploredNumber=this.sortAdjacentLowestExploredNumber(neighboursReversed);
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    if(this.map.isWall(neighboursByLowestExploredNumber[i])==false&&this.map.isEdge(neighboursByLowestExploredNumber[i])==false)
                     {
                         this.proposedPos = neighboursByLowestExploredNumber[i];
                         this.exploredDeadEnd=false;
@@ -321,7 +325,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored, so get one that is unexplored. 
                 for(let i = 0 ; i < neighboursReversed.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursReversed[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursReversed[i]))==false)
+                    if(this.map.isWall(neighboursReversed[i])==false&&this.map.isEdge(neighboursReversed[i])==false)
                     {
                         this.proposedPos = neighboursReversed[i];
                         this.exploredDeadEnd=false;
@@ -342,7 +346,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //find the neighbour with the highest explored number, that is not a wall and go there. 
                 for(let i = 0 ; i < resourceNeighboursByHighestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(resourceNeighboursByHighestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(resourceNeighboursByHighestExploredNumber[i]))==false)
+                    if(this.map.isWall(resourceNeighboursByHighestExploredNumber[i])==false&&this.map.isEdge(resourceNeighboursByHighestExploredNumber[i])==false)
                     {
                         this.proposedPos = resourceNeighboursByHighestExploredNumber[i];
                         this.exploredDeadEnd=false;
@@ -353,7 +357,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //if we haven't returned yet there must not be a neighbour with a resource marker that we can go to, so try to go to an unexplored neighbour
             for(let i = 0 ; i < neighbours.length; i ++)
             {
-                if(this.map.isWall(Helper.translatePosToMapPos(neighbours[i]))==false && this.map.isEdge(Helper.translatePosToMapPos(neighbours[i]))==false && this.map.getExploredNumber(Helper.translatePosToMapPos(neighbours[i]))==-1)
+                if(this.map.isWall(neighbours[i])==false && this.map.isEdge(neighbours[i])==false && this.map.getExploredNumber(neighbours[i])==-1)
                 {
                     this.proposedPos = neighbours[i];
                     this.exploredDeadEnd=false;
@@ -367,7 +371,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 let neighboursByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighbours);
                 for(let i = 0 ; i < neighboursByHighestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByHighestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursByHighestExploredNumber[i]))==false)
+                    if(this.map.isWall(neighboursByHighestExploredNumber[i])==false&&this.map.isEdge(neighboursByHighestExploredNumber[i])==false)
                     {
                         //move to the neighbour that has the highest explored number, unless it is our tail, in which case trigger the dead end flag.
                         if(Helper.vectorEquals(neighboursByHighestExploredNumber[i],this.memory[0]))
@@ -388,7 +392,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 let neighboursByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(neighbours);
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false&&this.map.isEdge(Helper.translatePosToMapPos(neighboursByLowestExploredNumber[i]))==false)
+                    if(this.map.isWall(neighboursByLowestExploredNumber[i])==false&&this.map.isEdge(neighboursByLowestExploredNumber[i])==false)
                     {
                         this.proposedPos = neighboursByLowestExploredNumber[i];
                         return this.proposedPos;
@@ -397,7 +401,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
         }
         //if we still have not returned return current position, we must have been surrounded by walls or something
-        this.proposedPos = {x:this.x,y:this.y};
+        this.proposedPos = {tx:this.tx,ty:this.ty};
         return this.proposedPos;
     }
     
@@ -405,21 +409,21 @@ export default class Creature extends Phaser.GameObjects.Sprite
     getAdjacent()
     {
         let neighbourArray=[];
-        let currentPos={x:this.x,y:this.y};
+        let currentPos={tx:this.tx,ty:this.ty};
         //this is to prevent weird behaviour when the original direction was diagonal, we vary the diagonal directions, so that if the explorerDirection is north east, we swap between preferring north then east each update, but if you went clockwise from east you would be giving preference to south over north, so use the alt direction like this 
         if(this.explorerDirectionAlt)
         {
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(this.explorerDirection,gridStep)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(this.explorerDirectionAlt,gridStep)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getOppositeDirection(this.explorerDirectionAlt),gridStep)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getOppositeDirection(this.explorerDirection),gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirection));
+            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirectionAlt));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirectionAlt)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
         }
         else
         {
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(this.explorerDirection,gridStep)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getClockwiseDirection(this.explorerDirection),gridStep)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getAntiClockwiseDirection(this.explorerDirection),gridStep)));
-            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.vectorMultiply(Helper.getOppositeDirection(this.explorerDirection),gridStep)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,this.explorerDirection));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getClockwiseDirection(this.explorerDirection)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getAntiClockwiseDirection(this.explorerDirection)));
+            neighbourArray.push(Helper.vectorPlus(currentPos,Helper.getOppositeDirection(this.explorerDirection)));
         }
         return neighbourArray;
     }
@@ -435,7 +439,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //do this in reverse order since i'm altering the array as i go through it
             for(let i = a.length-1 ; i >-1 ; i -- )
             {
-                if(this.map.getResourceMarker(Helper.translatePosToMapPos(a[i]))==false)
+                if(this.map.getResourceMarker(a[i])==false)
                 {
                     //so we are removing the neighbours that do not have a resource marker
                     a.splice(i,1);
@@ -457,7 +461,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
             //store the explorednumber of the first neighbour
-            let exploredNumber1=this.map.getExploredNumber(Helper.translatePosToMapPos(neighbours[i]));
+            let exploredNumber1=this.map.getExploredNumber(neighbours[i]);
             //if the neighbour does not actually have an explored number
             if(exploredNumber1==-1)
             {
@@ -471,7 +475,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //compare it to any other explored numbers we've added to the return array so far
                 for(let j = 0 ; j < returnArray.length ; j ++)
                 {
-                    let exploredNumber2 =this.map.getExploredNumber(Helper.translatePosToMapPos(returnArray[j]));
+                    let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
                     //if the neighbour explored number is less than any of the explored numbers in the returnarray, then add this neighbour before that, and continue the loop to the next neighbour
                     if(exploredNumber1<exploredNumber2 && exploredNumber2!=-1)
                     {
@@ -492,7 +496,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         neighboursLoop:
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
-            let exploredNumber1=this.map.getExploredNumber(Helper.translatePosToMapPos(neighbours[i]));
+            let exploredNumber1=this.map.getExploredNumber(neighbours[i]);
             //sort the neighbours into a new array based on lowest exploredNumber
             if(exploredNumber1==-1)
             {
@@ -504,7 +508,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 neighboursReturnLoop:
                 for(let j = 0 ; j < returnArray.length ; j ++)
                 {
-                    let exploredNumber2 =this.map.getExploredNumber(Helper.translatePosToMapPos(returnArray[j]));
+                    let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
                     if(exploredNumber1>exploredNumber2 && exploredNumber2!=-1)
                     {
                         returnArray.splice(j,0,neighbours[i]);
@@ -526,16 +530,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
         switch(dir)
         {
             case NORTH:  
-                this.priorityArray.addAndSort(this.priorityArray.north,{index:this.index,p:this.y},NORTH);
+                this.priorityArray.addAndSort(this.priorityArray.north,{index:this.index,p:this.ty},NORTH);
                 break;
             case SOUTH: 
-                this.priorityArray.addAndSort(this.priorityArray.south,{index:this.index,p:this.y},SOUTH);
+                this.priorityArray.addAndSort(this.priorityArray.south,{index:this.index,p:this.ty},SOUTH);
                 break;
             case EAST:    
-                this.priorityArray.addAndSort(this.priorityArray.east,{index:this.index,p:this.x},EAST);
+                this.priorityArray.addAndSort(this.priorityArray.east,{index:this.index,p:this.tx},EAST);
                 break;
             case WEST:    
-                this.priorityArray.addAndSort(this.priorityArray.west,{index:this.index,p:this.x},WEST);
+                this.priorityArray.addAndSort(this.priorityArray.west,{index:this.index,p:this.tx},WEST);
                 break;
             case STATIONARY:
                 this.priorityArray.addAndSort(this.priorityArray.stationary,{index:this.index,p:undefined},STATIONARY);
@@ -546,10 +550,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     getNeighbours(v)
     {
         let a =[];
-        a.push({x:v.x+gridStep* 0,y:v.y+gridStep*-1});//north
-        a.push({x:v.x+gridStep* 1,y:v.y+gridStep* 0});//east
-        a.push({x:v.x+gridStep* 0,y:v.y+gridStep* 1});//south
-        a.push({x:v.x+gridStep*-1,y:v.y+gridStep* 0});//west
+        a.push({tx:v.tx+ 0,ty:tv.ty+-1});//north
+        a.push({tx:v.tx+ 1,ty:tv.ty+ 0});//east
+        a.push({tx:v.tx+ 0,ty:tv.ty+ 1});//south
+        a.push({tx:v.tx+-1,ty:tv.ty+ 0});//west
         return a;
     }
     //sort neighbours based on distance to goal, shortest first
@@ -589,26 +593,26 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.proposedPos)
             {
                 //if the proposed position is not outside the map
-                if(this.map.inBounds(Helper.translatePosToMapPos(this.proposedPos)))
+                if(this.map.inBounds(this.proposedPos))
                 {
                     //if the proposed position does not already have a player on it or a vehicle
-                    if(this.map.getPlayerIndex(Helper.translatePosToMapPos(this.proposedPos))==-1 && (this.map.getVehicleIndex(Helper.translatePosToMapPos(this.proposedPos))==-1))
+                    if(this.map.getPlayerIndex(this.proposedPos)==-1 && (this.map.getVehicleIndex(this.proposedPos)==-1))
                     {
-                        if(this.map.isEdge(Helper.translatePosToMapPos(this.proposedPos))==false)
+                        if(this.map.isEdge(this.proposedPos)==false)
                         {
                             //if the proposed position is a path - and not a wall or rubble, or this.shortcutMode is active
                             //updating this so that creatures can walk on rubble an path
-                            if(this.map.isWall(Helper.translatePosToMapPos(this.proposedPos))==false||this.shortcutMode)
+                            if(this.map.isWall(this.proposedPos)==false||this.shortcutMode)
                             {             
                                 //this will be NORTH, SOUTH, EAST or WEST or STATIONARY
                                 let dir = this.proposedDirection();
                                 //if the proposed position does not already have a creature on it
-                                if(this.map.getCreatureIndex(Helper.translatePosToMapPos(this.proposedPos))==-1)
+                                if(this.map.getCreatureIndex(this.proposedPos)==-1)
                                 {
                                     //even if the proposed position has no creature on it we should still...
                                     ///...check if the proposed position is contested, 
                                     //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
-                                    if(this.map.isContestedExcluding(Helper.translatePosToMapPos(this.proposedPos),dir))
+                                    if(this.map.isContestedExcluding(this.proposedPos,dir))
                                     {
                                         //do not move
                                     }
@@ -621,25 +625,25 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                 else
                                 {
                                     // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
-                                    if(this.map.isContestedFromOpposite(Helper.translatePosToMapPos({x:this.x,y:this.y}),dir))
+                                    if(this.map.isContestedFromOpposite({x:this.x,y:this.y},dir))
                                     {
                                         this.swapCreatureWith(this.proposedPos);
                                     }
                                     // if not already contested, then mark it as contested by the direction we wanted to move in
                                     else
                                     {
-                                        this.map.setContested(Helper.translatePosToMapPos(this.proposedPos),dir);
+                                        this.map.setContested(this.proposedPos,dir);
                                     }
                                 }
                             }
                             //if the proposed position is a wall  set the memory to record that wall
-                            else if (this.map.isWall(Helper.translatePosToMapPos(this.proposedPos)))
+                            else if (this.map.isWall(this.proposedPos))
                             {
                                 this.updateMemoryWall(this.proposedPos);
                             }
                         }
                         //if the proposed position is a wall  set the memory to record that wall
-                        else if (this.map.isEdge(Helper.translatePosToMapPos(this.proposedPos)))
+                        else if (this.map.isEdge(this.proposedPos))
                         {
                             this.updateMemoryWall(this.proposedPos);
                         }
@@ -659,10 +663,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     kill()
     {
+        this.tx=undefined;
+        this.ty=undefined;
         this.x=undefined;
         this.y=undefined;
         //if the creature is destroyed we must clear it's contested data or else creatures could end up teleporting
-        this.map.clearContested(Helper.translatePosToMapPos({x:this.x,y:this.y}));
+        this.map.clearContested({tx:this.tx,ty:this.ty});
         //get rid of the tunnel
         for(let i = 0; i < this.potentialTunnelArray.length; i ++)
         {
@@ -675,19 +681,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             return STATIONARY;
         }
-        else if(this.proposedPos.x-this.x==-1*gridStep)
+        else if(this.proposedPos.tx-this.tx==-1)
         {
             return WEST;
         }
-        else if(this.proposedPos.x-this.x==1*gridStep)
+        else if(this.proposedPos.tx-this.tx==1)
         {
             return EAST;
         }
-        else if(this.proposedPos.y-this.y==-1*gridStep)
+        else if(this.proposedPos.ty-this.ty==-1)
         {
             return NORTH;
         }
-        else if(this.proposedPos.y-this.y==1*gridStep)
+        else if(this.proposedPos.ty-this.ty==1)
         {
             return SOUTH;
         }
@@ -724,21 +730,21 @@ export default class Creature extends Phaser.GameObjects.Sprite
     rightAnglePosition(wall,v,direction)
     {
 
-        let x = wall.x-v.x;
-        let y = wall.y-v.y;
-        let o = x;
+        let tx = wall.tx-v.tx;
+        let ty = wall.ty-v.ty;
+        let o = tx;
         //direction will be 1 or -1, which is RIGHT or LEFT
-        x=direction*y*-1;
-        y=direction*o;
-        return {x:v.x+x,y:v.y+y};
+        tx=direction*ty*-1;
+        ty=direction*o;
+        return {tx:v.tx+tx,ty:v.ty+ty};
     }
     moveCreature(v)
     {
         this.updateMemory(v);
         //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
-        if(this.map.getCreatureIndex(Helper.translatePosToMapPos({x:this.x,y:this.y}))==this.index)
+        if(this.map.getCreatureIndex({tx:this.tx,ty:this.ty})==this.index)
         {
-            this.map.setCreature(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
+            this.map.setCreature({tx:this.tx,ty:this.ty},-1);
         }
         if(this.cancelMove==false)
         {    
@@ -746,7 +752,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //if we have moved such that the trailer is on a path, then drop 1 rubble if possible
             this.attemptDumpTrailer();
             //update the new position of the creature in the map
-            this.map.setCreature(Helper.translatePosToMapPos(v),this.index);
+            this.map.setCreature(v,this.index);
             //set the explored number etc for the explorer creature
             if(this.allowAlterExplorerNumber)
             { 
@@ -756,14 +762,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 }
                 this.exploredNumber++;
                 //we should only overwrite the explored number if this tile was unexplored, or if our explored number is lower than the current one
-                let mapExploredNumber = this.map.getResourceIndex(Helper.translatePosToMapPos(v));
+                let mapExploredNumber = this.map.getResourceIndex(v);
                 if(this.exploredNumber<mapExploredNumber||mapExploredNumber==-1)
                 {
-                    this.map.setExploredNumber(Helper.translatePosToMapPos(v),this.exploredNumber);
+                    this.map.setExploredNumber(v,this.exploredNumber);
                 }
                 //todo logic for picking up resource, marking the map as a resource marker, deleting tail 
                 //if there is a resource at this pos
-                let resourceIndex=this.map.getResourceIndex(Helper.translatePosToMapPos(v));
+                let resourceIndex=this.map.getResourceIndex(v);
                 if(resourceIndex!=-1)
                 {
                     //you can only pick up a resource if you are not already carrying one 
@@ -777,13 +783,13 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 }
             }
             //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
-            if(this.map.isWall(Helper.translatePosToMapPos(v))==true)
+            if(this.map.isWall(v)==true)
             {
                 //...slow down the movement by skipping the next movement
                 this.skipMovement=true;
-                let terrain = this.map.getTerrain(Helper.translatePosToMapPos(v));
+                let terrain = this.map.getTerrain(v);
                 //this is where we actually dig the terrain 
-                this.map.setTerrain(Helper.translatePosToMapPos(v),terrain-1);
+                this.map.setTerrain(v,terrain-1);
                 //we add a trailer to the current position - note that we have not actually updated our position yet
                 this.addTrailer();
             }           
@@ -792,30 +798,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //if we added a trailer we don't want to move the trailers
                 this.moveTrailers();
             }
-            if(this.map.isRubble(Helper.translatePosToMapPos(v))==true)
+            if(this.map.isRubble(v)==true)
             {
                 //...slow down the movement by skipping the next movement
                 this.skipMovement=true;
             }
-            this.x=v.x;
-            this.y=v.y;
+            this.tx=v.tx;
+            this.ty=v.ty;
+            let tempV = Helper.translateTilePosToWorldPos(v);
+            this.x=tempV.x;
+            this.y=tempV.y;
             Helper.centreText(this);
         }
-        this.map.clearContested(Helper.translatePosToMapPos(v));
+        this.map.clearContested(v);
     }
     moveTrailers()
     {
         for(let i = this.trailerArray.length-1 ; i >0; i --)
         {
-            this.trailerArray[i].x=this.trailerArray[i-1].x;
-            this.trailerArray[i].y=this.trailerArray[i-1].y;
-            console.log('MOVEtrailer ' + i +' x: '+this.trailerArray[i].x+' y: '+this.trailerArray[i].y);            
+            this.trailerArray[i].tx=this.trailerArray[i-1].tx;
+            this.trailerArray[i].ty=this.trailerArray[i-1].ty;
+            console.log('MOVEtrailer ' + i +' tx: '+this.trailerArray[i].tx+' ty: '+this.trailerArray[i].ty);            
         }
         if(this.trailerArray.length>0)
         {
-            this.trailerArray[0].x=this.x;
-            this.trailerArray[0].y=this.y;
-            console.log('MOVEtrailer ' + 0 +' x: '+this.trailerArray[0].x+' y: '+this.trailerArray[0].y);  
+            this.trailerArray[0].tx=this.tx;
+            this.trailerArray[0].ty=this.ty;
+            console.log('MOVEtrailer ' + 0 +' tx: '+this.trailerArray[0].tx+' ty: '+this.trailerArray[0].ty);  
         }
     }
     //for creatures which use the memory to record the 'tail' or the prev position etc
@@ -824,7 +833,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.newGoal=false;
         
         //when trying to tunnel, we might set the goal to the start of the tunnel, if the proposed position is to then visit that goal, change the goal back to the old goal 
-        if(Helper.vectorEquals({x:v.x,y:v.y},this.goal))
+        if(Helper.vectorEquals({tx:v.tx,ty:v.ty},this.goal))
         {
             this.goal=this.oldGoal;
             this.newGoal=true;
@@ -835,7 +844,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         for(let i = 0; i < this.potentialTunnelArray.length; i ++)
         {
             //if we revisit the tunnel position, 
-            if(Helper.vectorEquals({x:v.x,y:v.y},{x:this.potentialTunnelArray[i].x,y:this.potentialTunnelArray[i].y}))
+            if(Helper.vectorEquals({tx:v.tx,ty:v.ty},{tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty}))
             {
                 //cancel that tunnel 
                 //if we set a potentialTunnelStartPos, and then for example we travel in a straight line up, then back down, due to walls, the proposedpos will be to revisit the potentialTunnelStartPos, in this case cancel the tunnel 
@@ -857,7 +866,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.potentialTunnelArray[i].alive)
             {
                 let oldDistToPotentialTunnelStartPos = this.potentialTunnelArray[i].distanceToOriginatingCreature;
-                this.potentialTunnelArray[i].distanceToOriginatingCreature = Helper.dist({x:v.x,y:v.y},{x:this.potentialTunnelArray[i].x,y:this.potentialTunnelArray[i].y});
+                this.potentialTunnelArray[i].distanceToOriginatingCreature = Helper.dist({tx:v.tx,ty:v.ty},{x:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty});
                 //if we are moving further away 
                 if(this.potentialTunnelArray[i].distanceToOriginatingCreature - oldDistToPotentialTunnelStartPos>=0)
                 {
@@ -869,7 +878,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         this.cancelMove=true;
                         //save our current goal as we are about to overwrite it
                         this.oldGoal=this.goal;
-                        this.goal={x:this.potentialTunnelArray[i].x,y:this.potentialTunnelArray[i].y};
+                        this.goal={tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty};
                         //this newGoal boolean affects how we pathfind
                         this.newGoal=true;
                         this.killAllTunnels();
@@ -896,7 +905,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(this.rememberTail)
         {
             this.memory=[];
-            this.memory.push({x:this.x,y:this.y});
+            this.memory.push({tx:this.tx,ty:this.ty});
         }
         if(this.rememberWall&&this.memory.length>0)
         {
@@ -905,21 +914,21 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(Helper.vectorEquals(wall,this.proposedPos))
             {
                 // get the velocity we are about to move 
-                let d = {x:wall.x-this.x,y:wall.y-this.y};
+                let d = {tx:wall.tx-this.tx,ty:wall.ty-this.ty};
                 //times that by the following and the creature's preferred direction and move in the other axis to get the new wall position
-                wall.y=wall.y+(d.x*-1*this.wallRunnerDirection);
-                wall.x=wall.x+(d.y*+1*this.wallRunnerDirection);
+                wall.ty=wall.ty+(d.tx*-1*this.wallRunnerDirection);
+                wall.tx=wall.tx+(d.ty*+1*this.wallRunnerDirection);
                 this.memory=[];
                 this.memory.push(wall);
             }
             else
             {
                 //turn the wall from a position like 4,6 to a direciton from the creature's current positon like, -1,0
-                wall.x=wall.x-this.x;
-                wall.y=wall.y-this.y;
+                wall.tx=wall.tx-this.tx;
+                wall.ty=wall.ty-this.ty;
                 //now turn the wall back into a position by adding that direction to the new position 
-                wall.x=wall.x+this.proposedPos.x;
-                wall.y=wall.y+this.proposedPos.y;
+                wall.tx=wall.tx+this.proposedPos.tx;
+                wall.ty=wall.ty+this.proposedPos.ty;
                 this.memory=[];
                 this.memory.push(wall);
             }
@@ -932,8 +941,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             if(this.potentialTunnelArray[i].alive==false)
             {
-                this.potentialTunnelArray[i].x=this.x;
-                this.potentialTunnelArray[i].y=this.y;
+                this.potentialTunnelArray[i].tx=this.tx;
+                this.potentialTunnelArray[i].ty=this.ty;
                 this.potentialTunnelArray[i].distanceToOriginatingCreature=0;
                 this.potentialTunnelArray[i].viable=false;
                 this.potentialTunnelArray[i].alive=true;
@@ -941,7 +950,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
         }
         //otherwise add a new one, adding it to the start of the array will solve the PROBLEMUNNESSARYTUNNELS
-        this.potentialTunnelArray.splice(0,0,new PotentialTunnel(this.scene,this.x,this.y,this.texture));
+        this.potentialTunnelArray.splice(0,0,new PotentialTunnel(this.scene,this.tx,this.ty,this.texture));
     }
     //if any tunnel is alive return true, else return false
     isAnyTunnelAlive()
@@ -978,8 +987,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     addTrailer()
     {
-        this.trailerArray.splice(0,0,new Trailer(this.scene,this.x,this.y,this.trailerTexture));
-        console.log('ADD trailer ' + 0 +' x: '+this.x+' y: '+this.y);  
+        this.trailerArray.splice(0,0,new Trailer(this.scene,this.tx,this.ty,this.trailerTexture));
+        console.log('ADD trailer ' + 0 +' tx: '+this.tx+' ty: '+this.ty);  
     }
     killTrailer()
     {
@@ -990,7 +999,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         if(this.trailerArray.length>0)
         {
-            if(this.map.isPath(Helper.translatePosToMapPos({x:this.trailerArray[0].x,y:this.trailerArray[0].y}))==true)
+            if(this.map.isPath({tx:this.trailerArray[0].tx,ty:this.trailerArray[0].ty})==true)
             {                    
                 this.killTrailer();
             }
@@ -1009,9 +1018,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         //this creature wants to move to the given position but it is occupied by a creature that wants to move to this creature's position, so we can swap them
         //save the other creature's index
-        let creatureBIndex = this.map.getCreatureIndex(Helper.translatePosToMapPos(v));
+        let creatureBIndex = this.map.getCreatureIndex(v);
         //save this creature's position
-        let creatureAPos = {x:this.x,y:this.y};
+        let creatureAPos = {tx:this.tx,ty:this.ty};
         //use the moveCreature method to update creatureB's position, we don't have access to that, just let the scene do it 
         this.scene.updateCreaturePos(creatureBIndex,creatureAPos);
         this.moveCreature(this.proposedPos);

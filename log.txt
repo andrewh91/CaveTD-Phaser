@@ -510,3 +510,37 @@ adding a debugging feature, for each camera, i am drawing to screen the x and y 
 next i really ought to change the way i store the x and y of the tiles etc
 currently the tile is set up with a real world position, which is like -mapOffset +gridStep*5
 instead i should just store the position as 5 and apply the offset etc when drawing it 
+
+20250404
+there is a gridstep which is how wide the tile is in world coords, there are world coords, camera coords, and tile coords, tile coords are analogous to the position of the tile in the map , most of my classes inherit from the sprite class, the x and y coords of the class mean it will be drawn at that position in world coords, so in order for me to have the tiles be drawn at the tile coords, i would need to convert the tile coords to x and y every update, or i can maintain both tile coords and world coords, and make sure to change both at the same time 
+
+i'll start with the player, so i will give it a tx and ty to denote the tile position, every time the x is set or moved also update the tx and ty 
+
+this seems like a worthwhile idea so far, i've been able to remove so many helper.translatePosToMapPos method calls
+made a new helper function called translateTilePosToWorldPos, which should be used much less than the other translate function
+
+some things should still use the x rather than tx, like the popup text when the vehicle is entered, that should appear based on the world x position of the player
+
+i think i finished updating it for the player, try the creature next
+
+so i've got rid of a lot of calls to Helper.vectorMultiply, as i was only multipying a vector by gridstep, but now i can just use 1 instead of gridstep so obviously there is no point multipying by 1 
+
+finished with creature
+start with the helper class - done 
+creatureBase - done
+TODO resume going through the code refactoring a lot of the .x and .y to .tx and .ty, replacing gridstep with 1 where needed, removing helper functions that are not needed
+classes left to process:
+main  
+mapData
+potentialTunnelStartPos
+priorityArray 
+resource
+savedMaps
+splitscreen
+tile
+trailer
+uiScene
+vehilce
+
+
+next i'll have the camera move, it should follow the player that the camera is tied to, but if that move would only show more blank space - outside the map, then it should not 
