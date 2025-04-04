@@ -525,14 +525,14 @@ i think i finished updating it for the player, try the creature next
 
 so i've got rid of a lot of calls to Helper.vectorMultiply, as i was only multipying a vector by gridstep, but now i can just use 1 instead of gridstep so obviously there is no point multipying by 1 
 
+DONE resume going through the code refactoring a lot of the .x and .y to .tx and .ty, replacing gridstep with 1 where needed, removing helper functions that are not needed
+classes done
 finished with creature
 start with the helper class - done 
 creatureBase - done
-TODO resume going through the code refactoring a lot of the .x and .y to .tx and .ty, replacing gridstep with 1 where needed, removing helper functions that are not needed
-classes left to process:
 main  
-mapData
-potentialTunnelStartPos
+mapData - resume from dump rubble onwards
+potentialTunnel
 priorityArray 
 resource
 savedMaps
@@ -541,6 +541,11 @@ tile
 trailer
 uiScene
 vehilce
+classes left to process:
+all done
 
+after a bit of testing this seems ok, 
+TODO 
+i need to further test, vehicles, rubble, creatures pathfinding
 
 next i'll have the camera move, it should follow the player that the camera is tied to, but if that move would only show more blank space - outside the map, then it should not 

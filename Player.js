@@ -71,7 +71,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 
                 //god mode for making maps
                 /*{
-                this.map.setTerrain(Helper.translatePosToMapPos({x:this.x,y:this.y}),pathTerrain);
+                this.map.setTerrain({tx:this.tx,ty:this.ty},pathTerrain);
                 return;
                 }*/
                 //if we are not already in a vehicle
@@ -171,9 +171,9 @@ export default class Player extends Phaser.GameObjects.Sprite {
     movePlayer(v)
     {
         //update the old position of the player in the map
-        this.map.setPlayer({x:this.tx,y:this.ty},-1);
-        this.tx=v.x;
-        this.ty=v.y;
+        this.map.setPlayer({tx:this.tx,ty:this.ty},-1);
+        this.tx=v.tx;
+        this.ty=v.ty;
         let tempV=Helper.translateTilePosToWorldPos(v);
         this.x=tempV.x;
         this.y=tempV.y;

@@ -63,12 +63,12 @@ class Game extends Phaser.Scene
         this.setUpMap();
 
         vehicleIndex=-1;
-        //this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*2);
-        //this.addVehicle(mapOffSetX+gridStep*3,mapOffSetY+gridStep*4);
+        //this.addVehicle({tx:3,ty:2});
+        //this.addVehicle({tx:4,ty:3});
 
         selectedPlayer=-1;
         //one player by default
-        this.addPlayer(mapOffSetX+gridStep*1,mapOffSetY+gridStep*1);
+        this.addPlayer({tx:1,ty:1});
         priorityArray=new PriorityArray();
         this.setUpResources();
         this.setUpCreatureBases();
@@ -110,11 +110,12 @@ class Game extends Phaser.Scene
         this.ui.showNewPlayerDialog();
         createPlayerFlag=true;
         /*make a new player at this player's position, and select it so the cursor keys move the new player*/
-        let x = players[selectedPlayer].x;
-        let y = players[selectedPlayer].y;
-        this.addPlayer(x,y);
+        let tx = players[selectedPlayer].tx;
+        let ty = players[selectedPlayer].ty;
+        this.addPlayer({tx:tx,ty:ty});
         selectedPlayer=players.length-1;
-        addCamera(this,x,y);
+        //use the world coords for the camera
+        addCamera(this,players[selectedPlayer].x,players[selectedPlayer].y);
     }
     onPressR()
     {
@@ -180,6 +181,7 @@ class Game extends Phaser.Scene
         console.log("entered");
         //give the vehicle a player index to show it is occupied by this player
         vehicles[v].playerIndex=p;
+        //popups should use real world coords
         this.addPopup("Player "+p+" entered Vehicle "+v,{x:players[p].x,y:players[p].y},2000);
         
     }
@@ -317,26 +319,28 @@ class Game extends Phaser.Scene
     {
         drawGridCoords(this);
     }
-    addPlayer(x,y)
+    addPlayer(v)
     {
         selectedPlayer++;
-        let p = new Player(this, x,y, 'dot',selectedPlayer,Helper.incrementColour(selectedPlayer,3),mapData);
+        let tempV = Helper.translateTilePosToWorldPos(v);
+        let p = new Player(this, tempV.x,tempV.y, 'dot',selectedPlayer,Helper.incrementColour(selectedPlayer,3),mapData);
         players.push(p);
         //the player's index is stored at the player's position in the map, make sure to update that 
-        mapData.setPlayer(Helper.translatePosToMapPos({x:p.x,y:p.y}),p.index);
+        mapData.setPlayer(v,p.index);
     }
-    addVehicle(x,y)
+    addVehicle(v)
     {
         vehicleIndex++;
-        let v = new Vehicle(this,x ,y ,'dot','rubble',vehicleIndex,Helper.incrementColour(vehicleIndex,3),mapData);
-        vehicles.push(v);
+        let tempV = Helper.translateTilePosToWorldPos(v);
+        let vehicle = new Vehicle(this,tempV.x ,tempV.y ,'dot','rubble',vehicleIndex,Helper.incrementColour(vehicleIndex,3),mapData);
+        vehicles.push(vehicle);
         //store the vehicle's index in the map at the vehicle's position 
-        mapData.setVehicle(Helper.translatePosToMapPos({x:v.x,y:v.y}),v.index);
+        mapData.setVehicle(v,vehicle.index);
     }
     //if i add a creature mid game, it can sort of be deleted by the priority array if added at the wrong time in the update, so add them to a waiting room and then at the correct time process the waiting room 
-    addCreatureToWaitingRoom(x,y)
+    addCreatureToWaitingRoom(v)
     {
-        creatureWaitingRoom.push({x:x,y:y});
+        creatureWaitingRoom.push(v);
     }
     //so at the right moment in the update, we will get the length of the waiting room = (i), then in a loop remove the first creature (i) number of times
     processCreatureWaitingRoom()
@@ -347,11 +351,11 @@ class Game extends Phaser.Scene
         {
             tempcreature = creatureWaitingRoom.slice(j,j+1)[0];
             //if there is not already a creature on that space then create a creature here
-            if(mapData.getCreatureIndex(Helper.translatePosToMapPos(tempcreature))==-1)
+            if(mapData.getCreatureIndex(tempcreature)==-1)
             {
                 creatureWaitingRoom.splice(j,1);
                 
-                this.addCreature(tempcreature.x,tempcreature.y);
+                this.addCreature({tx:tempcreature.tx,ty:tempcreature.ty});
             }
             else
             {
@@ -359,49 +363,51 @@ class Game extends Phaser.Scene
             }
         }
     }
-    addCreature(x,y)
+    addCreature(v)
     {
         creatureIndex++;
-        let c = new Creature(this, x,y, 'dot','trailer',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
+        let tempV = Helper.translateTilePosToWorldPos(v);
+        let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
         creatures.push(c);
-        mapData.setCreature(Helper.translatePosToMapPos({x:c.x,y:c.y}),c.index);
+        mapData.setCreature({x:c.tx,y:c.ty},c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
         priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
     }
-    addCreatureBase(x,y)
+    addCreatureBase(v)
     {
         creatureBaseIndex++;
-        let c= new CreatureBase(this,x,y,'dot',creatureBaseIndex,0x00ff00,mapData);
+        let tempV = Helper.translateTilePosToWorldPos(v);
+        let c= new CreatureBase(this,tempV.x,tempV.y,'dot',creatureBaseIndex,0x00ff00,mapData);
         creatureBases.push(c);
     }
-    addResource(x,y)
+    addResource(v)
     {
         resourceIndex++;
-        let r = new Resource(this, x,y, 'dot',resourceIndex);
+        let tempV = Helper.translateTilePosToWorldPos(v);
+        let r = new Resource(this, tempV.x,tempV.y, 'dot',resourceIndex);
         resources.push(r);
-        mapData.setResourceIndex(Helper.translatePosToMapPos({x:r.x,y:r.y}),r.index);
+        mapData.setResourceIndex({tx:r.tx,ty:r.ty},r.index);
     }
     setUpResources()
     {
         resourceIndex=-1;
         
-        this.addResource(mapOffSetX+gridStep*10,mapOffSetY+gridStep*(mapHeight-7));
-        this.addResource(mapOffSetX+gridStep*15,mapOffSetY+gridStep*4);
+        this.addResource({tx:15,ty:4});
     }
     setUpCreatureBases()
     {
         creatureBaseIndex=-1;
-        this.addCreatureBase(mapOffSetX+gridStep*15,mapOffSetY+gridStep*10);
+        this.addCreatureBase({tx:15,ty:10});
     }
     setUpCreatures1()
     {
         creatureIndex=-1;
 /*
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*(mapWidth-2),mapOffSetY+gridStep*(mapHeight-2));
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
+        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2)});
+        creatures[creatureIndex].setGoal({tx:0,ty:0});
 */
-        //this.addCreatureToWaitingRoom(mapOffSetX+gridStep*12,mapOffSetY+gridStep*(mapHeight-2));
-        //creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*0,y:mapOffSetY+gridStep*0});
+        //this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2)});
+        //creatures[creatureIndex].setGoal({tx:0,ty:0});
 
         priorityArray.loopThroughAll();
     }
@@ -409,66 +415,66 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
         //these 2 creatures are on the top row and should hit each other 
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*20,mapOffSetY+gridStep*0);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*1,y:mapOffSetY+gridStep*0});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*11,mapOffSetY+gridStep*0);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*26,y:mapOffSetY+gridStep*0});
+        this.addCreatureToWaitingRoom({tx:20,ty:0});
+        creatures[creatureIndex].setGoal({tx:1,ty:0});
+        this.addCreatureToWaitingRoom({tx:11,ty:0});
+        creatures[creatureIndex].setGoal({tx:26,ty:0});
         //this is a continuous row of creatures that go east, notice that they get in each others way (without the priority array)
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*3,mapOffSetY+gridStep*16);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*4,mapOffSetY+gridStep*16);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*16);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*16,y:mapOffSetY+gridStep*16});
+        this.addCreatureToWaitingRoom({tx:3,ty:16});
+        creatures[creatureIndex].setGoal({tx:16,ty:16});
+        this.addCreatureToWaitingRoom({tx:4,ty:16});
+        creatures[creatureIndex].setGoal({tx:16,ty:16});
+        this.addCreatureToWaitingRoom({tx:5,ty:16});
+        creatures[creatureIndex].setGoal({tx:16,ty:16});
         //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*14,mapOffSetY+gridStep*16);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*15,mapOffSetY+gridStep*16);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*16,mapOffSetY+gridStep*16);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*3,y:mapOffSetY+gridStep*16});
+        this.addCreatureToWaitingRoom({tx:14,ty:16});
+        creatures[creatureIndex].setGoal({tx:3,ty:16});
+        this.addCreatureToWaitingRoom({tx:15,ty:16});
+        creatures[creatureIndex].setGoal({tx:3,ty:16});
+        this.addCreatureToWaitingRoom({tx:16,ty:16});
+        creatures[creatureIndex].setGoal({tx:3,ty:16});
         //a dotted line moving down
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*1);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*3);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*5,mapOffSetY+gridStep*5);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*5,y:mapOffSetY+gridStep*11});
+        this.addCreatureToWaitingRoom({tx:5,ty:1});
+        creatures[creatureIndex].setGoal({tx:5,ty:11});
+        this.addCreatureToWaitingRoom({tx:5,ty:3});
+        creatures[creatureIndex].setGoal({tx:5,ty:11});
+        this.addCreatureToWaitingRoom({tx:5,ty:5});
+        creatures[creatureIndex].setGoal({tx:5,ty:11});
         //a dotted line moving east
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*0,mapOffSetY+gridStep*7);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*2,mapOffSetY+gridStep*7);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*4,mapOffSetY+gridStep*7);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*11,y:mapOffSetY+gridStep*7});
+        this.addCreatureToWaitingRoom({tx:0,ty:7});
+        creatures[creatureIndex].setGoal({tx:11,ty:7});
+        this.addCreatureToWaitingRoom({tx:2,ty:7});
+        creatures[creatureIndex].setGoal({tx:11,ty:7});
+        this.addCreatureToWaitingRoom({tx:4,ty:7});
+        creatures[creatureIndex].setGoal({tx:11,ty:7});
         //4 creatures colliding from 4 directions
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*17,mapOffSetY+gridStep*11);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*17,y:mapOffSetY+gridStep*17});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*17,mapOffSetY+gridStep*17);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*17,y:mapOffSetY+gridStep*11});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*14,mapOffSetY+gridStep*14);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*14});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*20,mapOffSetY+gridStep*14);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*14,y:mapOffSetY+gridStep*14});
+        this.addCreatureToWaitingRoom({tx:17,ty:11});
+        creatures[creatureIndex].setGoal({tx:17,ty:17});
+        this.addCreatureToWaitingRoom({tx:17,ty:17});
+        creatures[creatureIndex].setGoal({tx:17,ty:11});
+        this.addCreatureToWaitingRoom({tx:14,ty:14});
+        creatures[creatureIndex].setGoal({tx:20,ty:14});
+        this.addCreatureToWaitingRoom({tx:20,ty:14});
+        creatures[creatureIndex].setGoal({tx:14,ty:14});
 
         //a continuous line of creatures going down
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*1);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*2);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*3);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*4);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*5);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*6);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*25,mapOffSetY+gridStep*7);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*25,y:mapOffSetY+gridStep*18});
+        this.addCreatureToWaitingRoom({tx:25,ty:1});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:2});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:3});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:4});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:5});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:6});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:7});
+        creatures[creatureIndex].setGoal({tx:25,ty:18});
         //one creature trying to go across
-        this.addCreatureToWaitingRoom(mapOffSetX+gridStep*26,mapOffSetY+gridStep*7);
-        creatures[creatureIndex].setGoal({x:mapOffSetX+gridStep*20,y:mapOffSetY+gridStep*7});
+        this.addCreatureToWaitingRoom({tx:26,ty:7});
+        creatures[creatureIndex].setGoal({tx:20,ty:7});
 
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array
         priorityArray.loopThroughAll();
@@ -481,7 +487,7 @@ class Game extends Phaser.Scene
     //this is just used as the resource doees not have access to the map 
     addResourceMarkerToMap(v,b)
     {
-        mapData.setResourceMarker(Helper.translatePosToMapPos(v),b);
+        mapData.setResourceMarker(v,b);
     }
     collectResource(index)
     {
@@ -490,8 +496,8 @@ class Game extends Phaser.Scene
     //sometimes trailers containing rubble will be destroyed - when the creature dies- and the rubble should be added to the map at the trailer position 
     addTrailerRubble(v)
     {
-        let terrain = mapData.getTerrain(Helper.translatePosToMapPos(v));
-        mapData.setTerrain(Helper.translatePosToMapPos(v),terrain+1);
+        let terrain = mapData.getTerrain(v);
+        mapData.setTerrain(v,terrain+1);
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something

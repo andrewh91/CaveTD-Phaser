@@ -4,7 +4,10 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
         constructor(scene, x, y, texture,rubbleTexture,index,colour,map) {
         super(scene, x, y, texture);
         
-        scene.add.existing(this);
+        scene.add.existing(this);        
+        //the tx is a more useful way of figuring out where the player is in the world, this.x is the world coord, but this is a grid based game, and the player could be at position (60,10) in order to figure out where the player is you would need to know what the gridstep is, and that the grid does not start at 0,0, it has an offset, so (60,10) could be (2,0) tile position if the gridstep is 25 and the offset is (10,10)
+        this.tx=(this.x-mapOffSetX)/gridStep;
+        this.ty=(this.y-mapOffSetY)/gridStep;
         this.depth=1;
         this.index=index;
         //i've made the player image be the same size as the value it can move in one go 
@@ -19,6 +22,7 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
         //the vehicle is capable of carrying one or more rubble, each carried rubble wil be indicated by an icon
         this.rubbleIcons=[];
         this.rubbleIconsPos=[];
+        //these will be offset within the tile so i'll use the world pos instead of tile pos
         this.addRubbleIcons(x,y,rubbleTexture);
         this.addRubbleIcons(x,y,rubbleTexture);
         this.addRubbleIcons(x,y,rubbleTexture);
@@ -95,13 +99,16 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
     moveVehicle(v)
     {
         //update the old position of the player in the map
-        this.map.setVehicle(Helper.translatePosToMapPos({x:this.x,y:this.y}),-1);
-        this.x=v.x;
-        this.y=v.y;
+        this.map.setVehicle({tx:this.tx,ty:this.ty},-1);
+        this.tx=v.tx;
+        this.ty=v.ty;
+        let tempV =Helper.translateTilePosToWorldPos(v);
+        this.x=tempV.tx;
+        this.y=tempV.ty;
         this.updateRubbleIconsPos();
         this.centreText();
         //update the new position of the player in the map
-        this.map.setVehicle(Helper.translatePosToMapPos(v),this.index);
+        this.map.setVehicle(v,this.index);
     }
     centreText()
     {

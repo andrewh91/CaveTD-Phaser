@@ -13,12 +13,12 @@ export default class MapData
     }
     getIndexFromCoords(v)
     {
-        return v.x+v.y*mapWidth;
+        return v.tx+v.ty*mapWidth;
     }
     setTerrain(v,t)
     {
         //this can be out of bounds
-        if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
+        if(v.tx>=0&&v.tx<mapWidth && v.ty>=0 && v.ty <mapHeight)
         {
             //you can add more rubble to the wall to give it more 'health', but currently the colour will only go from light, medium and dark grey to black 
             this.tiles[this.getIndexFromCoords(v)].terrain = t;
@@ -30,7 +30,7 @@ export default class MapData
         }
         else
         {
-            console.log('mapSetTerrain failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
+            console.log('mapSetTerrain failed , tx and ty is out of bounds, x: ' + v.tx + ' y: '+v.ty)
         }
     }
     setExploredNumber(v,n)
@@ -81,28 +81,28 @@ export default class MapData
     {
         let currentValue;
         //this can be out of bounds
-        if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
+        if(v.tx>=0&&v.tx<mapWidth && v.ty>=0 && v.ty <mapHeight)
         {
             currentValue = this.tiles[this.getIndexFromCoords(v)].terrain ;
             this.setTerrain(v,currentValue-1);
         }
         else
         {
-            console.log('drillWall failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
+            console.log('drillWall failed , x and y is out of bounds, tx: ' + v.tx + ' ty: '+v.ty)
         }
     }
     dumpRubble(v)
     {
         let currentValue;
         //this can be out of bounds
-        if(v.x>=0&&v.x<mapWidth && v.y>=0 && v.y <mapHeight)
+        if(v.tx>=0&&v.tx<mapWidth && v.ty>=0 && v.ty <mapHeight)
         {
             currentValue = this.tiles[this.getIndexFromCoords(v)].terrain ;
             this.setTerrain(v,currentValue+1);
         }
         else
         {
-            console.log('dumpRubble failed , x and y is out of bounds, x: ' + v.x + ' y: '+v.y)
+            console.log('dumpRubble failed , tx and ty is out of bounds, tx: ' + v.tx + ' ty: '+v.ty)
         }
     }
     setPlayer(v,index)
@@ -341,7 +341,7 @@ export default class MapData
     }
     inBounds(v)
     {
-        return (v.x>=0&&v.x<mapWidth  && v.y>=0&&v.y<mapHeight);
+        return (v.tx>=0&&v.tx<mapWidth  && v.ty>=0&&v.ty<mapHeight);
     }
     //this is just a helper method to display a text version of the map data
     //this uses 'dynamic property access' and 'bracket notation' to allow the user to specify a new variable of mapData.tiles to display, 

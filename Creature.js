@@ -943,6 +943,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.potentialTunnelArray[i].tx=this.tx;
                 this.potentialTunnelArray[i].ty=this.ty;
+                this.potentialTunnelArray[i].x=this.x;
+                this.potentialTunnelArray[i].y=this.y;
                 this.potentialTunnelArray[i].distanceToOriginatingCreature=0;
                 this.potentialTunnelArray[i].viable=false;
                 this.potentialTunnelArray[i].alive=true;
@@ -950,7 +952,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
         }
         //otherwise add a new one, adding it to the start of the array will solve the PROBLEMUNNESSARYTUNNELS
-        this.potentialTunnelArray.splice(0,0,new PotentialTunnel(this.scene,this.tx,this.ty,this.texture));
+        this.potentialTunnelArray.splice(0,0,new PotentialTunnel(this.scene,this.x,this.y,this.texture));
     }
     //if any tunnel is alive return true, else return false
     isAnyTunnelAlive()
