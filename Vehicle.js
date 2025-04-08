@@ -103,8 +103,8 @@ export default class Vehicle extends Phaser.GameObjects.Sprite {
         this.tx=v.tx;
         this.ty=v.ty;
         let tempV =Helper.translateTilePosToWorldPos(v);
-        this.x=tempV.tx;
-        this.y=tempV.ty;
+        this.x=tempV.x;
+        this.y=tempV.y;
         this.updateRubbleIconsPos();
         this.centreText();
         //update the new position of the player in the map

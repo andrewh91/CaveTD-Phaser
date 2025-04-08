@@ -63,7 +63,7 @@ class Game extends Phaser.Scene
         this.setUpMap();
 
         vehicleIndex=-1;
-        //this.addVehicle({tx:3,ty:2});
+        this.addVehicle({tx:3,ty:2});
         //this.addVehicle({tx:4,ty:3});
 
         selectedPlayer=-1;
@@ -355,7 +355,7 @@ class Game extends Phaser.Scene
             {
                 creatureWaitingRoom.splice(j,1);
                 
-                this.addCreature({tx:tempcreature.tx,ty:tempcreature.ty});
+                this.addCreature(tempcreature);
             }
             else
             {
@@ -366,10 +366,17 @@ class Game extends Phaser.Scene
     addCreature(v)
     {
         creatureIndex++;
+
         let tempV = Helper.translateTilePosToWorldPos(v);
         let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
+        /*the v data might include a goal vector gx,gy*/
+        if(v.gx!=undefined)
+        {
+            let tempG = Helper.translateTilePosToWorldPos({vx:v.gx,vy:v.gy});
+            c.setGoal(tempG);
+        }
         creatures.push(c);
-        mapData.setCreature({x:c.tx,y:c.ty},c.index);
+        mapData.setCreature({tx:c.tx,ty:c.ty},c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
         priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
     }
@@ -402,12 +409,10 @@ class Game extends Phaser.Scene
     setUpCreatures1()
     {
         creatureIndex=-1;
-/*
-        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2)});
-        creatures[creatureIndex].setGoal({tx:0,ty:0});
-*/
-        //this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2)});
-        //creatures[creatureIndex].setGoal({tx:0,ty:0});
+
+        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2),gx:0,gy:0});
+
+        this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2),gx:0,gy:0});
 
         priorityArray.loopThroughAll();
     }
@@ -415,66 +420,40 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
         //these 2 creatures are on the top row and should hit each other 
-        this.addCreatureToWaitingRoom({tx:20,ty:0});
-        creatures[creatureIndex].setGoal({tx:1,ty:0});
-        this.addCreatureToWaitingRoom({tx:11,ty:0});
-        creatures[creatureIndex].setGoal({tx:26,ty:0});
+        this.addCreatureToWaitingRoom({tx:20,ty:0,gx:1,gy:0});
+        this.addCreatureToWaitingRoom({tx:11,ty:0,gx:26,gy:0});
         //this is a continuous row of creatures that go east, notice that they get in each others way (without the priority array)
-        this.addCreatureToWaitingRoom({tx:3,ty:16});
-        creatures[creatureIndex].setGoal({tx:16,ty:16});
-        this.addCreatureToWaitingRoom({tx:4,ty:16});
-        creatures[creatureIndex].setGoal({tx:16,ty:16});
-        this.addCreatureToWaitingRoom({tx:5,ty:16});
-        creatures[creatureIndex].setGoal({tx:16,ty:16});
+        this.addCreatureToWaitingRoom({tx:3,ty:16,gx:16,gy:16});
+        this.addCreatureToWaitingRoom({tx:4,ty:16,gx:16,gy:16});
+        this.addCreatureToWaitingRoom({tx:5,ty:16,gx:5,gy:16});
         //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
-        this.addCreatureToWaitingRoom({tx:14,ty:16});
-        creatures[creatureIndex].setGoal({tx:3,ty:16});
-        this.addCreatureToWaitingRoom({tx:15,ty:16});
-        creatures[creatureIndex].setGoal({tx:3,ty:16});
-        this.addCreatureToWaitingRoom({tx:16,ty:16});
-        creatures[creatureIndex].setGoal({tx:3,ty:16});
+        this.addCreatureToWaitingRoom({tx:14,ty:16,gx:3,gy:16});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:3,gy:16});
+        this.addCreatureToWaitingRoom({tx:16,ty:16,gx:3,gy:16});
         //a dotted line moving down
-        this.addCreatureToWaitingRoom({tx:5,ty:1});
-        creatures[creatureIndex].setGoal({tx:5,ty:11});
-        this.addCreatureToWaitingRoom({tx:5,ty:3});
-        creatures[creatureIndex].setGoal({tx:5,ty:11});
-        this.addCreatureToWaitingRoom({tx:5,ty:5});
-        creatures[creatureIndex].setGoal({tx:5,ty:11});
+        this.addCreatureToWaitingRoom({tx:5,ty:1,gx:5,gy:11});
+        this.addCreatureToWaitingRoom({tx:5,ty:3,gx:5,gy:11});
+        this.addCreatureToWaitingRoom({tx:5,ty:5,gx:5,gy:11});
         //a dotted line moving east
-        this.addCreatureToWaitingRoom({tx:0,ty:7});
-        creatures[creatureIndex].setGoal({tx:11,ty:7});
-        this.addCreatureToWaitingRoom({tx:2,ty:7});
-        creatures[creatureIndex].setGoal({tx:11,ty:7});
-        this.addCreatureToWaitingRoom({tx:4,ty:7});
-        creatures[creatureIndex].setGoal({tx:11,ty:7});
+        this.addCreatureToWaitingRoom({tx:0,ty:7,gx:11,gy:7});
+        this.addCreatureToWaitingRoom({tx:2,ty:7,gx:11,gy:7});
+        this.addCreatureToWaitingRoom({tx:4,ty:7,gx:11,gy:7});
         //4 creatures colliding from 4 directions
-        this.addCreatureToWaitingRoom({tx:17,ty:11});
-        creatures[creatureIndex].setGoal({tx:17,ty:17});
-        this.addCreatureToWaitingRoom({tx:17,ty:17});
-        creatures[creatureIndex].setGoal({tx:17,ty:11});
-        this.addCreatureToWaitingRoom({tx:14,ty:14});
-        creatures[creatureIndex].setGoal({tx:20,ty:14});
-        this.addCreatureToWaitingRoom({tx:20,ty:14});
-        creatures[creatureIndex].setGoal({tx:14,ty:14});
+        this.addCreatureToWaitingRoom({tx:17,ty:11,gx:17,gy:17});
+        this.addCreatureToWaitingRoom({tx:17,ty:17,gx:17,gy:11});
+        this.addCreatureToWaitingRoom({tx:14,ty:14,gx:20,gy:14});
+        this.addCreatureToWaitingRoom({tx:20,ty:14,gx:14,gy:14});
 
         //a continuous line of creatures going down
-        this.addCreatureToWaitingRoom({tx:25,ty:1});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:2});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:3});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:4});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:5});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:6});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:7});
-        creatures[creatureIndex].setGoal({tx:25,ty:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:1,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:2,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:3,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:4,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:5,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:6,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:7,gx:25,gy:18});
         //one creature trying to go across
-        this.addCreatureToWaitingRoom({tx:26,ty:7});
-        creatures[creatureIndex].setGoal({tx:20,ty:7});
+        this.addCreatureToWaitingRoom({tx:26,ty:7,gx:20,gy:7});
 
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array
         priorityArray.loopThroughAll();

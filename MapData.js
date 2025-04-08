@@ -129,6 +129,10 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].creatureIndex;
     }
+    getCreatureBaseIndex(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].creatureBaseIndex;
+    }
     getResourceIndex(v)
     {
         return this.tiles[this.getIndexFromCoords(v)].resourceIndex;
@@ -322,9 +326,18 @@ export default class MapData
         }
         return this.tiles[this.getIndexFromCoords(v)].terrain==pathTerrain;
     }
+    //the player can only dump rubble on terrain like path or rubble, if it dumped on wall, then that wall value would become impassable terrain and i don't want that 
+    isDumpable(v)
+    {
+        //path is exactly 0 or 1
+        if(this.tiles[this.getIndexFromCoords(v)]==undefined)
+        {
+            return false;
+        }
+        return this.tiles[this.getIndexFromCoords(v)].terrain<wallTerrain;
+    }
     getTerrain(v)
     {
-        //path is exactly 0
         if(this.tiles[this.getIndexFromCoords(v)]==undefined)
         {
             return false;

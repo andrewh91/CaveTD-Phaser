@@ -549,3 +549,16 @@ TODO
 i need to further test, vehicles, rubble, creatures pathfinding
 
 next i'll have the camera move, it should follow the player that the camera is tied to, but if that move would only show more blank space - outside the map, then it should not 
+
+20250408
+now that i add the creatures to a waiting room, i can no longer set their goal immediately afterwards, 
+i've made it so that i pass in the goal as well, if it has a goal it will be given the goal data when the waiting room is process, 
+
+fixed some glitches with the creatures relating to the new tx and ty 
+vechilce seems to work ok, 
+there is a problem with the vehicles, you can dig rubble or wall and carry 3 rubble, you can add 3 rubble to a path to make, rubble, then a wall, then impassable terrain. but then you cannot dig impassable terrain, so i don't think you should be able to add more rubble on top of a wall
+made it so that player cannot dump or move on creatures or creature bases
+
+TODO
+test out the other creature pathfinding 
+i still need to test the explorer pathfinding for when they encounter resources 

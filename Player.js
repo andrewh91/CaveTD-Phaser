@@ -104,8 +104,8 @@ export default class Player extends Phaser.GameObjects.Sprite {
                     //if the proposed position is not outside the map
                     if(this.map.inBounds(proposedPos))
                     {
-                        //if the pos is not a creature
-                        if(this.map.getCreatureIndex(proposedPos)==-1)
+                        //if the pos is not a creature, or a creature base 
+                        if(this.map.getCreatureIndex(proposedPos)==-1&&this.map.getCreatureBaseIndex(proposedPos)==-1)
                         {
                             //if the proposed position does not already have a player on it, and if the player is either not in a vehicle or there is no vehicle in the proposed position...
                             if(this.map.getPlayerIndex(proposedPos)==-1 && (this.map.getVehicleIndex(proposedPos)==-1||this.vehicleIndex==-1))
@@ -146,8 +146,8 @@ export default class Player extends Phaser.GameObjects.Sprite {
                 //if we are in dump mode
                 else
                 {
-                    //if the proposed position does not contains a player and does not contain a vehicle
-                    if(this.map.getPlayerIndex(proposedPos)==-1&&this.map.getVehicleIndex(proposedPos)==-1)
+                    //if the proposed position does not contains a player and does not contain a vehicle and does not contain a creature and is not already a wall - which means we can not dump additional rubble on top of it 
+                    if(this.map.getPlayerIndex(proposedPos)==-1&&this.map.getVehicleIndex(proposedPos)==-1&&this.map.getCreatureIndex(proposedPos)==-1&&this.map.getCreatureBaseIndex(proposedPos)==-1&&this.map.isDumpable(proposedPos))
                     {
                         //get the scene to check if there is any rubble available to dump
                         if(this.scene.isVehicleRubbleCapacityEmpty(this.vehicleIndex)==false)
@@ -162,6 +162,10 @@ export default class Player extends Phaser.GameObjects.Sprite {
                             //this can be annoying depending on how fast the movement is 
                             this.setMoveMode(true);
                         }
+                    }
+                    else
+                    {
+                        this.scene.addPopup("Vehicle "+this.vehicleIndex+ " Dump position blocked",{x:this.x,y:this.y},2000);
                     }
                 }
             }

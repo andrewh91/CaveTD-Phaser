@@ -25,7 +25,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.setTint(colour);
         this.text = scene.add.text(this.x, this.y, 'c'+this.index, { fontSize: '20px', fill: '#fff'});
         Helper.centreText(this);
-        this.goal={tx:tx,ty:ty};
+        this.goal={tx:this.tx,ty:this.ty};
         this.oldGoal={tx:undefined,ty:undefined};
         //we may start tunnelling if we change direction, that's assuming that we changed direction due to hitting a wall, if we changed direction due to getting a new goal, then we set this flag so that we ignore that change in direction for tunnelling purposes
         this.newGoal=false;
@@ -267,7 +267,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         if(this.explorerDirectionDiagonal)
         {
             //make either the x or y value a zero, depending on if the toggle bool is true or false, then toggle the toggle bool
-            this.explorerDirection = this.explorerDirectionBoolToggle==true?{tx:0,ty:this.explorerDirectionOriginal.ty}:{x:this.explorerDirectionOriginal.tx,ty:0};
+            this.explorerDirection = this.explorerDirectionBoolToggle==true?{tx:0,ty:this.explorerDirectionOriginal.ty}:{tx:this.explorerDirectionOriginal.tx,ty:0};
             this.explorerDirectionAlt = this.explorerDirectionBoolToggle==true?{tx:this.explorerDirectionOriginal.tx,ty:0}:{tx:0,ty:this.explorerDirectionOriginal.ty};
             this.explorerDirectionBoolToggle= !this.explorerDirectionBoolToggle;
         }
