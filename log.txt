@@ -562,3 +562,17 @@ made it so that player cannot dump or move on creatures or creature bases
 TODO
 test out the other creature pathfinding 
 i still need to test the explorer pathfinding for when they encounter resources 
+
+20250411
+the different pathfinding methods require some bools to be set in different ways. to avoid me making a mistake setting the correct bools for the chosen pathfinding method, i've set up a function to do this for me, which also allows me to change the pathfinding method on the fly in game. 
+
+tested the beeline1 pathfinding with a blank map and the setupcreatures method that sets a lot of creatures on collision courses with each other, fixed some problems that arose. 
+testing beeline2, i noticed that once they reach their goal, they wander off to the top of the screen, turns out this was because in the updateMemory method, there is a part taht sets the goal to the oldGoal, which by default is undefined, this code was intended only for the pathfinding that tunnels, so i made an if statement to only run that for tunnelling creatures.
+testing tail3 seems to work as intended
+testing wallRunner4 works as intended
+testing wallRunnerDigger5 i which included beelineDigger6 -  this is setting tunnels, but never ends up digging, there are a typo when calculating the distance to teh tunnel from the creature, it was x instead of tx
+the trailers were being created at the wrong positions, fixed that, but they still seem to be being destroyed at the wrong position, and don't follow the creature, fixed that
+i've noticed i've done the kil ltrialer method wrong, it kills the last trailer, it should kill the most recent one instead, fixed that 
+next i will test explorer7
+
+

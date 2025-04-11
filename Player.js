@@ -226,5 +226,7 @@ export default class Player extends Phaser.GameObjects.Sprite {
         this.cursors.down=d;
         this.cursors.space=s;
         this.cursors.shift=sh;
+        console.log(this.scene.input.keyboard.listenerCount(this.cursors.left));
+
     }
 }

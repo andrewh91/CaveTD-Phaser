@@ -33,29 +33,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.priorityArray=priorityArray;
         //the memory can be various things, but related to pathfinding
         this.memory=[];
-        //rememberTail will be used for tail3 pathfinding
-        this.rememberTail=true;
-        //rememberWall will be used for wallRunner4 pathfinding, it will overwrite rememberTail
-        this.rememberWall=false;
         //use this to store the previous position, we will update this in the move method and the swapCreatureWith method 
         this.memoryDirection=STATIONARY;
+        //pathfinding bools, some bools like shortcutMode always start off as false, but these bools below, might be true of false depending on what pathfinding method we have chosen, this is all handled in the setPathfindingMethod method
+            //rememberTail will be used for tail3 pathfinding
+            this.rememberTail=false;
+            //rememberWall will be used for wallRunner4 pathfinding, it will overwrite rememberTail
+            this.rememberWall=true;
+            //some creatures can dig, if so make this true
+            this.useTunnel=false;
+            //for wall runners, the direction can be RIGHT or LEFT
+            this.wallRunnerDirection = RIGHT;
+            //if the creature is an explorer this should be true
+            this.allowAlterExplorerNumber=true;
+        
         this.shortcutMode=false;
         this.cancelMove=false;
         this.encounteredWall=false;
         this.potentialTunnelArray =[];
-
         this.trailerArray=[];
+        this.distToPotentialTunnelStartPos=0;
 
-        
         //add a sprite so i can see where the proposed pos is 
         this.proposedPosSprite = new Phaser.GameObjects.Sprite(scene,undefined,undefined,texture);
         scene.add.existing(this.proposedPosSprite);
         this.proposedPosSprite.setTint(0x00ff00);
         this.proposedPosSprite.setScale(5);
 
-        this.distToPotentialTunnelStartPos=0;
-        //for wall runners, the direction can be RIGHT or LEFT
-        this.wallRunnerDirection = RIGHT;
         //if walking over rubble we will walk slower, this is achieved by using this flag, if this is set to true we skip one movement and one pathfinding update
         this.skipMovement=false;
 
@@ -93,30 +97,99 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.explorerDirectionDiagonal=tempx*tempy !==0;
         //the explorer pathfinding will use this 
         this.carryingResource=false;
-        //if the creature is an explorer this should be true
-        this.allowAlterExplorerNumber=true;
         this.exploredNumber=0;
         //if the explorer hits a dead end it should back track until it find unexplored tiles. 
         this.exploredDeadEnd=false;
+        //this is a variable to hold the pathfinding method function of choice
+        this.pathfindingMethod;
+        this.setPathfindingMethod(5);
     }
     updatePathfinding(delta)
     {
         //the timing of this update will happen in the main.js 
         this.proposedPos=this.pathfinding();
-        let tempV = Helper.translateTilePosToWorldPos(this.proposedPos.tx);
-        this.proposedPosSprite.x=tempV.x;
-        this.proposedPosSprite.y=tempV.y;
+        if(this.proposedPos)
+        {
+            let tempV = Helper.translateTilePosToWorldPos(this.proposedPos);
+            this.proposedPosSprite.x=tempV.x;
+            this.proposedPosSprite.y=tempV.y;
+        }
     }
     updatePosition(delta)
     {
         this.move();
+    }
+    //some pathfinding methods need booleans to be turned on, so it's not enough to just change the pathfinding method, i need to set the correct bools too - so i made this method to make it easy for me 
+    //this method will set the bools needed for the chosen pathfinding method, then will set the 'this.pathfindingMethod' to the correct pathfinding function so that if you call this.pathfindingMethod it will call that method
+    setPathfindingMethod(n)
+    {
+        switch(n)
+        {
+            case 1:
+                this.rememberTail=false;
+                this.rememberWall=false;
+                this.useTunnel=false;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=false;
+                this.pathfindingMethod=this.beeline1;
+                break;
+            case 2:
+                this.rememberTail=false;
+                this.rememberWall=false;
+                this.useTunnel=false;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=false;
+                this.pathfindingMethod=this.beeline2;
+                break;             
+            case 3:
+                this.rememberTail=true;
+                this.rememberWall=false;
+                this.useTunnel=false;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=false;
+                this.pathfindingMethod=this.tail3;
+                break;                
+            case 4:
+                this.rememberTail=false;
+                this.rememberWall=true;
+                this.useTunnel=false;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=false;
+                this.pathfindingMethod=this.wallRunner4;
+                break;
+            case 5:
+                this.rememberTail=false;
+                this.rememberWall=true;
+                this.useTunnel=true;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=false;
+                this.pathfindingMethod=this.wallRunnerDigger5;
+                break;
+            case 6:
+                this.rememberTail=false;
+                this.rememberWall=false;
+                this.useTunnel=true;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=false;
+                this.pathfindingMethod=this.beelineDigger6;
+                break;
+            case 7:
+                this.rememberTail=false;
+                this.rememberWall=false;
+                this.useTunnel=false;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=true;
+                this.pathfindingMethod=this.this.explorer7;
+                break;
+                
+        }
     }
     //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
         //if the creature finds a tunnel to dig it will cancel it's current move, this happens in the move method - just before it moves, when we get to the pathfinding again - like here - we can reset this to false. 
         this.cancelMove=false;
-        let proposedPathfindingPosition = this.explorer7();
+        let proposedPathfindingPosition = this.pathfindingMethod();
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -216,6 +289,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         this.encounteredWall=false;
         this.proposedPos=undefined;
+        //use object.assign to copy the memory by value not by ref 
         let wall = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
         if(this.shortcutMode)
         {
@@ -235,6 +309,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.encounteredWall=true;
                 //otherwise if the wall is a wall -or the imapassable edge, then set the proposedPos to the position to the left or right of that wall depending on this creature's direction value
+                //basically we propose to sidestep the wall
                 this.proposedPos = this.rightAnglePosition(wall,{tx:this.tx,ty:this.ty},this.wallRunnerDirection);
                 return this.proposedPos;
             }
@@ -550,10 +625,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     getNeighbours(v)
     {
         let a =[];
-        a.push({tx:v.tx+ 0,ty:tv.ty+-1});//north
-        a.push({tx:v.tx+ 1,ty:tv.ty+ 0});//east
-        a.push({tx:v.tx+ 0,ty:tv.ty+ 1});//south
-        a.push({tx:v.tx+-1,ty:tv.ty+ 0});//west
+        a.push({tx:v.tx+ 0,ty:v.ty+-1});//north
+        a.push({tx:v.tx+ 1,ty:v.ty+ 0});//east
+        a.push({tx:v.tx+ 0,ty:v.ty+ 1});//south
+        a.push({tx:v.tx+-1,ty:v.ty+ 0});//west
         return a;
     }
     //sort neighbours based on distance to goal, shortest first
@@ -625,7 +700,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                 else
                                 {
                                     // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
-                                    if(this.map.isContestedFromOpposite({x:this.x,y:this.y},dir))
+                                    if(this.map.isContestedFromOpposite({tx:this.tx,ty:this.ty},dir))
                                     {
                                         this.swapCreatureWith(this.proposedPos);
                                     }
@@ -818,90 +893,99 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.trailerArray[i].tx=this.trailerArray[i-1].tx;
             this.trailerArray[i].ty=this.trailerArray[i-1].ty;
+            this.trailerArray[i].x=this.trailerArray[i-1].x;
+            this.trailerArray[i].y=this.trailerArray[i-1].y;
             console.log('MOVEtrailer ' + i +' tx: '+this.trailerArray[i].tx+' ty: '+this.trailerArray[i].ty);            
         }
         if(this.trailerArray.length>0)
         {
             this.trailerArray[0].tx=this.tx;
             this.trailerArray[0].ty=this.ty;
+            this.trailerArray[0].x=this.x;
+            this.trailerArray[0].y=this.y;
             console.log('MOVEtrailer ' + 0 +' tx: '+this.trailerArray[0].tx+' ty: '+this.trailerArray[0].ty);  
         }
     }
     //for creatures which use the memory to record the 'tail' or the prev position etc
     updateMemory(v)
     {
-        this.newGoal=false;
-        
-        //when trying to tunnel, we might set the goal to the start of the tunnel, if the proposed position is to then visit that goal, change the goal back to the old goal 
-        if(Helper.vectorEquals({tx:v.tx,ty:v.ty},this.goal))
+        if(this.useTunnel)
         {
-            this.goal=this.oldGoal;
-            this.newGoal=true;
-            this.shortcutMode=false;
-            this.killAllTunnels();
-        }
-        //for each potentialTunnel
-        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
-        {
-            //if we revisit the tunnel position, 
-            if(Helper.vectorEquals({tx:v.tx,ty:v.ty},{tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty}))
+            this.newGoal=false;
+            
+            //when trying to tunnel, we might set the goal to the start of the tunnel, if the proposed position is to then visit that goal, change the goal back to the old goal 
+            if(Helper.vectorEquals({tx:v.tx,ty:v.ty},this.goal))
             {
-                //cancel that tunnel 
-                //if we set a potentialTunnelStartPos, and then for example we travel in a straight line up, then back down, due to walls, the proposedpos will be to revisit the potentialTunnelStartPos, in this case cancel the tunnel 
+                this.goal=this.oldGoal;
                 this.newGoal=true;
                 this.shortcutMode=false;
-                this.potentialTunnelArray[i].kill();
+                this.killAllTunnels();
             }
-        }
+            //for each potentialTunnel
+            for(let i = 0; i < this.potentialTunnelArray.length; i ++)
+            {
+                //if we revisit the tunnel position, 
+                if(Helper.vectorEquals({tx:v.tx,ty:v.ty},{tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty}))
+                {
+                    //cancel that tunnel 
+                    //if we set a potentialTunnelStartPos, and then for example we travel in a straight line up, then back down, due to walls, the proposedpos will be to revisit the potentialTunnelStartPos, in this case cancel the tunnel 
+                    this.newGoal=true;
+                    this.shortcutMode=false;
+                    this.potentialTunnelArray[i].kill();
+                    break;
+                }
+            }
         
       
         
-        let oldMemoryDirection = this.memoryDirection;
-        //record the previous position
-        this.memoryDirection=this.proposedDirection();
-     
-        //if any tunnel is alive, record the distance to that pos
-        for(let i = 0; i < this.potentialTunnelArray.length; i ++)
-        {
-            if(this.potentialTunnelArray[i].alive)
+            let oldMemoryDirection = this.memoryDirection;
+            //record the previous position
+            this.memoryDirection=this.proposedDirection();
+        
+            //if any tunnel is alive, record the distance to that pos
+            for(let i = 0; i < this.potentialTunnelArray.length; i ++)
             {
-                let oldDistToPotentialTunnelStartPos = this.potentialTunnelArray[i].distanceToOriginatingCreature;
-                this.potentialTunnelArray[i].distanceToOriginatingCreature = Helper.dist({tx:v.tx,ty:v.ty},{x:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty});
-                //if we are moving further away 
-                if(this.potentialTunnelArray[i].distanceToOriginatingCreature - oldDistToPotentialTunnelStartPos>=0)
+                if(this.potentialTunnelArray[i].alive)
                 {
-                    //if we move away after previously moving closer, then we found a shortcut
-                    if(this.potentialTunnelArray[i].viable)
+                    let oldDistToPotentialTunnelStartPos = this.potentialTunnelArray[i].distanceToOriginatingCreature;
+                    this.potentialTunnelArray[i].distanceToOriginatingCreature = Helper.dist({tx:v.tx,ty:v.ty},{tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty});
+                    //if we are moving further away 
+                    if(this.potentialTunnelArray[i].distanceToOriginatingCreature - oldDistToPotentialTunnelStartPos>=0)
                     {
-                        this.shortcutMode=true;
-                        //we don't want to move further away, so cancel the move, next update we will move towards the tunnel pos
-                        this.cancelMove=true;
-                        //save our current goal as we are about to overwrite it
-                        this.oldGoal=this.goal;
-                        this.goal={tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty};
-                        //this newGoal boolean affects how we pathfind
-                        this.newGoal=true;
-                        this.killAllTunnels();
-                        if(this.rememberWall)
+                        //if we move away after previously moving closer, then we found a shortcut
+                        if(this.potentialTunnelArray[i].viable)
                         {
-                            this.memory = [];
+                            this.shortcutMode=true;
+                            //we don't want to move further away, so cancel the move, next update we will move towards the tunnel pos
+                            this.cancelMove=true;
+                            //save our current goal as we are about to overwrite it
+                            this.oldGoal=this.goal;
+                            this.goal={tx:this.potentialTunnelArray[i].tx,ty:this.potentialTunnelArray[i].ty};
+                            //this newGoal boolean affects how we pathfind
+                            this.newGoal=true;
+                            this.killAllTunnels();
+                            if(this.rememberWall)
+                            {
+                                this.memory = [];
+                            }
                         }
                     }
+                    //if we are moving closer
+                    else
+                    {
+                        //set a flag saying shortcut viable, 
+                        this.potentialTunnelArray[i].viable=true;
+                    }
                 }
-                //if we are moving closer
-                else
-                {
-                    //set a flag saying shortcut viable, 
-                    this.potentialTunnelArray[i].viable=true;
-                }
+            
             }
-          
+            //if we are changing direction, and the previous direction was not stationary and we are not currently in the shortcutMode and we did not change direction due to a new goal and we actually encountered a wall
+            if(oldMemoryDirection!=this.memoryDirection&&oldMemoryDirection!=STATIONARY&&this.shortcutMode==false&&this.newGoal==false&&this.encounteredWall)
+            {
+                this.addTunnel();
+            }
         }
-        //if we are changing direction, and the previous direction was not stationary and we are not currently in the shortcutMode and we did not change direction due to a new goal and we actually encountered a wall
-        if(oldMemoryDirection!=this.memoryDirection&&oldMemoryDirection!=STATIONARY&&this.shortcutMode==false&&this.newGoal==false&&this.encounteredWall)
-        {
-            this.addTunnel();
-        }
+
         if(this.rememberTail)
         {
             this.memory=[];
@@ -989,13 +1073,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     addTrailer()
     {
-        this.trailerArray.splice(0,0,new Trailer(this.scene,this.tx,this.ty,this.trailerTexture));
+        this.trailerArray.splice(0,0,new Trailer(this.scene,this.x,this.y,this.trailerTexture));
         console.log('ADD trailer ' + 0 +' tx: '+this.tx+' ty: '+this.ty);  
     }
     killTrailer()
     {
         //remove the last item from the trailerArray, and run that item's kill method 
-        this.trailerArray.pop().kill();   
+        this.trailerArray.slice(0)[0].kill();   
+        this.trailerArray.splice(0,1);
     }
     attemptDumpTrailer()
     {

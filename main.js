@@ -30,7 +30,7 @@ var movementSegmentSize;
 var latestKey;
 import UIScene, { drawGridCoords } from './uiScene.js';
 import {drawBorders} from './uiScene.js';
-import Player from './player.js';
+import Player from './Player.js';
 import Helper from './Helper.js';
 import Vehicle from './Vehicle.js';
 import {manageCamera} from './splitScreen.js';
@@ -72,7 +72,6 @@ class Game extends Phaser.Scene
         priorityArray=new PriorityArray();
         this.setUpResources();
         this.setUpCreatureBases();
-        //this.setUpCreatures();
         this.setUpCreatures1();
 
 
@@ -173,7 +172,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[3]);
+        mapData.loadFromText(savedMaps.mapsArray[2]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -372,7 +371,7 @@ class Game extends Phaser.Scene
         /*the v data might include a goal vector gx,gy*/
         if(v.gx!=undefined)
         {
-            let tempG = Helper.translateTilePosToWorldPos({vx:v.gx,vy:v.gy});
+            let tempG = {tx:v.gx,ty:v.gy};
             c.setGoal(tempG);
         }
         creatures.push(c);
@@ -406,16 +405,6 @@ class Game extends Phaser.Scene
         creatureBaseIndex=-1;
         this.addCreatureBase({tx:15,ty:10});
     }
-    setUpCreatures1()
-    {
-        creatureIndex=-1;
-
-        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2),gx:0,gy:0});
-
-        this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2),gx:0,gy:0});
-
-        priorityArray.loopThroughAll();
-    }
     setUpCreatures()
     {
         creatureIndex=-1;
@@ -425,7 +414,7 @@ class Game extends Phaser.Scene
         //this is a continuous row of creatures that go east, notice that they get in each others way (without the priority array)
         this.addCreatureToWaitingRoom({tx:3,ty:16,gx:16,gy:16});
         this.addCreatureToWaitingRoom({tx:4,ty:16,gx:16,gy:16});
-        this.addCreatureToWaitingRoom({tx:5,ty:16,gx:5,gy:16});
+        this.addCreatureToWaitingRoom({tx:5,ty:16,gx:16,gy:16});
         //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
         this.addCreatureToWaitingRoom({tx:14,ty:16,gx:3,gy:16});
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:3,gy:16});
@@ -456,6 +445,26 @@ class Game extends Phaser.Scene
         this.addCreatureToWaitingRoom({tx:26,ty:7,gx:20,gy:7});
 
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array
+        priorityArray.loopThroughAll();
+    }
+    setUpCreatures1()
+    {
+        creatureIndex=-1;
+
+        this.addCreatureToWaitingRoom({tx:25,ty:5,gx:0,gy:0});
+
+        this.addCreatureToWaitingRoom({tx:23,ty:16,gx:0,gy:0});
+
+        priorityArray.loopThroughAll();
+    }
+    setUpCreatures3()
+    {
+        creatureIndex=-1;
+
+        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2),gx:0,gy:0});
+
+        this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2),gx:0,gy:0});
+
         priorityArray.loopThroughAll();
     }
     //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here
