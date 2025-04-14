@@ -13,6 +13,9 @@ export default class CreatureBase extends Phaser.GameObjects.Sprite
         this.addToMap();
         this.setScale(gridStep);
         this.setTint(colour);
+        this.index=index;
+        this.text = scene.add.text(this.x, this.y, ''+this.resources, { fontSize: '20px', fill: '#fff'});
+        Helper.centreText(this);
     }
     addToMap()
     {
@@ -22,5 +25,14 @@ export default class CreatureBase extends Phaser.GameObjects.Sprite
     {
         this.scene.addCreatureToWaitingRoom(this.tx,this.ty);
     }
-
+    addResource()
+    {
+        this.resources++;
+        this.updateText(this.resources);
+    }
+    updateText(newText)
+    {
+        this.text.setText(newText);
+        Helper.centreText(this);
+    }
 }

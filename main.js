@@ -72,7 +72,7 @@ class Game extends Phaser.Scene
         priorityArray=new PriorityArray();
         this.setUpResources();
         this.setUpCreatureBases();
-        this.setUpCreatures1();
+        this.setUpCreatures3();
 
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
@@ -172,7 +172,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[2]);
+        mapData.loadFromText(savedMaps.mapsArray[3]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -378,6 +378,10 @@ class Game extends Phaser.Scene
         mapData.setCreature({tx:c.tx,ty:c.ty},c.index);
         //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
         priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
+        if(mapData.getExploredNumber({tx:c.tx,ty:c.ty})==-1)
+        {
+            mapData.setExploredNumber({tx:c.tx,ty:c.ty},0);
+        }
     }
     addCreatureBase(v)
     {
@@ -385,6 +389,7 @@ class Game extends Phaser.Scene
         let tempV = Helper.translateTilePosToWorldPos(v);
         let c= new CreatureBase(this,tempV.x,tempV.y,'dot',creatureBaseIndex,0x00ff00,mapData);
         creatureBases.push(c);
+        mapData.setCreatureBaseIndex({tx:c.tx,ty:c.ty},c.index);
     }
     addResource(v)
     {
@@ -457,13 +462,23 @@ class Game extends Phaser.Scene
 
         priorityArray.loopThroughAll();
     }
-    setUpCreatures3()
+    setUpCreatures2()
     {
         creatureIndex=-1;
 
         this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2),gx:0,gy:0});
 
         this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2),gx:0,gy:0});
+
+        priorityArray.loopThroughAll();
+    }
+    setUpCreatures3()
+    {
+        creatureIndex=-1;
+
+        this.addCreatureToWaitingRoom({tx:15,ty:9,gx:0,gy:0});
+
+        //this.addCreatureToWaitingRoom({tx:21,ty:10,gx:0,gy:0});
 
         priorityArray.loopThroughAll();
     }
@@ -476,6 +491,10 @@ class Game extends Phaser.Scene
     addResourceMarkerToMap(v,b)
     {
         mapData.setResourceMarker(v,b);
+    }
+    addResourceToCreatureBase(index)
+    {
+        creatureBases[index].addResource();
     }
     collectResource(index)
     {

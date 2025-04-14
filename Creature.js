@@ -98,11 +98,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //the explorer pathfinding will use this 
         this.carryingResource=false;
         this.exploredNumber=0;
+        this.exploringWhileCarrying=false;
         //if the explorer hits a dead end it should back track until it find unexplored tiles. 
         this.exploredDeadEnd=false;
         //this is a variable to hold the pathfinding method function of choice
         this.pathfindingMethod;
-        this.setPathfindingMethod(5);
+        this.setPathfindingMethod(7);
     }
     updatePathfinding(delta)
     {
@@ -174,12 +175,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.pathfindingMethod=this.beelineDigger6;
                 break;
             case 7:
-                this.rememberTail=false;
+                this.rememberTail=true;
                 this.rememberWall=false;
                 this.useTunnel=false;
                 this.wallRunnerDirection = RIGHT;
                 this.allowAlterExplorerNumber=true;
-                this.pathfindingMethod=this.this.explorer7;
+                this.pathfindingMethod=this.explorer7;
                 break;
                 
         }
@@ -351,7 +352,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //if the creature is carrying a resource...
         if(this.carryingResource)
         {
-            //the neighbours are sorted by the exploreDirection, but if i has a resource i want to go back to the base, so reverse this sorted order
+            //the neighbours are sorted by the exploreDirection, but if it has a resource i want to go back to the base, so reverse this sorted order
             let neighboursReversed = Helper.reverseArray(neighbours);
             //get a list of the neighbours with a resource marker 
             let resourceNeighbours=this.refineAdjacent(neighboursReversed,true);
@@ -362,7 +363,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //now set our proposedPos as the neighbour with the lowestExploredNumber - that is not our tail and if that is not a wall
                 for(let i = 0 ; i < resourceNeighboursByLowestExploredNumber.length; i ++)
                 {
-                    if(Helper.vectorEquals(this.memory[0],resourceNeighboursByLowestExploredNumber[i]))
+                    if(Helper.vectorEquals(this.memory[0],resourceNeighboursByLowestExploredNumber[i])==false)
                     {
                         if(this.map.isWall(resourceNeighboursByLowestExploredNumber[i])==false&&this.map.isEdge(resourceNeighboursByLowestExploredNumber[i])==false)
                         {
@@ -372,38 +373,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         }
                     }
                 }
-                //if we have not returned, then maybe the resource neighbour, is unexplored
-                for(let i = 0 ; i < resourceNeighbours.length; i ++)
-                {
-                    if(this.map.isWall(resourceNeighbours[i])==false&&this.map.isEdge(resourceNeighbours[i])==false)
-                    {
-                        this.proposedPos = resourceNeighbours[i];
-                        this.exploredDeadEnd=false;
-                        return this.proposedPos;
-                    }
-                }
             }
-            //if there are no neighbours with resource markers...
-            else
+            //if there are no neighbours with resource markers, that we can go to...
             {
-                //set proposed move to the neighbour with lowest explored number   
+                //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail
+                let currentExploredNumber = this.map.getExploredNumber({tx:this.tx,ty:this.ty});
                 let neighboursByLowestExploredNumber=this.sortAdjacentLowestExploredNumber(neighboursReversed);
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(neighboursByLowestExploredNumber[i])==false&&this.map.isEdge(neighboursByLowestExploredNumber[i])==false)
+                    if(Helper.vectorEquals(this.memory[0],neighboursByLowestExploredNumber[i])==false)
                     {
-                        this.proposedPos = neighboursByLowestExploredNumber[i];
-                        this.exploredDeadEnd=false;
-                        return this.proposedPos;
+                        if(this.map.isWall(neighboursByLowestExploredNumber[i])==false&&this.map.isEdge(neighboursByLowestExploredNumber[i])==false&&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber)
+                        {
+                            this.proposedPos = neighboursByLowestExploredNumber[i];
+                            this.exploredDeadEnd=false;
+                            return this.proposedPos;
+                        }
                     }
                 }
-                //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored, so get one that is unexplored. 
+                //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored - with an exploredNumber less than the current tile - that are not our tail, so get a neighbour that is unexplored. 
                 for(let i = 0 ; i < neighboursReversed.length; i ++)
                 {
                     if(this.map.isWall(neighboursReversed[i])==false&&this.map.isEdge(neighboursReversed[i])==false)
                     {
                         this.proposedPos = neighboursReversed[i];
                         this.exploredDeadEnd=false;
+                        //set this to true so that we continue to set the explored number of the tiles
+                        this.exploringWhileCarrying=true;
                         return this.proposedPos;
                     }
                 }
@@ -424,6 +420,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     if(this.map.isWall(resourceNeighboursByHighestExploredNumber[i])==false&&this.map.isEdge(resourceNeighboursByHighestExploredNumber[i])==false)
                     {
                         this.proposedPos = resourceNeighboursByHighestExploredNumber[i];
+                        this.exploredDeadEnd=false;
+                        return this.proposedPos;
+                    }
+                }
+                //if we did not return yet then the resource neighbour might be unexplored, in which case it must have a resource marker because it is a resource, so the creature should want to go there. 
+                //there might be more than one resourceadjacent to us, we can go to any but go to the first one, which will be our direction priority  
+                for(let i = 0 ; i < resourceNeighbours.length; i ++)
+                {
+                    if(this.map.isWall(resourceNeighbours[i])==false&&this.map.isEdge(resourceNeighbours[i])==false)
+                    {
+                        this.proposedPos = resourceNeighbours[i];
                         this.exploredDeadEnd=false;
                         return this.proposedPos;
                     }
@@ -835,12 +842,13 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     this.scene.addResourceMarkerToMap(v,true);
                 }
-                this.exploredNumber++;
-                //we should only overwrite the explored number if this tile was unexplored, or if our explored number is lower than the current one
-                let mapExploredNumber = this.map.getResourceIndex(v);
-                if(this.exploredNumber<mapExploredNumber||mapExploredNumber==-1)
+                //we should only overwrite the explored number if we are exploring, so is carryingResource is true then don't update the exploredNumber - unless we are unable to follow the exisitng path and we are exploring WITH a carried resource
+                if(this.carryingResource==false||this.exploringWhileCarrying)
                 {
+                    this.exploredNumber++;
                     this.map.setExploredNumber(v,this.exploredNumber);
+                    
+                    this.exploringWhileCarrying=false;
                 }
                 //todo logic for picking up resource, marking the map as a resource marker, deleting tail 
                 //if there is a resource at this pos
@@ -852,7 +860,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     {
                         this.scene.collectResource(resourceIndex);
                         //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
-                        this.memory[0]=v;
+                        this.memory[0]=Object.assign({}, v);;
                     }
                     this.carryingResource=true;
                 }
@@ -886,6 +894,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
             Helper.centreText(this);
         }
         this.map.clearContested(v);
+        //if we have a resource and are next to a creatureBase, add it to that creature base and set carryingresource to false
+        this.depositResource();
+    }
+    //for each adjacent tile, check if there is a creature base there, if so add our carryied resource to that base
+    depositResource()
+    {
+        if(this.carryingResource)
+        {
+            let n = this.getAdjacent();
+            let creatureBaseIndex=-1;
+            for( let i = 0 ; i < n.length ; i ++)
+            {
+                creatureBaseIndex=this.map.getCreatureBaseIndex(n[i]);
+                if(creatureBaseIndex>-1)
+                {
+                    this.carryingResource=false;
+                    this.scene.addResourceToCreatureBase(creatureBaseIndex);
+                    this.exploredNumber=0;
+                }
+            }
+        }
     }
     moveTrailers()
     {

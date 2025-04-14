@@ -575,4 +575,40 @@ the trailers were being created at the wrong positions, fixed that, but they sti
 i've noticed i've done the kil ltrialer method wrong, it kills the last trailer, it should kill the most recent one instead, fixed that 
 next i will test explorer7
 
+20250414
+testing explorer7
+if the creatures are surrounded by explored tiles, it will go back and forth endlessly, turned out i forgot to set rememberTail to true for explorer7
+
+if it crosses a rubble patch, the alternating direction will alternate twice because i basically skip a turn 
+
+the creture goes back and forth when it hits a resource, this is because the resource tile is not being marked as explored
+second problem:
+i found another problem,, it turns out the explorer number was always being updated, although my comments did say it should only be updated if the explored number is lower than the existing one, there was an error that meant it was always updated. 
+
+if it is always updated, then if the creature hits a dead end it can move to the lowest adjacent explored number to backtrack, if it is not always updated then it would just go back and forth 
+
+wereas if you only update it when the explored number is lower than the recorded explored number then we will create an efficient path back to the start point. 
+
+when carrying a resource, it looked for neighbours with resource markers and moved to it if it WAS the tail, it was supposed to be if it was NOT the tail , fixed that 
+
+another error: when carrying a resource it finds teh resource marker with the lowest explored number, that is a not the tail, and if it does not go there for whatever reason, it then goes there anyway... the comment explained that it must be unexplored, but that is wrong it could be explored but nobody has put a resource marker on it yet, so i deleted that. i assume that was why it went back and forth repeatedly
+
+i think i understand the second problem now, once we are carrying a resource, we don't want to update our explored number on the way back to the base because that would make it higher, and we are following the lowest path back, so the next creature is not going to want to go the same way 
+
+so i need to make sure not to update the explored number on the way back?
+i've made a new bool exploringWhileCarrying, this will be set to true if we propose to go to an unexplored tile when carrying a resource. 
+
+i've changed it so that we record our explored number so long as we are NOT carryingResource OR if exploringWhileCarrying is true. 
+
+if i'm not following a resource trail, i should only go to an explored location if it is less than my current explored number, otherwise we should explore
+
+i think i might have fixed it, i will create a way for the creature to drop the resource off at the creature base
+at the end of movement, check if carryingResource, check if adjacent to creatureBase
+
+if the creature is returning to the base with a resource, and it cannot follow the exploredNumber trail it will look for an unexplored tile, if it moves there, then it will move back to where it was next time as that explored number would be lower than our current one, so we need to prevent moving on our tail here too 
+
+i think i need to set the explored number of a creature's initial position to 0 if it is -1 
+also reset the creature's explored number when it reaches the base
+
+ok i think this works now, next time, set up several creatures to spawn at the creature base, set up several resources, see how well it does
 
