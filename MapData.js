@@ -142,50 +142,50 @@ export default class MapData
         return this.tiles[this.getIndexFromCoords(v)].resourceMarker;
     }
     //return false if contested by our direction, or no direction, returns true if not contested by our direction and is contested by another direction  
-    isContestedExcluding(v,dir)
+    isContestedFromExcluding(v,dir)
     {
         switch(dir)
         {
             //if we are going north...
             case NORTH:
                 //...and the proposed position is already contested by north...
-                if(this.getContestedNorth(v))
+                if(this.getContestedFromNorth(v))
                 {
                     //...then return false, and we can move there
                     return false;
                 }
-                else if(this.getContestedEast(v)||this.getContestedSouth(v)||this.getContestedWest(v))
+                else if(this.getContestedFromEast(v)||this.getContestedFromSouth(v)||this.getContestedFromWest(v))
                 {
                     //else  if it's contested by another direction, return true so that we do not move there
                     return true;
                 }
                 break;
             case SOUTH:
-                if(this.getContestedSouth(v))
+                if(this.getContestedFromSouth(v))
                 {
                     return false;
                 }
-                else if (this.getContestedNorth(v)||this.getContestedEast(v)||this.getContestedWest(v))
+                else if (this.getContestedFromNorth(v)||this.getContestedFromEast(v)||this.getContestedFromWest(v))
                 {
                     return true;
                 }
                 break;
             case EAST:
-                if(this.getContestedEast(v))
+                if(this.getContestedFromEast(v))
                 {
                     return false;
                 }
-                else if (this.getContestedNorth(v)||this.getContestedSouth(v)||this.getContestedWest(v))
+                else if (this.getContestedFromNorth(v)||this.getContestedFromSouth(v)||this.getContestedFromWest(v))
                 {
                     return true;
                 }
                 break;
             case WEST:
-                if(this.getContestedWest(v))
+                if(this.getContestedFromWest(v))
                 {
                     return false;
                 }
-                else if (this.getContestedNorth(v)||this.getContestedEast(v)||this.getContestedSouth(v))
+                else if (this.getContestedFromNorth(v)||this.getContestedFromEast(v)||this.getContestedFromSouth(v))
                 {
                     return true;
                 }
@@ -199,19 +199,19 @@ export default class MapData
     {
         if(dir==NORTH)
         {
-            return this.getContestedSouth(v);
+            return this.getContestedFromSouth(v);
         }
         else if(dir==SOUTH)
         {
-            return this.getContestedNorth(v);
+            return this.getContestedFromNorth(v);
         }
         else if(dir==EAST)
         {
-            return this.getContestedWest(v);
+            return this.getContestedFromWest(v);
         }
         else if(dir==WEST)
         {
-            return this.getContestedEast(v);
+            return this.getContestedFromEast(v);
         }
         else
         {
@@ -219,56 +219,118 @@ export default class MapData
             return false;
         }
     }
-    getContestedNorth(v)
+    //v is the map coord, it should be the proposedPos. dir is the proposed direction of the creature. so logically if the proposed direction is north we must be coming from the south. this method will return if the proposedPos is contested from a creature FROM the opposite direction to what we are travelling, so if we are travelling north, we want to see if the proposedPos is contested from the north - as that will be a creature with a proposed direction that is south 
+    isContestedFrom(v,dir)
     {
-        return this.tiles[this.getIndexFromCoords(v)].contestedNorth;
-    }
-    getContestedSouth(v)
-    {
-        return this.tiles[this.getIndexFromCoords(v)].contestedSouth;
-    }
-    getContestedWest(v)
-    {
-        return this.tiles[this.getIndexFromCoords(v)].contestedWest;
-    }
-    getContestedEast(v)
-    {
-        return this.tiles[this.getIndexFromCoords(v)].contestedEast;
-    }
-    setContested(v,dir)
-    {
-        if(dir==SOUTH)
+        if(dir==NORTH)
         {
-            this.setContestedSouth(v);
+            return this.getContestedFromNorth(v);
         }
-        else if(dir==NORTH)
+        else if(dir==SOUTH)
         {
-            this.setContestedNorth(v);
-        }
-        else if(dir==WEST)
-        {
-            this.setContestedWest(v);
+            return this.getContestedFromSouth(v);
         }
         else if(dir==EAST)
         {
-            this.setContestedEast(v);
+            return this.getContestedFromEast(v);
+        }
+        else if(dir==WEST)
+        {
+            return this.getContestedFromWest(v);
+        }
+        else
+        {
+            //if the dir is not one of these 4, it must be STATIONARY
+            return false;
         }
     }
-    setContestedNorth(v)
+    getContestedFromNorth(v)
     {
-        this.tiles[this.getIndexFromCoords(v)].contestedNorth=true;
+        return this.tiles[this.getIndexFromCoords(v)].contestedFromNorth;
     }
-    setContestedSouth(v)
+    getContestedFromSouth(v)
     {
-        this.tiles[this.getIndexFromCoords(v)].contestedSouth=true;
+        return this.tiles[this.getIndexFromCoords(v)].contestedFromSouth;
     }
-    setContestedWest(v)
+    getContestedFromWest(v)
     {
-        this.tiles[this.getIndexFromCoords(v)].contestedWest=true;
+        return this.tiles[this.getIndexFromCoords(v)].contestedFromWest;
     }
-    setContestedEast(v)
+    getContestedFromEast(v)
     {
-        this.tiles[this.getIndexFromCoords(v)].contestedEast=true;
+        return this.tiles[this.getIndexFromCoords(v)].contestedFromEast;
+    }
+    setContestedFrom(v,dir)
+    {
+        if(dir==SOUTH)
+        {
+            this.setContestedFromSouth(v);
+        }
+        else if(dir==NORTH)
+        {
+            this.setContestedFromNorth(v);
+        }
+        else if(dir==WEST)
+        {
+            this.setContestedFromWest(v);
+        }
+        else if(dir==EAST)
+        {
+            this.setContestedFromEast(v);
+        }
+    }
+    setContestedFromNorth(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromNorth=true;
+    }
+    setContestedFromSouth(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromSouth=true;
+    }
+    setContestedFromWest(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromWest=true;
+    }
+    setContestedFromEast(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromEast=true;
+    }
+    //example, a creature wants to travel south but cannot, so it set that proposed location to the south of it to have a flag saying that tile is contested from the north. when that creature moves to this proposed tile, or is killed, or no longer proposes to move to this tile then we call this method. so we delete the opposite flag to what it wanted to travel - it wanted to travel south so the flag said it is contested from a creature COMING FROM THE NORTH, so delete the north flag
+    //  we should use the opposite direction here, for example, our proposedDirection was south - we wanted to move south, we couldn't so we set the proposedPos flag to say it was contested from the NORTH- as it was contested by a creature that came from the north travelling south , when we eventually travel to the proposedPos then we want to delete the NORTH flag
+    clearContestedDirection(v,dir)
+    {
+        if(dir==SOUTH)
+        {
+            this.clearcontestedFromNorth(v);
+        }
+        else if(dir==NORTH)
+        {
+            this.clearcontestedFromSouth(v);
+        }
+        else if(dir==WEST)
+        {
+            this.clearcontestedFromEast(v);
+        }
+        else if(dir==EAST)
+        {
+            this.clearcontestedFromWest(v);
+        }
+    }
+    clearcontestedFromNorth(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromNorth=false;
+    }
+    clearcontestedFromSouth(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromSouth=false;
+    }
+    clearcontestedFromWest(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromWest=false;
+    }
+    clearcontestedFromEast(v)
+    {
+        this.tiles[this.getIndexFromCoords(v)].contestedFromEast=false;
     }
     setResourceMarker(v,b)
     {
@@ -284,10 +346,31 @@ export default class MapData
     }
     clearContested(v)
     {        
-        this.tiles[this.getIndexFromCoords(v)].contestedNorth=false;
-        this.tiles[this.getIndexFromCoords(v)].contestedSouth=false;
-        this.tiles[this.getIndexFromCoords(v)].contestedEast=false;
-        this.tiles[this.getIndexFromCoords(v)].contestedWest=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedFromNorth=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedFromSouth=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedFromEast=false;
+        this.tiles[this.getIndexFromCoords(v)].contestedFromWest=false;
+    }
+    getContestedFrom(v)
+    {        
+        let r="";
+        if(this.tiles[this.getIndexFromCoords(v)].contestedFromNorth==true)
+        {
+            r+= "contestedFromNorth=true";
+        }
+        if(this.tiles[this.getIndexFromCoords(v)].contestedFromSouth==true)
+        {
+            r+= "contestedFromSouth=true";
+        }
+        if(this.tiles[this.getIndexFromCoords(v)].contestedFromEast==true)
+        {
+            r+= "contestedFromEast=true";
+        }
+        if(this.tiles[this.getIndexFromCoords(v)].contestedFromWest==true)
+        {
+            r+= "contestedFromWest=true";
+        }
+        return r;
     }
     isWall(v)
     {

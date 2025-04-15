@@ -30,6 +30,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //we may start tunnelling if we change direction, that's assuming that we changed direction due to hitting a wall, if we changed direction due to getting a new goal, then we set this flag so that we ignore that change in direction for tunnelling purposes
         this.newGoal=false;
         this.proposedPos;
+        this.oldProposedPos;
         this.priorityArray=priorityArray;
         //the memory can be various things, but related to pathfinding
         this.memory=[];
@@ -97,6 +98,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.explorerDirectionDiagonal=tempx*tempy !==0;
         //the explorer pathfinding will use this 
         this.carryingResource=false;
+        //if the creature picks up the last resource, or the resource is at 0, it will go back to base and delete any resource markers along the way 
+        this.resourceDepleted=false;
         this.exploredNumber=0;
         this.exploringWhileCarrying=false;
         //if the explorer hits a dead end it should back track until it find unexplored tiles. 
@@ -108,7 +111,15 @@ export default class Creature extends Phaser.GameObjects.Sprite
     updatePathfinding(delta)
     {
         //the timing of this update will happen in the main.js 
+        //save the old proposed pos so we can clear the contested data if this creature is killed, or decides to change direction 
+        this.oldProposedPos=this.proposedPos;
+        this.oldProposedDirection=this.proposedDirection();
         this.proposedPos=this.pathfinding();
+        //check if the new proposed pos is the same as the old proposed pos, if so ok, if not we potentially need to clear the contested data for that old proposed pos
+        if(Helper.vectorEquals(this.oldProposedPos,this.proposedPos)==false)
+        {
+            this.map.clearContestedDirection(this.oldProposedPos,this.oldProposedDirection);
+        }
         if(this.proposedPos)
         {
             let tempV = Helper.translateTilePosToWorldPos(this.proposedPos);
@@ -185,12 +196,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 
         }
     }
-    //for now this will just beeline to the goal, ignoring any terrain 
     pathfinding()
     {
         //if the creature finds a tunnel to dig it will cancel it's current move, this happens in the move method - just before it moves, when we get to the pathfinding again - like here - we can reset this to false. 
         this.cancelMove=false;
-        let proposedPathfindingPosition = this.pathfindingMethod();
+        let proposedPathfindingPosition;
+        if(this.skipMovement)
+        {
+            proposedPathfindingPosition=this.proposedPos;
+        }
+        else
+        {
+            proposedPathfindingPosition = this.pathfindingMethod();
+        }
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
         return proposedPathfindingPosition;
@@ -338,6 +356,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     explorer7()
     {
+        if(this.index==4)
+            {
+                console.log('movec4');
+            }
         this.proposedPos=undefined;
         //if the creature is going diagonal
         if(this.explorerDirectionDiagonal)
@@ -607,7 +629,6 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
     proposePathfinding()
     {
-        
         let dir = this.proposedDirection();
         switch(dir)
         {
@@ -694,7 +715,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                     //even if the proposed position has no creature on it we should still...
                                     ///...check if the proposed position is contested, 
                                     //specifically if it is contested by some direction other than our direction, and not contested by our direction - in that case do not move
-                                    if(this.map.isContestedExcluding(this.proposedPos,dir))
+                                    if(this.map.isContestedFromExcluding(this.proposedPos,this.oppositeDirection(dir)))
                                     {
                                         //do not move
                                     }
@@ -707,14 +728,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                 else
                                 {
                                     // check if our position is contested by the opposite direction, if so we can swap those 2 creature's positions and clear that contested data, as the 2 creatures in question want to be in each other's spaces
-                                    if(this.map.isContestedFromOpposite({tx:this.tx,ty:this.ty},dir))
+                                    if(this.map.isContestedFrom({tx:this.tx,ty:this.ty},dir))
                                     {
                                         this.swapCreatureWith(this.proposedPos);
                                     }
-                                    // if not already contested, then mark it as contested by the direction we wanted to move in
+                                    // if not already contested, then mark it as contested by the direction opposite to what we wanted to move in - so if we wanted to move NORTH into this position, we label that position as being contested by a creature from the SOUTH
                                     else
                                     {
-                                        this.map.setContested(this.proposedPos,dir);
+                                        this.map.setContestedFrom(this.proposedPos,this.oppositeDirection(dir));
                                     }
                                 }
                             }
@@ -749,8 +770,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.ty=undefined;
         this.x=undefined;
         this.y=undefined;
-        //if the creature is destroyed we must clear it's contested data or else creatures could end up teleporting
-        this.map.clearContested({tx:this.tx,ty:this.ty});
+        //if the creature is destroyed we must clear its contested data or else creatures could end up teleporting
+        //this.map.clearContested({tx:this.tx,ty:this.ty});
+        //instead of clearing the contested data at the dead creature's position, we should clear the contested bool for the proposed direction, at the proposed position as well as the old values for those
+        this.map.clearContestedDirection(this.oldProposedPos,this.oldProposedDirection);
+        this.map.clearContestedDirection(this.proposedPos,this.proposedDirection());
         //get rid of the tunnel
         for(let i = 0; i < this.potentialTunnelArray.length; i ++)
         {
@@ -837,32 +861,52 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.map.setCreature(v,this.index);
             //set the explored number etc for the explorer creature
             if(this.allowAlterExplorerNumber)
-            { 
-                if(this.carryingResource)
+            {   
+                //if we have visited a depleted resource and we are travelling back to base deleting resourceMarkers as we go...            
+                if(this.resourceDepleted==true)
+                {
+                    //if the proposed position already does not have a resource marker then make the resource depleted flag false. so if we are no longer following this trail of resource markers, set this flag so that we try to prevent us from deleting any resource markers that did not relate to that resource
+                    if(this.map.getResourceMarker(v)==false)
+                    {
+                        this.resourceDepleted=false;
+                    }
+                }
+                //if we are carrying a resource - and it's not the last resource(the resourceDepleted flag is not true), set the proposedPos to have a resource marker flag
+                if(this.carryingResource&&this.resourceDepleted==false)
                 {
                     this.scene.addResourceMarkerToMap(v,true);
                 }
-                //we should only overwrite the explored number if we are exploring, so is carryingResource is true then don't update the exploredNumber - unless we are unable to follow the exisitng path and we are exploring WITH a carried resource
+
+
+                //we should only overwrite the explored number if we are exploring, so if carryingResource is true then don't update the exploredNumber - unless we are unable to follow the exisitng path and we are exploring WITH a carried resource
                 if(this.carryingResource==false||this.exploringWhileCarrying)
                 {
                     this.exploredNumber++;
-                    this.map.setExploredNumber(v,this.exploredNumber);
+                    if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)==-1>this.exploredNumber)
+                    {
+                        this.map.setExploredNumber(v,this.exploredNumber);
+                    }
                     
                     this.exploringWhileCarrying=false;
                 }
-                //todo logic for picking up resource, marking the map as a resource marker, deleting tail 
-                //if there is a resource at this pos
+               
                 let resourceIndex=this.map.getResourceIndex(v);
                 if(resourceIndex!=-1)
                 {
-                    //you can only pick up a resource if you are not already carrying one 
-                    if(this.carryingResource==false)
+                    //you can only pick up a resource if you are not already carrying one, and if there is at least one resource left
+                    if(this.carryingResource==false&&this.scene.getResourceHealth(resourceIndex)>0)
                     {
                         this.scene.collectResource(resourceIndex);
                         //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
-                        this.memory[0]=Object.assign({}, v);;
+                        this.memory[0]=Object.assign({}, v);
+                        this.carryingResource=true;
                     }
-                    this.carryingResource=true;
+                    //if the resource had no health, or now has no health now that we took a resource from it then set the depleted flag, which will allow this creature to delete the resourceMarkers on the way back to the base 
+                    if(this.scene.getResourceHealth(resourceIndex)<=0)
+                    {
+                        this.resourceDepleted=true;
+                        this.memory[0]=Object.assign({}, v);
+                    }
                 }
             }
             //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
@@ -886,14 +930,22 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //...slow down the movement by skipping the next movement
                 this.skipMovement=true;
             }
+            //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
+            //this.map.clearContested(v);
+            this.map.clearContestedDirection(v,this.proposedDirection());
+            //if the depleted flag is set then we must have visited a resource that has no resources, or 'health' remaining. so we are deleting resourceMarkers as we travel 
+            if(this.resourceDepleted)
+            {
+
+            }
             this.tx=v.tx;
             this.ty=v.ty;
             let tempV = Helper.translateTilePosToWorldPos(v);
             this.x=tempV.x;
             this.y=tempV.y;
             Helper.centreText(this);
+            
         }
-        this.map.clearContested(v);
         //if we have a resource and are next to a creatureBase, add it to that creature base and set carryingresource to false
         this.depositResource();
     }
@@ -924,15 +976,13 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.trailerArray[i].ty=this.trailerArray[i-1].ty;
             this.trailerArray[i].x=this.trailerArray[i-1].x;
             this.trailerArray[i].y=this.trailerArray[i-1].y;
-            console.log('MOVEtrailer ' + i +' tx: '+this.trailerArray[i].tx+' ty: '+this.trailerArray[i].ty);            
         }
         if(this.trailerArray.length>0)
         {
             this.trailerArray[0].tx=this.tx;
             this.trailerArray[0].ty=this.ty;
             this.trailerArray[0].x=this.x;
-            this.trailerArray[0].y=this.y;
-            console.log('MOVEtrailer ' + 0 +' tx: '+this.trailerArray[0].tx+' ty: '+this.trailerArray[0].ty);  
+            this.trailerArray[0].y=this.y;  
         }
     }
     //for creatures which use the memory to record the 'tail' or the prev position etc
@@ -1103,7 +1153,6 @@ export default class Creature extends Phaser.GameObjects.Sprite
     addTrailer()
     {
         this.trailerArray.splice(0,0,new Trailer(this.scene,this.x,this.y,this.trailerTexture));
-        console.log('ADD trailer ' + 0 +' tx: '+this.tx+' ty: '+this.ty);  
     }
     killTrailer()
     {

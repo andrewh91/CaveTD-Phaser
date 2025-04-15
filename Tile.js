@@ -15,10 +15,10 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     this.vehicleIndex=-1;
     this.creatureIndex=-1;
     //i want 4 values for contested
-    this.contestedNorth=false;
-    this.contestedSouth=false;
-    this.contestedEast=false;
-    this.contestedWest=false;
+    this.contestedFromNorth=false;
+    this.contestedFromSouth=false;
+    this.contestedFromEast=false;
+    this.contestedFromWest=false;
     //these are used by the explorer pathfinding
     this.exploredNumber=-1;
     this.resourceMarker=false;

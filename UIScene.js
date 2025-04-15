@@ -84,15 +84,48 @@ export function drawBorders(scene)
     }
 }
 //for testing purposes i want to draw the grid coords of the tile the mouse is over, to screen, for each camera
-export function drawGridCoords(scene)
+export function drawGridCoords(scene,creatures,mapData)
 {
     for(let i = 0 ; i < scene.ui.cameraTextArray.length;i ++)
     {
         //this is the mouse pos on screen, subtract the map offset subtract the camera's position on screen (important for splitscreen) plus gridstep/2 (because tiles are drawn from the centre) all divded by gridstep
         //so this all boils down to showing you the coord of the tile you have moused over
+        let x = Math.floor((scene.input.activePointer.x-mapOffSetX-scene.cameras.cameras[i].x+scene.cameras.cameras[i].scrollX+gridStep/2)/gridStep);
+        let y = Math.floor((scene.input.activePointer.y-mapOffSetY-scene.cameras.cameras[i].y+scene.cameras.cameras[i].scrollY+gridStep/2)/gridStep);
+        let creatureIndex=-1;
+        try
+        {
+            creatureIndex = mapData.getCreatureIndex({tx:x,ty:y});
+        }       
+        catch(e)
+        {
+
+        }
+
+        let dir = '';
+        let contestedCurrent ='';
+        let exploredNumber ='';
+        let carryingResource ='no';
+        if(mapData.inBounds({tx:x,ty:y}))
+        {
+            contestedCurrent = mapData.getContestedFrom({tx:x,ty:y});
+            exploredNumber = mapData.getExploredNumber({tx:x,ty:y});
+        }
+        if(creatureIndex>-1)
+        {
+            dir = creatures[creatureIndex].proposedDirection();
+            dir=dir==0?'north':dir==1?'south':dir==2?'east':dir==3?'west':'stationary';
+            carryingResource = creatures[creatureIndex].carryingResource;
+        }
         scene.ui.cameraTextArray[i].setText(`
-        X=${Math.floor((scene.input.activePointer.x-mapOffSetX-scene.cameras.cameras[i].x+scene.cameras.cameras[i].scrollX+gridStep/2)/gridStep)}, 
-        Y=${Math.floor((scene.input.activePointer.y-mapOffSetY-scene.cameras.cameras[i].y+scene.cameras.cameras[i].scrollY+gridStep/2)/gridStep)}`);
+        X=${x}, 
+        Y=${y},
+        id=${creatureIndex},
+        dir=${dir},
+        contested=${contestedCurrent},
+        explored=${exploredNumber},
+        carryingR=${carryingResource}
+        `);
         
     }
 }

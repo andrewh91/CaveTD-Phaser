@@ -77,6 +77,10 @@ class Game extends Phaser.Scene
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
+        if(testing)
+        {
+            this.input.keyboard.on('keydown-C', this.onPressC, this);
+        }
         this.scene.launch('uiScene');
         this.ui;
         this.ui=this.scene.get("uiScene");
@@ -97,9 +101,9 @@ class Game extends Phaser.Scene
         window.debug={
             players: players, scene: this,uiScene:this.ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray,creatureBases:creatureBases
         }
-        //this will be altered in the updateMouse method
         if(testing)
         {
+            //this will be altered in the updateMouse method
             this.ui.cameraTextArray.push(this.ui.add.text(10,10 , 'Mouse position', { fontSize: '32px', fill: '#ff0000', wordWrap: { width: 560 } }));
             this.ui.cameraTextArray[0].setScrollFactor(0);
         }
@@ -119,6 +123,10 @@ class Game extends Phaser.Scene
     onPressR()
     {
         removeCamera(this);
+    }
+    onPressC()
+    {
+        Creature.playerMoveTimer=0;
     }
     //this will run on any button press, only does something if createPlayerFlag is true. createPlayerFlag will turn true when we press 'p' and go back to false after we set up the key bindings for the new player
     recordKey(e)
@@ -310,13 +318,17 @@ class Game extends Phaser.Scene
                 movementUpdateCounter++;
             }
             Creature.playerMoveTimer=Creature.playerMoveTimerStep/(pathfindingUpdateMax+movementUpdateMax);
+            if(testing)
+            {
+                Creature.playerMoveTimer=1000*60*60*24;
+            }
             pathfindingUpdateCounter++;
         }
         
     }
     updateMouse()
     {
-        drawGridCoords(this);
+        drawGridCoords(this,creatures,mapData);
     }
     addPlayer(v)
     {
@@ -476,9 +488,14 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
 
-        this.addCreatureToWaitingRoom({tx:15,ty:9,gx:0,gy:0});
-
-        //this.addCreatureToWaitingRoom({tx:21,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
 
         priorityArray.loopThroughAll();
     }
@@ -499,6 +516,10 @@ class Game extends Phaser.Scene
     collectResource(index)
     {
         resources[index].collect();
+    }
+    getResourceHealth(index)
+    {
+        return resources[index].health;
     }
     //sometimes trailers containing rubble will be destroyed - when the creature dies- and the rubble should be added to the map at the trailer position 
     addTrailerRubble(v)

@@ -612,3 +612,53 @@ also reset the creature's explored number when it reaches the base
 
 ok i think this works now, next time, set up several creatures to spawn at the creature base, set up several resources, see how well it does
 
+250415
+it seems the contested tiles are not working as intended, i think when rubble is involved, in which case it might be to do with the skipMovement...?
+
+creature 1 is on rubble, pathfinding says to go south into more rubble -  at the time it was an empty space, but by the time creature 1 gets to move creature 2 is already to the south of it so creature 1 sets it as contested south. if the creature 1 pathfinding tells it to go south again, then creature 1 could move into the contested space - because it is contested by its direction, and that would clear the contested flag, but because it is a diagonally moving creature, it changes its mind and does not go south, it moves away instead, leaving that position as contested south, because it is still contested, the creature 2 comes around and wants to move there from the east, but it can not as it is still contested south. 
+so i think it's less to do with rubble and more to do with a creature changing its pathfinding. but even if it did not change its pathfinding, imagine if that creature was killed before it was able to move south, that would remain contested south. 
+so i need to either wipe all contested data periodically, or when a creature proposes pathfinding or is killed, i should examine what its old proposed direction was and clear it
+
+so before we propose new pathfinding, record the old pathfinding, if the new pathfinding proposes a new position, we  need to clear the old pathfinding's proposed position contested data from that old proposed direction . 
+
+similarly for when it dies, we should clear the contested data for the proposedPos and the old proposedPos
+
+that did fix my problem with creature 1 and creature 2 
+
+the next problem is i have lots of creatures in a bottle neck and only one of them seems to be moving. 
+
+if a tile is contested from north and east, and the tile is empty, the creatures do not move into it. i thought the idea was that if it is contested from your direction, then you can move into it if it's empty, and the priority array will make sure that every creature gets a fair chance to move first 
+
+so i think i have some faulty logic in the move method, the comment says to not move to an empty tile if it is contested, but we can still move there if it is contested by our direction , 
+but the isContestedExcluding method does not do that, it's doing the opposite, 
+for clarity if a tile is contestedNorth, that should mean that a creature to its north, wants to move there, the direction that creature wants to move, is south, so its a bit confusing, i should rename it contestedFromNorth
+
+rather than change that method i've changed the code where i set a contested flag, i've changed it to use the opposite direction 
+
+i've renamed some of the methods like setContested, to setContestedFrom 
+
+i might need to set contestedFrom if the tile is just contested from a direction, even if it is empty 
+
+the //we take the map coord and the direction a creature is intending to travel into that map coord from, this will return true if that coord is already contested from the opposite direction and false otherwise isContestedFromOpposite method is not needed now 
+
+i've made a new testing feature, press 'c' to advance the creature pathfinding and movement update. 
+added some info to the ui for testing purposes 
+
+there is a problem when collecting resources, i have many creatures, they all travel a short distance to one resource and ferry that back to the base, eventually they are remaing static apart from 2 which switch position adjacent to the base. the pathfinding is telling them to follow the path marked by resourceMarker and of the tile with a resourceMarker it should go to the one with the highest explored number, which makes sense as following the highest explored number should take us away from the creature base and towards the resource. however the creature moves back and forth as the 2 available resourceMarker tiles have the same explored number. 
+
+the explored number on the tile is altered by any creature that moves there that is 'exploring' that means it is not carryingResource or if it is, it has decided to move to an unexplored tile. i did originally only want to update the explored number on the tile if the creature had a lower number than the existing one, but i changed that for some reason - which i think was to do with the behaviour when exploring deadends ?
+
+well changing it so that it only does setExploredNumber if the new number is lower seems to give better behaviour, but i'd have to test it in more complex situations too. 
+
+once the resource has run out of its 10 resources, the creatures get stuck in a loop, if a creature gets to a resource and takes the last one back to the base it should delete the resourceMarkers as it goes.
+
+so set the resourceDepleted flag, if true delete any resource marker you travel on until you travel on a tile that has no resource marker then set it to false
+
+this has a downside, if we travel to a resource, take the last one and make our way back to the base we will be deleting th resourcemarkers until there is a break in the resource trail, if that break comes mid way through the trail - which could happen- then we only delete half the trail, and that half a trail will stick around forever, misdirecting many creatures, 
+
+perhaps instead of the resource marker being a bool, it should be a value, equal to the amount of resources the creature found at the resource location, then any creature that follows the trail hoping to arrive at the resource can decrement it as it goes, so if there is only 3 resources left and 3 creatures go to follow the trail, the 4th won't bother as it will assume the other creatures will handle it . however that info wil not be for certain, those creatures could have been killed on the way there, a creature coming back with a resource could leave a marker with more certainty
+
+TODO 
+i have changed the way the setExploredNumber works, i now only do it if the new number would be lower than the exisitng number for that tile. test this 
+
+i want to change the resourceMarker into an int equal to the amount of resources remaining at the resource location. it should be decremented by every creature that follows it while not carryingResource. 

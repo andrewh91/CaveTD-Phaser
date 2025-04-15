@@ -21,8 +21,9 @@ export default class Resource extends Phaser.GameObjects.Sprite
         this.health--;
         if(this.health<=0)
         {
-            this.scene.addResourceMarkerToMap({tx:this.tx,ty:this.ty},false);
-            this.destroy;
+            //i'm not going to do this here, the resource can remain, although it will have no health, the creatures that travel to it will be responsibile for deleting the resourceMarkers
+            //this.scene.addResourceMarkerToMap({tx:this.tx,ty:this.ty},false);
+            //this.destroy;
         }
     }
 }
