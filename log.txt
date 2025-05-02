@@ -662,3 +662,11 @@ TODO
 i have changed the way the setExploredNumber works, i now only do it if the new number would be lower than the exisitng number for that tile. test this 
 
 i want to change the resourceMarker into an int equal to the amount of resources remaining at the resource location. it should be decremented by every creature that follows it while not carryingResource. 
+
+20250502
+testing this new behaviour - where the explored number is only updated if the new number is lower than the existing number, 
+creature will travel in its preferred direction, prefering unexplored tiles, if it hits a dead end it retraces its steps, moving to any unexplored tiles if possible, else it moves to the lowest existing explored number it is adjacent to, if it returns all the way to the base then it will just move back and forth and become stuck, so when it reaches the base i should clear the dead end flag so it can explore again, returning to the base in this way could mean that its path was a complete dead end, but not necessarily, there could still be unexplored tiles, and also the map could have been altered. however i could slightly rotate its preferred direction, this way even if there is only one creature it would eventually map out the whole map just as well as multiple creatures. 
+
+this is better, creatures now reset their dead end flag when returning to base, and are given a random new preferred direction. 
+
+i still have the problem, there is a resource close to the base, so close that the creatures form and unbroken chain from the base to the resource, and they are all in each other's way. i have not actually implemented the resource marker being an int instead of a bool yet, so do that and test again

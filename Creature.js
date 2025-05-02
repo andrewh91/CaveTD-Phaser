@@ -6,6 +6,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
     //this many milliseconds must pass before the player is allowed to make a move
     static playerMoveTimerStep=500;
     static playerMoveTimer=Creature.playerMoveTimerStep;
+    //these are the available options, 8 directions, this is static so i don't have to remake it for every creature
+    static dirArray=[
+        {tx: 0,ty:-1},
+        {tx: 1,ty:-1},
+        {tx: 1,ty: 0},
+        {tx: 1,ty: 1},
+        {tx: 0,ty: 1},
+        {tx:-1,ty: 1},
+        {tx:-1,ty: 0},
+        {tx:-1,ty:-1}
+    ];
     constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray) 
     {
         super(scene, x, y, texture);
@@ -63,39 +74,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         //if walking over rubble we will walk slower, this is achieved by using this flag, if this is set to true we skip one movement and one pathfinding update
         this.skipMovement=false;
-
-        //this will generate a vector like, 0,1 or 1,-1, or -1,0 etc  but will avoid 0,0
-        let tempx, tempy;
-        do 
-        {
-            tempx = Math.floor(Math.random() * 3 - 1); // Generates -1, 0, or 1
-            tempy = Math.floor(Math.random() * 3 - 1);
-        } 
-        while (tempx === 0 && tempy === 0); // Re-roll if both are 0
-        this.dirArray=[];
-        //i don't want this to be random while testing
-        if(testing)
-        {
-            this.dirArray=[
-                {tx: 0,ty:-1},
-                {tx: 1,ty:-1},
-                {tx: 1,ty: 0},
-                {tx: 1,ty: 1},
-                {tx: 0,ty: 1},
-                {tx:-1,ty: 1},
-                {tx:-1,ty: 0},
-                {tx:-1,ty:-1}
-            ]
-            tempx = this.dirArray[this.index%8].tx;
-            tempy = this.dirArray[this.index%8].ty;
-        }
-
-        this.explorerDirectionOriginal={tx:tempx,ty:tempy};
-        this.explorerDirection={tx:tempx,ty:tempy};
-        // i want the explorerDirectionOriginal to be one of 8 possible values, so it could be {1,1}, but i don't want the creatures to actually move diagonally, so i'm going to use these bools to turn either the x or y to a 0 then toggle the bool, this way the ones that want to go diagonally north east will just switch their preference between north and east every update
-        this.explorerDirectionBoolToggle=false;
-        //this will be true if the random direction ended up being diagonal
-        this.explorerDirectionDiagonal=tempx*tempy !==0;
+        this.resetPreferredDirection();
+        
         //the explorer pathfinding will use this 
         this.carryingResource=false;
         //if the creature picks up the last resource, or the resource is at 0, it will go back to base and delete any resource markers along the way 
@@ -107,6 +87,30 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //this is a variable to hold the pathfinding method function of choice
         this.pathfindingMethod;
         this.setPathfindingMethod(7);
+    } 
+    resetPreferredDirection()
+    {
+        let tempx;
+        let tempy;
+        //i don't want this to be random while testing
+        if(testing)
+        {    
+            tempx = Creature.dirArray[this.index%8].tx;
+            tempy = Creature.dirArray[this.index%8].ty;
+        }
+        else
+        {
+            let tempRand = Math.floor(Math.random()*8);
+            tempx = Creature.dirArray[tempRand].tx;
+            tempy = Creature.dirArray[tempRand].ty;
+        }
+
+        this.explorerDirectionOriginal={tx:tempx,ty:tempy};
+        this.explorerDirection={tx:tempx,ty:tempy};
+        // i want the explorerDirectionOriginal to be one of 8 possible values, so it could be {1,1}, but i don't want the creatures to actually move diagonally, so i'm going to use these bools to turn either the x or y to a 0 then toggle the bool, this way the ones that want to go diagonally north east will just switch their preference between north and east every update
+        this.explorerDirectionBoolToggle=false;
+        //this will be true if the random direction ended up being diagonal
+        this.explorerDirectionDiagonal=tempx*tempy !==0;
     }
     updatePathfinding(delta)
     {
@@ -947,23 +951,37 @@ export default class Creature extends Phaser.GameObjects.Sprite
             
         }
         //if we have a resource and are next to a creatureBase, add it to that creature base and set carryingresource to false
-        this.depositResource();
+        //if we return to the creature base we should set dead end to false
+        this.checkIfReturnedToBase();
     }
-    //for each adjacent tile, check if there is a creature base there, if so add our carryied resource to that base
-    depositResource()
+
+    //for each adjacent tile, check if there is a creature base there, if so add our carried resource to that base
+    checkIfReturnedToBase()
     {
-        if(this.carryingResource)
+        let n = this.getAdjacent();
+        let creatureBaseIndex=-1;
+        //for each adjacent 
+        for( let i = 0 ; i < n.length ; i ++)
         {
-            let n = this.getAdjacent();
-            let creatureBaseIndex=-1;
-            for( let i = 0 ; i < n.length ; i ++)
-            {
-                creatureBaseIndex=this.map.getCreatureBaseIndex(n[i]);
-                if(creatureBaseIndex>-1)
+            //check if there is a base
+            creatureBaseIndex=this.map.getCreatureBaseIndex(n[i]);
+            if(creatureBaseIndex>-1)
+            { 
+                //if we are carrying a resource, drop it off and reset 
+                if(this.carryingResource)
                 {
                     this.carryingResource=false;
                     this.scene.addResourceToCreatureBase(creatureBaseIndex);
+                }
+                //if we returned to base because there was a dead end, then alter the preferred direction - randomly- not that if testing it will just use the same direction again
+                if(this.exploredDeadEnd)
+                {
+                    this.resetPreferredDirection()
+                }
+                //even if we are not carrying a resource, reset the explored number to 0, and reset dead end flag
+                {
                     this.exploredNumber=0;
+                    this.exploredDeadEnd=false;
                 }
             }
         }
