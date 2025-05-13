@@ -78,8 +78,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         
         //the explorer pathfinding will use this 
         this.carryingResource=false;
-        //if the creature picks up the last resource, or the resource is at 0, it will go back to base and delete any resource markers along the way 
-        this.resourceDepleted=false;
+        //if the creature reaches a resource and is currently on a tile that does not already have a resource marker, then we consider that resource to be newly discovered, record how many resources are left in this variable and record that info on the tiles heading back to base so the creatures no how many resources are available
+        this.noOfResourcesDiscovered=0;
         this.exploredNumber=0;
         this.exploringWhileCarrying=false;
         //if the explorer hits a dead end it should back track until it find unexplored tiles. 
@@ -381,7 +381,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //the neighbours are sorted by the exploreDirection, but if it has a resource i want to go back to the base, so reverse this sorted order
             let neighboursReversed = Helper.reverseArray(neighbours);
             //get a list of the neighbours with a resource marker 
-            let resourceNeighbours=this.refineAdjacent(neighboursReversed,true);
+            let resourceNeighbours=this.refineAdjacent(neighboursReversed);
             if(resourceNeighbours.length>0)
             {
                 //of those neighbours that have resource markers, sort them by lowest explored number
@@ -435,7 +435,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         else
         {
             //list of neighbours that have resource marker
-            let resourceNeighbours=this.refineAdjacent(neighbours,true);
+            let resourceNeighbours=this.refineAdjacent(neighbours);
             if(resourceNeighbours.length>0)
             {
                 //of those neighbours that have resource markers, sort them by highest explored number
@@ -536,22 +536,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
         return neighbourArray;
     }
     //this should be used with the getAdjacent method's returned array, 
-    refineAdjacent(neighbours,hasResourceMarker)
+    refineAdjacent(neighbours)
     {
         //take a copy of the neighbours, so that we don't edit the neighbours
         let a = neighbours.slice();
         let returnArray=[];
         //sometimes i only want a list of the adjacents that have a resource marker, so go through my adjacents and eliminate any that don't have a resource marker 
-        if(hasResourceMarker)
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
         {
-            //do this in reverse order since i'm altering the array as i go through it
-            for(let i = a.length-1 ; i >-1 ; i -- )
+            if(this.map.getResourceMarker(a[i])==0)
             {
-                if(this.map.getResourceMarker(a[i])==false)
-                {
-                    //so we are removing the neighbours that do not have a resource marker
-                    a.splice(i,1);
-                }
+                //so we are removing the neighbours that do not have a resource marker
+                a.splice(i,1);
             }
         }
         //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
@@ -784,6 +781,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.potentialTunnelArray[i].kill();
         }
+        //reset all the things that would be reset on visiting the base 
+        this.exploredNumber=0;
+        this.exploredDeadEnd=false;
+        this.noOfResourcesDiscovered=0;
+        this.carryingResource=false;
     }
     proposedDirection()
     {
@@ -866,22 +868,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //set the explored number etc for the explorer creature
             if(this.allowAlterExplorerNumber)
             {   
-                //if we have visited a depleted resource and we are travelling back to base deleting resourceMarkers as we go...            
-                if(this.resourceDepleted==true)
-                {
-                    //if the proposed position already does not have a resource marker then make the resource depleted flag false. so if we are no longer following this trail of resource markers, set this flag so that we try to prevent us from deleting any resource markers that did not relate to that resource
-                    if(this.map.getResourceMarker(v)==false)
-                    {
-                        this.resourceDepleted=false;
-                    }
-                }
-                //if we are carrying a resource - and it's not the last resource(the resourceDepleted flag is not true), set the proposedPos to have a resource marker flag
-                if(this.carryingResource&&this.resourceDepleted==false)
-                {
-                    this.scene.addResourceMarkerToMap(v,true);
-                }
-
-
+                
                 //we should only overwrite the explored number if we are exploring, so if carryingResource is true then don't update the exploredNumber - unless we are unable to follow the exisitng path and we are exploring WITH a carried resource
                 if(this.carryingResource==false||this.exploringWhileCarrying)
                 {
@@ -893,7 +880,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     
                     this.exploringWhileCarrying=false;
                 }
-               
+                //if there is a resource at the proposed position
                 let resourceIndex=this.map.getResourceIndex(v);
                 if(resourceIndex!=-1)
                 {
@@ -904,14 +891,29 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
                         this.memory[0]=Object.assign({}, v);
                         this.carryingResource=true;
-                    }
-                    //if the resource had no health, or now has no health now that we took a resource from it then set the depleted flag, which will allow this creature to delete the resourceMarkers on the way back to the base 
-                    if(this.scene.getResourceHealth(resourceIndex)<=0)
-                    {
-                        this.resourceDepleted=true;
-                        this.memory[0]=Object.assign({}, v);
+                        //see if our current location has a resourceMarker, if not then treat it like we have discovered a new resource
+                        if(this.map.getResourceMarker({tx:this.tx,ty:this.ty})==0)
+                        {
+                            //a number of creatures equal to the this.noOfResourcesDiscovered will follow the trail to the resource, after that they will treat the path like any explored area, but i want to send a few creatures to check out the path even after we know the resource is depleted, because there could be another resource behind it, so use +1 at the end here
+                            this.noOfResourcesDiscovered=this.scene.getResourceHealth(resourceIndex)+1;
+                        }
                     }
                 }
+                //if we are carrying a resource - and we discovered a new resource, record the number of remaining resources on each tile as we head back to the base
+                if(this.carryingResource&&this.noOfResourcesDiscovered>0)
+                {
+                    this.scene.addResourceMarkerToMap(v,this.noOfResourcesDiscovered);
+                }
+                //if we are not carrying a resource, but we are following a resource trail then we should decrement that resource marker on the tile, the idea being that if 5 creatures go to a discovered resource that has 5 resources left, then we don't need to send any more creatures - well actually i've set it up so that 1 or 2 will follow the path to see if there is anything beyond the depleted resource
+                if(this.carryingResource==false)
+                {
+                    let tempRM=this.map.getResourceMarker(v);
+                    if(tempRM>0)
+                    {
+                        this.scene.addResourceMarkerToMap(v,tempRM-1);
+                    }
+                }
+                
             }
             //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
             if(this.map.isWall(v)==true)
@@ -937,11 +939,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
             //this.map.clearContested(v);
             this.map.clearContestedDirection(v,this.proposedDirection());
-            //if the depleted flag is set then we must have visited a resource that has no resources, or 'health' remaining. so we are deleting resourceMarkers as we travel 
-            if(this.resourceDepleted)
-            {
-
-            }
+          
             this.tx=v.tx;
             this.ty=v.ty;
             let tempV = Helper.translateTilePosToWorldPos(v);
@@ -973,15 +971,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.carryingResource=false;
                     this.scene.addResourceToCreatureBase(creatureBaseIndex);
                 }
-                //if we returned to base because there was a dead end, then alter the preferred direction - randomly- not that if testing it will just use the same direction again
+                //if we returned to base because there was a dead end, then alter the preferred direction - randomly- note that if testing it will just use the same direction again
                 if(this.exploredDeadEnd)
                 {
                     this.resetPreferredDirection()
                 }
-                //even if we are not carrying a resource, reset the explored number to 0, and reset dead end flag
+                //even if we are not carrying a resource, reset the explored number to 0, and reset dead end flag, and reset the number of resources discovered
                 {
                     this.exploredNumber=0;
                     this.exploredDeadEnd=false;
+                    this.noOfResourcesDiscovered=0;
                 }
             }
         }

@@ -56,7 +56,7 @@ class Game extends Phaser.Scene
     }   
     create()
     {
-        
+        this.printControls();
         this.mainCamera = this.cameras.main;
         
         
@@ -108,6 +108,22 @@ class Game extends Phaser.Scene
             this.ui.cameraTextArray[0].setScrollFactor(0);
         }
     }
+    //print the controls to the console log
+    printControls()
+    {
+        console.log("use the arrow keys to move player1");
+        console.log("move player ontop of vehicle and use shift to enter");
+        console.log("when in vehicle:");
+        console.log(" use shift to exit");
+        console.log(" move ontop of rubble or wall to dig it up");
+        console.log(" press space to switch between dig and dump mode");
+        console.log(" in dump mode press arrow key to dump rubble in that direction");
+        console.log("press p to create a new player with camera, follow prompt to set up controls for that player ");
+        console.log("press r to remove the most recent camera");
+        console.log("press c to advance time");
+        console.log("the godMode and testing variable in the index file can be altered to help testing and debug and map creation etc");
+        console.log("");
+    }
     onPressP()
     {
         this.ui.showNewPlayerDialog();
@@ -128,6 +144,7 @@ class Game extends Phaser.Scene
     {
         Creature.playerMoveTimer=0;
     }
+ 
     //this will run on any button press, only does something if createPlayerFlag is true. createPlayerFlag will turn true when we press 'p' and go back to false after we set up the key bindings for the new player
     recordKey(e)
     {
@@ -505,9 +522,9 @@ class Game extends Phaser.Scene
         creatures[id].moveCreature(v);        
     }
     //this is just used as the resource doees not have access to the map 
-    addResourceMarkerToMap(v,b)
+    addResourceMarkerToMap(v,i)
     {
-        mapData.setResourceMarker(v,b);
+        mapData.setResourceMarker(v,i);
     }
     addResourceToCreatureBase(index)
     {

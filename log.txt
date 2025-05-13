@@ -670,3 +670,39 @@ creature will travel in its preferred direction, prefering unexplored tiles, if 
 this is better, creatures now reset their dead end flag when returning to base, and are given a random new preferred direction. 
 
 i still have the problem, there is a resource close to the base, so close that the creatures form and unbroken chain from the base to the resource, and they are all in each other's way. i have not actually implemented the resource marker being an int instead of a bool yet, so do that and test again
+
+20250513
+today i will change the resoure marker from a bool to an int 
+need to amend the refineAdjacent method
+
+the old system was, accidentally reach a resource, return to base, marking every step as a resource marker. 
+then if you go back to the resource but it is depleted, we should unmark those, - it looks like i never actually implemented that. 
+
+the new system, should accidentally reach a resource, count how many resources there are and try and take one, on the way back to base, mark each tile visited with the resource marker integer equal to the resources remaining, 
+then when a creature follows the resource trail, hoping to get a resource, it lowers the value of the resource marker by 1. so if there were 9 left, and 9 creatures take off following that already discovered resource trail, they will reduce it to 0, and no more creatures will bother prioritising that path, however, if some of those are killed halfway, the resource marker for the path would still be 0, but there would still be resources left. in this case a creature could randomly discover the resource again, or if one does make it back it will be setting the resource marker as it goes with however many resources were left at the time it picked one up. 
+
+this creates a new thing to think about, if a creature dies holding a resource, it is dropped, the next creautre on the way back to base already holding a resource might see this, what should it do? should it increase the resource number that it's laying down? 
+
+what if 10 resources are discovered, so 10 creatures set off to find it, the first one to get there comes back recording that there are 9 left on each tile on the way back, but coming the other way are some more creatures, they are reducing the recorded number because they intend to collect a resource, the first one on the way back will be overwritting these with a higher number. 
+
+so there are 2 ways to update the resource marker
+option A) reducing the number as creatures follow the path, and option B) setting the number based on how many resources are remaining  - these 2 options are sort of conflicting with each other. 
+
+A) is good assuming no creatures die, it will send the right amount of creatures for the resource, but if the path becomes blocked or some creatures die it will think the resource has been collected. and will only return there accidentally. 
+B) will send potentially unlimited creatures down the same path until one comes back confirming there is no resources left, not good for a large map, not a big deal on a small map, also it deals with creatures dying better, or the map changing, it deal with that better too. 
+
+using both together B) will overwrite A) so even if you sent the right amount of creatures, once the first one returns to base, it will have reset the number on the path so it will still think there are some left
+
+so maybe i should stick to A), do B) initially, specifically that should mean if the resource was previously undiscovered - i.e. the path leading up to it did not already have resource markers on it - then the creature returns to base laying down a resource marker equal to the number remaining. then the way i can make A) better, creatures can detect dead creatures, i wanted that feature anyway, reporting the loss of a creature should be a priority, it should pick up the creature's resource if possible, then return to base laying a danger marker, once it reaches the base the danger is detected and strong units will follow that path 
+
+i did say i wanted to send a number of creatures equal to the number of resources remaining after that creature takes one, but maybe increase the number by 1 or 2 just so a couple of creatures continue to that spot even after it's depleted to see if there was anything else in that area. 
+
+the danger markers should be similar, resource collecting creatures should not want to follow that path because there is danger, but if some strong units follow that way they should reduce the number, which in effect means that resource gathering creatures will follow behind the strong ones. if the resource collecting creature encounters deceased strong creatures, the danger amount should be increased. 
+
+so i want to get rid of the depleted marker 
+
+creating a console log to explain the controls
+
+this has certainly changed the behaviour, seems to be for the better, but i have not tested it properly, need to see if the variables are changing as they are expected to like the noOfResourcesDiscovered and the resource markers
+
+TODO when a creature dies, it needs to drop its resource, that might mean adding a new resource index to the map, or adding to an exisiting one . i also need to have creatures detect dead creatures, so i need to make a bloodstain marker or something on the map

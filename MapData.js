@@ -332,9 +332,9 @@ export default class MapData
     {
         this.tiles[this.getIndexFromCoords(v)].contestedFromEast=false;
     }
-    setResourceMarker(v,b)
+    setResourceMarker(v,i)
     {
-        this.tiles[this.getIndexFromCoords(v)].resourceMarker=b;
+        this.tiles[this.getIndexFromCoords(v)].resourceMarker=i;
     }
     setResourceIndex(v,n)
     {
