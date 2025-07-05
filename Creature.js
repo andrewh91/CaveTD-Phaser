@@ -360,7 +360,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     explorer7()
     {
-        if(this.index==4)
+        if(this.index==5)
             {
                 console.log('movec4');
             }
@@ -852,6 +852,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
+        if(this.index==5)
+            {
+                console.log('movec4');
+            }
         this.updateMemory(v);
         //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
         if(this.map.getCreatureIndex({tx:this.tx,ty:this.ty})==this.index)
@@ -873,7 +877,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 if(this.carryingResource==false||this.exploringWhileCarrying)
                 {
                     this.exploredNumber++;
-                    if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)==-1>this.exploredNumber)
+                    if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)>this.exploredNumber)
                     {
                         this.map.setExploredNumber(v,this.exploredNumber);
                     }
