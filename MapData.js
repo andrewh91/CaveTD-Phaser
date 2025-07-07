@@ -335,6 +335,8 @@ export default class MapData
     setResourceMarker(v,i)
     {
         this.tiles[this.getIndexFromCoords(v)].resourceMarker=i;
+        
+        this.tiles[this.getIndexFromCoords(v)].updateText('R'+('00'+i).slice(-2));
     }
     setResourceIndex(v,n)
     {

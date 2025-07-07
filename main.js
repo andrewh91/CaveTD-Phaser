@@ -420,19 +420,28 @@ class Game extends Phaser.Scene
         creatureBases.push(c);
         mapData.setCreatureBaseIndex({tx:c.tx,ty:c.ty},c.index);
     }
-    addResource(v)
+    addResource(v,health)
     {
         resourceIndex++;
         let tempV = Helper.translateTilePosToWorldPos(v);
-        let r = new Resource(this, tempV.x,tempV.y, 'dot',resourceIndex);
-        resources.push(r);
-        mapData.setResourceIndex({tx:r.tx,ty:r.ty},r.index);
+        //check if there is already a resource
+        let exisitingResourceIndex = mapData.getResourceIndex(v);
+        if (exisitingResourceIndex>-1)
+        {
+            resources[exisitingResourceIndex].health+=health;
+        }
+        else
+        {
+            let r = new Resource(this, tempV.x,tempV.y, 'dot',resourceIndex,health);
+            resources.push(r);
+            mapData.setResourceIndex({tx:r.tx,ty:r.ty},r.index);
+        }
     }
     setUpResources()
     {
         resourceIndex=-1;
         
-        this.addResource({tx:15,ty:4});
+        this.addResource({tx:15,ty:4},10);
     }
     setUpCreatureBases()
     {
@@ -524,7 +533,27 @@ class Game extends Phaser.Scene
     //this is just used as the resource doees not have access to the map 
     addResourceMarkerToMap(v,i)
     {
+        let current = mapData.getResourceMarker(v);
+        if(current==-1)
+        {
+            current=0;
+        }
+        //this will add the current resource marker to the new one
+        mapData.setResourceMarker(v,i+current);
+    }
+    //this is just used as the resource doees not have access to the map 
+    setResourceMarkerOnMap(v,i)
+    {
         mapData.setResourceMarker(v,i);
+    }
+    decrementResourceMarkerOnMap(v)
+    {
+        let current = mapData.getResourceMarker(v);
+        if(current>-1)
+        {
+            //subtract 1 from the resourceMarker
+            mapData.setResourceMarker(v,current-1);
+        }
     }
     addResourceToCreatureBase(index)
     {

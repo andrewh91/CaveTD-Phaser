@@ -360,10 +360,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     explorer7()
     {
-        if(this.index==5)
-            {
-                console.log('movec4');
-            }
+
         this.proposedPos=undefined;
         //if the creature is going diagonal
         if(this.explorerDirectionDiagonal)
@@ -545,7 +542,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //do this in reverse order since i'm altering the array as i go through it
         for(let i = a.length-1 ; i >-1 ; i -- )
         {
-            if(this.map.getResourceMarker(a[i])==0)
+            if(this.map.getResourceMarker(a[i])==-1)
             {
                 //so we are removing the neighbours that do not have a resource marker
                 a.splice(i,1);
@@ -781,6 +778,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.potentialTunnelArray[i].kill();
         }
+        //drop the carried resource, so we need to add the resource to the map and set a marker - or add to the marker
+        if(this.carryingResource)
+        {
+            this.scene.addResource({tx:this.tx,ty:this.ty},1);
+        }
         //reset all the things that would be reset on visiting the base 
         this.exploredNumber=0;
         this.exploredDeadEnd=false;
@@ -852,10 +854,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
-        if(this.index==5)
-            {
-                console.log('movec4');
-            }
+
         this.updateMemory(v);
         //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
         if(this.map.getCreatureIndex({tx:this.tx,ty:this.ty})==this.index)
@@ -895,26 +894,25 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
                         this.memory[0]=Object.assign({}, v);
                         this.carryingResource=true;
-                        //see if our current location has a resourceMarker, if not then treat it like we have discovered a new resource
-                        if(this.map.getResourceMarker({tx:this.tx,ty:this.ty})==0)
-                        {
-                            //a number of creatures equal to the this.noOfResourcesDiscovered will follow the trail to the resource, after that they will treat the path like any explored area, but i want to send a few creatures to check out the path even after we know the resource is depleted, because there could be another resource behind it, so use +1 at the end here
-                            this.noOfResourcesDiscovered=this.scene.getResourceHealth(resourceIndex)+1;
-                        }
+                        //we have picked up a resource, we need to count how many resources remain from that location so we can leave a trail for others to follow
+                        this.noOfResourcesDiscovered=this.scene.getResourceHealth(resourceIndex);
                     }
                 }
-                //if we are carrying a resource - and we discovered a new resource, record the number of remaining resources on each tile as we head back to the base
-                if(this.carryingResource&&this.noOfResourcesDiscovered>0)
+                //if we are carrying a resource - record the number of remaining resources on each tile as we head back to the base, unless that tile already has a trail
+                if(this.carryingResource)
                 {
-                    this.scene.addResourceMarkerToMap(v,this.noOfResourcesDiscovered);
+                    //returning to base laying a trail should only happen if there is no trail, editing the existing trail is the job of creatures that follow the trail to the resource
+                    if(this.map.getResourceMarker(v)==-1)
+                    {
+                        this.scene.setResourceMarkerOnMap(v,this.noOfResourcesDiscovered);
+                    }
                 }
-                //if we are not carrying a resource, but we are following a resource trail then we should decrement that resource marker on the tile, the idea being that if 5 creatures go to a discovered resource that has 5 resources left, then we don't need to send any more creatures - well actually i've set it up so that 1 or 2 will follow the path to see if there is anything beyond the depleted resource
+                //if we are not carrying a resource and we are following a resource marker trail, we should subtract 1 from it. this will have the result of a number of creatures equal to the number of reported resources following the resource trail 
                 if(this.carryingResource==false)
                 {
-                    let tempRM=this.map.getResourceMarker(v);
-                    if(tempRM>0)
+                    if(this.map.getResourceMarker(v)>-1)
                     {
-                        this.scene.addResourceMarkerToMap(v,tempRM-1);
+                        this.scene.decrementResourceMarkerOnMap(v);
                     }
                 }
                 

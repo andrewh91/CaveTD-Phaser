@@ -21,7 +21,7 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     this.contestedFromWest=false;
     //these are used by the explorer pathfinding
     this.exploredNumber=-1;
-    this.resourceMarker=0;
+    this.resourceMarker=-1;
     //gridstep is a global variable
     this.setScale(gridStep);
     this.setTint(colour);

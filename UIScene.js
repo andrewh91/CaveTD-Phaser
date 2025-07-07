@@ -106,10 +106,12 @@ export function drawGridCoords(scene,creatures,mapData)
         let contestedCurrent ='';
         let exploredNumber ='';
         let carryingResource ='no';
+        let resourceMark ='';
         if(mapData.inBounds({tx:x,ty:y}))
         {
             contestedCurrent = mapData.getContestedFrom({tx:x,ty:y});
             exploredNumber = mapData.getExploredNumber({tx:x,ty:y});
+            resourceMark = mapData.getResourceMarker({tx:x,ty:y});
         }
         if(creatureIndex>-1)
         {
@@ -124,7 +126,8 @@ export function drawGridCoords(scene,creatures,mapData)
         dir=${dir},
         contested=${contestedCurrent},
         explored=${exploredNumber},
-        carryingR=${carryingResource}
+        carryingR=${carryingResource},
+        resourceMark=${resourceMark}
         `);
         
     }
