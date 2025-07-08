@@ -72,7 +72,7 @@ class Game extends Phaser.Scene
         priorityArray=new PriorityArray();
         this.setUpResources();
         this.setUpCreatureBases();
-        this.setUpCreatures3();
+        this.setUpCreatures4();
 
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
@@ -197,7 +197,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[3]);
+        mapData.loadFromText(savedMaps.mapsArray[4]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -441,7 +441,8 @@ class Game extends Phaser.Scene
     {
         resourceIndex=-1;
         
-        this.addResource({tx:15,ty:4},10);
+        this.addResource({tx:15,ty:6},10);
+        this.addResource({tx:15,ty:3},4);
     }
     setUpCreatureBases()
     {
@@ -521,6 +522,16 @@ class Game extends Phaser.Scene
         this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
         this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
         this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+
+        priorityArray.loopThroughAll();
+    }
+    setUpCreatures4()
+    {
+        creatureIndex=-1;
+
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+
         this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
 
         priorityArray.loopThroughAll();

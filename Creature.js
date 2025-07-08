@@ -491,7 +491,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     }
                 }
             }
-            //if the explorer has found a dead end we should still be lokoing for resource marker first, then unexplored, but failing that choose a low explored number neighbour, so that we backtrack until we find unexplored tiles
+            //if the explorer has found a dead end we should still be looking for resource marker first, then unexplored, but failing that choose a low explored number neighbour, so that we backtrack until we find unexplored tiles
             if(this.exploredDeadEnd==true)
             {
                 let neighboursByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(neighbours);
@@ -972,6 +972,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     this.carryingResource=false;
                     this.scene.addResourceToCreatureBase(creatureBaseIndex);
+                    //we now need to decrement the trail - this is normally done when we move onto a tile with a resource marker and we are not carrying a resource, but when we stepped on this tile adjacent to the creature base we were carrying one, so decrement it now
+                    this.scene.decrementResourceMarkerOnMap({tx:this.tx,ty:this.ty});
                 }
                 //if we returned to base because there was a dead end, then alter the preferred direction - randomly- note that if testing it will just use the same direction again
                 if(this.exploredDeadEnd)
