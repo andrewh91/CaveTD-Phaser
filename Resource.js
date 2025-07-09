@@ -14,11 +14,20 @@ export default class Resource extends Phaser.GameObjects.Sprite
         this.setTint(0x5555ff);
         this.health=health;
         this.index=index;
-        this.scene.addResourceMarkerToMap({tx:this.tx,ty:this.ty},this.health);
+        this.scene.setResourceMarkerOnMap({tx:this.tx,ty:this.ty},this.health);
+        //problem:newlyDiscovered
+        //this bool will help a creature decide what to do when it picks up a resource off a dead creatuer
+        this.newlyDiscovered = true;
     }
     collect()
     {
         this.health--;
+        let returnValue=false;
+        if(this.newlyDiscovered)
+        {
+            returnValue = true;
+        }
+        this.newlyDiscovered=false;
         this.scene.decrementResourceMarkerOnMap({tx:this.tx,ty:this.ty});
         if(this.health<=0)
         {
@@ -26,5 +35,6 @@ export default class Resource extends Phaser.GameObjects.Sprite
             //this.scene.addResourceMarkerToMap({tx:this.tx,ty:this.ty},false);
             //this.destroy;
         }
+        return returnValue;
     }
 }

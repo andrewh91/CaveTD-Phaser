@@ -1,6 +1,7 @@
 var players=[];
 var vehicles=[];
 var creatures=[];
+var deadCreatures=[];
 var creatureWaitingRoom=[];
 var creatureBases=[];
 var resources=[];
@@ -73,6 +74,7 @@ class Game extends Phaser.Scene
         this.setUpResources();
         this.setUpCreatureBases();
         this.setUpCreatures4();
+        this.setUpDeadCreatures();
 
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
@@ -391,25 +393,65 @@ class Game extends Phaser.Scene
             }
         }
     }
+    //when a creature is killed we add its index to this array for reuse
+    addDeadCreature(i)
+    {
+        deadCreatures.push(i);
+    }
     addCreature(v)
     {
-        creatureIndex++;
-
-        let tempV = Helper.translateTilePosToWorldPos(v);
-        let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndex,Helper.incrementColour(creatureIndex,3),mapData,priorityArray);
-        /*the v data might include a goal vector gx,gy*/
-        if(v.gx!=undefined)
+        //first check if there is a dead creature index we can reuse, 
+        let creatureIndexToUse = -1;
+        let reuseDeadCreature=false;
+        for(let i = 0 ; i < deadCreatures.length; i++)
         {
-            let tempG = {tx:v.gx,ty:v.gy};
-            c.setGoal(tempG);
+            reuseDeadCreature=true;
+            creatureIndexToUse=deadCreatures[i];
+            //remove that index from the deadCreatures array
+            deadCreatures.splice(i,1);
+            break;
         }
-        creatures.push(c);
-        mapData.setCreature({tx:c.tx,ty:c.ty},c.index);
-        //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
-        priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndex,p:undefined},STATIONARY);
-        if(mapData.getExploredNumber({tx:c.tx,ty:c.ty})==-1)
+        //if there are no dead creatures, we need to make a new creature
+        if(reuseDeadCreature==false)
         {
-            mapData.setExploredNumber({tx:c.tx,ty:c.ty},0);
+            creatureIndex++;
+            creatureIndexToUse = creatureIndex;
+    
+            let tempV = Helper.translateTilePosToWorldPos(v);
+            let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndexToUse,Helper.incrementColour(creatureIndexToUse,3),mapData,priorityArray);
+            /*the v data might include a goal vector gx,gy*/
+            if(v.gx!=undefined)
+            {
+                let tempG = {tx:v.gx,ty:v.gy};
+                c.setGoal(tempG);
+            }
+            creatures.push(c);        
+            //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
+            priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndexToUse,p:undefined},STATIONARY);
+        }
+        else
+        {
+            let tempV = Helper.translateTilePosToWorldPos(v);
+            //if we are reusing a dead creature, we can just call the reset method to reset most variables and give it a new position 
+            creatures[creatureIndexToUse].x=tempV.x;
+            creatures[creatureIndexToUse].y=tempV.y;
+            creatures[creatureIndexToUse].tx=v.tx;
+            creatures[creatureIndexToUse].ty=v.ty;
+            creatures[creatureIndexToUse].reset();
+            /*the v data might include a goal vector gx,gy*/
+            if(v.gx!=undefined)
+            {
+                let tempG = {tx:v.gx,ty:v.gy};
+                creatures[creatureIndexToUse].setGoal(tempG);
+            }
+            //add the creature to the priority array, just so i can loop through the priority array to begin with, rather than looping through the creature array in the first update
+            priorityArray.addAndSort(priorityArray.stationary,{index:creatureIndexToUse,p:undefined},STATIONARY);
+        }
+        mapData.setCreature({tx:v.tx,ty:v.ty},creatureIndexToUse);
+
+        if(mapData.getExploredNumber({tx:v.tx,ty:v.ty})==-1)
+        {
+            mapData.setExploredNumber({tx:v.tx,ty:v.ty},0);
         }
     }
     addCreatureBase(v)
@@ -422,16 +464,18 @@ class Game extends Phaser.Scene
     }
     addResource(v,health)
     {
-        resourceIndex++;
         let tempV = Helper.translateTilePosToWorldPos(v);
         //check if there is already a resource
         let exisitingResourceIndex = mapData.getResourceIndex(v);
         if (exisitingResourceIndex>-1)
         {
-            resources[exisitingResourceIndex].health+=health;
+            let totalHealth = resources[exisitingResourceIndex].health + health;
+            resources[exisitingResourceIndex].health=totalHealth;
+            this.setResourceMarkerOnMap(v,totalHealth); 
         }
         else
         {
+            resourceIndex++;
             let r = new Resource(this, tempV.x,tempV.y, 'dot',resourceIndex,health);
             resources.push(r);
             mapData.setResourceIndex({tx:r.tx,ty:r.ty},r.index);
@@ -447,7 +491,7 @@ class Game extends Phaser.Scene
     setUpCreatureBases()
     {
         creatureBaseIndex=-1;
-        this.addCreatureBase({tx:15,ty:10});
+        this.addCreatureBase({tx:15,ty:16});
     }
     setUpCreatures()
     {
@@ -529,30 +573,19 @@ class Game extends Phaser.Scene
     setUpCreatures4()
     {
         creatureIndex=-1;
-
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
         priorityArray.loopThroughAll();
+    }
+    setUpDeadCreatures()
+    {
+        deadCreatures = [];
     }
     //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here
     updateCreaturePos(id,v)
     {
         creatures[id].moveCreature(v);        
     }
-    //this is just used as the resource doees not have access to the map 
-    addResourceMarkerToMap(v,i)
-    {
-        let current = mapData.getResourceMarker(v);
-        if(current==-1)
-        {
-            current=0;
-        }
-        //this will add the current resource marker to the new one
-        mapData.setResourceMarker(v,i+current);
-    }
-    //this is just used as the resource doees not have access to the map 
+    //when you create a new resource, either during set up or when the creature drops a resource, call this to set a marker equal to the health of the resource. also if the resource is dropped on an existing resource, we should combine the health of the resources and set a marker equal to the combined health
     setResourceMarkerOnMap(v,i)
     {
         mapData.setResourceMarker(v,i);
@@ -570,9 +603,11 @@ class Game extends Phaser.Scene
     {
         creatureBases[index].addResource();
     }
+    //problem:newlyDiscovered
+    //this will return true if it is a newlyDiscovered resource
     collectResource(index)
     {
-        resources[index].collect();
+        return resources[index].collect();
     }
     getResourceHealth(index)
     {

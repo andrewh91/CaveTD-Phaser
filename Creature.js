@@ -20,29 +20,42 @@ export default class Creature extends Phaser.GameObjects.Sprite
     constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray) 
     {
         super(scene, x, y, texture);
-        this.texture=texture;
-        this.trailerTexture=trailerTexture;
         this.scene=scene;
-        scene.add.existing(this);
         //the tx is a more useful way of figuring out where the player is in the world, this.x is the world coord, but this is a grid based game, and the player could be at position (60,10) in order to figure out where the player is you would need to know what the gridstep is, and that the grid does not start at 0,0, it has an offset, so (60,10) could be (2,0) tile position if the gridstep is 25 and the offset is (10,10)
         this.tx=(this.x-mapOffSetX)/gridStep;
         this.ty=(this.y-mapOffSetY)/gridStep;
+        this.texture=texture;
+        this.trailerTexture=trailerTexture;
         this.index=index;
-        //pass in a reference to the map data, so we can query the map to see if there is a wall etc
-        this.map=map;
+        scene.add.existing(this);
         //i've made the player image be the same size as the value it can move in one go 
         this.setScale(gridStep);
         //this is a simple way to give the player a colour based on it's index, so each player should look a little different
         this.setTint(colour);
         this.text = scene.add.text(this.x, this.y, 'c'+this.index, { fontSize: '20px', fill: '#fff'});
+        //pass in a reference to the map data, so we can query the map to see if there is a wall etc
+        this.map=map;
+        this.priorityArray=priorityArray;
+        //add a sprite so i can see where the proposed pos is 
+        this.proposedPosSprite = new Phaser.GameObjects.Sprite(scene,undefined,undefined,texture);
+        scene.add.existing(this.proposedPosSprite);
+        this.proposedPosSprite.setTint(0x00ff00);
+        this.proposedPosSprite.setScale(5);
+        
+        //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
+        this.reset();
+
+        
+    } 
+    reset()
+    {
         Helper.centreText(this);
         this.goal={tx:this.tx,ty:this.ty};
         this.oldGoal={tx:undefined,ty:undefined};
         //we may start tunnelling if we change direction, that's assuming that we changed direction due to hitting a wall, if we changed direction due to getting a new goal, then we set this flag so that we ignore that change in direction for tunnelling purposes
         this.newGoal=false;
-        this.proposedPos;
-        this.oldProposedPos;
-        this.priorityArray=priorityArray;
+        this.proposedPos={tx:undefined,ty:undefined};
+        this.oldProposedPos={tx:undefined,ty:undefined};;
         //the memory can be various things, but related to pathfinding
         this.memory=[];
         //use this to store the previous position, we will update this in the move method and the swapCreatureWith method 
@@ -66,11 +79,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.trailerArray=[];
         this.distToPotentialTunnelStartPos=0;
 
-        //add a sprite so i can see where the proposed pos is 
-        this.proposedPosSprite = new Phaser.GameObjects.Sprite(scene,undefined,undefined,texture);
-        scene.add.existing(this.proposedPosSprite);
-        this.proposedPosSprite.setTint(0x00ff00);
-        this.proposedPosSprite.setScale(5);
+
 
         //if walking over rubble we will walk slower, this is achieved by using this flag, if this is set to true we skip one movement and one pathfinding update
         this.skipMovement=false;
@@ -87,7 +96,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //this is a variable to hold the pathfinding method function of choice
         this.pathfindingMethod;
         this.setPathfindingMethod(7);
-    } 
+        //problem:newlyDiscovered
+        //this variable will be true if the creature picked up the first resource in a resource pool, it will help the creature decide to follow the shortest explored number path, normally we would follow the resource marker path but if this is newly discovered then there likely is no resource marker path and if there is it will be going back to where the resource was, not back to the base as this would likely only happen if the previous creature to carry it was killed.  
+        this.newlyDiscovered=false;
+        this.alive=true;
+        this.visible=true;
+        this.text.visible=true;
+        this.proposedPosSprite.visible=true;
+        this.proposedPosSprite.x=undefined;
+        this.proposedPosSprite.y=undefined;
+    }
     resetPreferredDirection()
     {
         let tempx;
@@ -114,26 +132,32 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     updatePathfinding(delta)
     {
-        //the timing of this update will happen in the main.js 
-        //save the old proposed pos so we can clear the contested data if this creature is killed, or decides to change direction 
-        this.oldProposedPos=this.proposedPos;
-        this.oldProposedDirection=this.proposedDirection();
-        this.proposedPos=this.pathfinding();
-        //check if the new proposed pos is the same as the old proposed pos, if so ok, if not we potentially need to clear the contested data for that old proposed pos
-        if(Helper.vectorEquals(this.oldProposedPos,this.proposedPos)==false)
+        if(this.alive)
         {
-            this.map.clearContestedDirection(this.oldProposedPos,this.oldProposedDirection);
-        }
-        if(this.proposedPos)
-        {
-            let tempV = Helper.translateTilePosToWorldPos(this.proposedPos);
-            this.proposedPosSprite.x=tempV.x;
-            this.proposedPosSprite.y=tempV.y;
+            //the timing of this update will happen in the main.js 
+            //save the old proposed pos so we can clear the contested data if this creature is killed, or decides to change direction 
+            this.oldProposedPos=this.proposedPos;
+            this.oldProposedDirection=this.proposedDirection();
+            this.proposedPos=this.pathfinding();
+            //check if the new proposed pos is the same as the old proposed pos, if so ok, if not we potentially need to clear the contested data for that old proposed pos
+            if(Helper.vectorEquals(this.oldProposedPos,this.proposedPos)==false)
+            {
+                this.map.clearContestedDirection(this.oldProposedPos,this.oldProposedDirection);
+            }
+            if(this.proposedPos)
+            {
+                let tempV = Helper.translateTilePosToWorldPos(this.proposedPos);
+                this.proposedPosSprite.x=tempV.x;
+                this.proposedPosSprite.y=tempV.y;
+            }
         }
     }
     updatePosition(delta)
     {
-        this.move();
+        if(this.alive)
+        {
+            this.move();
+        }
     }
     //some pathfinding methods need booleans to be turned on, so it's not enough to just change the pathfinding method, i need to set the correct bools too - so i made this method to make it easy for me 
     //this method will set the bools needed for the chosen pathfinding method, then will set the 'this.pathfindingMethod' to the correct pathfinding function so that if you call this.pathfindingMethod it will call that method
@@ -379,7 +403,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
             let neighboursReversed = Helper.reverseArray(neighbours);
             //get a list of the neighbours with a resource marker 
             let resourceNeighbours=this.refineAdjacent(neighboursReversed);
-            if(resourceNeighbours.length>0)
+            //problem:newlyDiscovered
+            //in the specific scenario where a creature is on the way back to base with the first resource - laying a resoure marker trail as it goes, if it is then killed, the only resource marker adjacent to it will be leading back to the resource, not back to the base, i will set a flag on the creature if it is the first to get a resource, if so then don't follow the resourcemarker, instead make your own way back to base. 
+            if(resourceNeighbours.length>0 && this.newlyDiscovered==false)
             {
                 //of those neighbours that have resource markers, sort them by lowest explored number
                 let resourceNeighboursByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(resourceNeighbours);
@@ -764,10 +790,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     kill()
     {
-        this.tx=undefined;
-        this.ty=undefined;
-        this.x=undefined;
-        this.y=undefined;
+        this.map.setCreature({tx:this.tx,ty:this.ty},-1);
         //if the creature is destroyed we must clear its contested data or else creatures could end up teleporting
         //this.map.clearContested({tx:this.tx,ty:this.ty});
         //instead of clearing the contested data at the dead creature's position, we should clear the contested bool for the proposed direction, at the proposed position as well as the old values for those
@@ -788,6 +811,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.exploredDeadEnd=false;
         this.noOfResourcesDiscovered=0;
         this.carryingResource=false;
+        //reset pos
+        this.tx=undefined;
+        this.ty=undefined;
+        this.x=undefined;
+        this.y=undefined;
+        this.scene.addDeadCreature(this.index);
+        this.alive=false;
+        this.visible=false;
+        this.text.visible=false;
+        this.proposedPosSprite.visible=false;
     }
     proposedDirection()
     {
@@ -890,7 +923,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     //you can only pick up a resource if you are not already carrying one, and if there is at least one resource left
                     if(this.carryingResource==false&&this.scene.getResourceHealth(resourceIndex)>0)
                     {
-                        this.scene.collectResource(resourceIndex);
+                        //problem:newlyDiscovered
+                        //when we pick up the resource we will find out if we are the first to discover it, which will alter how we return to the base
+                        this.newlyDiscovered= this.scene.collectResource(resourceIndex);
                         //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
                         this.memory[0]=Object.assign({}, v);
                         this.carryingResource=true;
