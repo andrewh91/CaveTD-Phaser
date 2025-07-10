@@ -762,3 +762,39 @@ if a creature finds a resource it will follow resource markers back to the base.
 reference //problem:newlyDiscovered
 
 this seems to work next time sort out the dead creature logic as per yesterdays notes, 
+
+20250710
+some additional notes on the bloodstains and warriors:
+i should have the bloodstain work even for a creature that has just taken damage, it should retreat, leaving a value of 1 bloodstain, this will basically be a danger score, it adds 1 for damaged creatures, 2 for dead  worker creatures, 3 for dead warrior creatures. 
+but depending on where the player is when the creature took damage, the creature could end up running towards the player instead of away from danger, so maybe it should detect the direction of danger and initially flee away from that ?
+i need the warriors to wait for sufficient reinforcments before advancing. 
+i can handle this by the warrior having a certain reinforcement score - lets say each warrior has a value of 2, that is the value it adds to the reinforcing trail, if that value exceeds the bloodstain value then it can follow it. so it can handle a 1 on its own, but a value of 2 it will want an additional warrior, making the reinforcement score 4. so it scales up, 2 warriors can handle a report of 1 dead warrior, 2 dead warriors would be a score of 6, so you would need 4 warriors, only 4x2 would exceed 6. 3 dead warriors would equal 9 so you would need 5, etc 
+
+there are a few scenarios i need to account for, 
+a warrior can be produced from the base, move onto the bloodstain trail, it should then move out of the way, because if the bloodstain is too high the warrior will not move, blocking more warriors coming from the base. 
+if a warrior happens across the mid point of a bloodstain and it is less than its reinforcement score, it will follow the bloodstain , if a new warrior then ecounters the earlier part of the bloodstain, it will follow until it realises the reinforcement score already exceeds it due to the first warrior. then it will go back to patrol.
+if a warrior happens across the mid point of the bloodstain but it does not have sufficient reienforcment score, it will follow it the other way, back to the base. laying its reinforcment score as it goes, and possibly also spreading the bloodstain- if the worker that was doing it was killed. once at the base it should then take a step away from the base to prevent blocking
+when warriors are sufficient in number to take on the threat they will need a way to communicate their strength. 
+for example, a warrior finds a threat it cannot face alone with a score of 13, it goes back to the base, then waits one space away from the base. it has laid a reinforcement score of 2, because it is 1 warrior. a new warrior is produced, it appears on the base, moves forwards adjacent to the base, and adjacent to the first warrior, the new warrior will see that the warning score is 13 and the reinforcing score is 2, it will send a push command to the first warrior, this first of all will tell the first warrior it has a new backup, the first warrior will add 2 to its tile's reinforcement score marker and tell the new warrior what its new reinforcement score is, they will both lay a reinforcement score marker, it will also move the first warrior forwards, so the second can move one space away from the base, laying a new reinforcment marker with the current score in that new space. this will continue until the reinforcement score reaches 14 in this case, because that is over the bloodstain score of 13. throughout this process the whole line of warriors should have now updated the reinforcement marker to 14, meaning they are good to go with our troop of 7 warriors. however with this system, as soon as the lead one is killed , that would increase the bloodstain causing the warriors to retreat... maybe once a warrior gets sufficient reinforcement score to proceed, it should multiply its reinforcment score by 1.5? so in this example up to 21, this over confidence can basically act as a bravery score, only if the bloodstains are signifcantly bad will anyone retreat. so in this example the blood stain of 13 would increase to 22 if 3 of the 7 warriors die, then they can retreat, this will set their reinforcement score back to 2, reporting a new bloodstain of 22, they will have to come back with a total of 11 warriors. so they will retreat ADDDING this score of 22 bloodstain to the previous bloodstain of 13 equalling 35, because bear in mind the reinforcement score marker is still 14 and we need to add 22 ( 11x2) to make that 14 over the 35 bloodstain. 
+
+if this convoy of warriors is attacked from the side, that will set a damage bloodstain in the direction of the attack, that will only be a value of 1 so they should all get distracted and go and attack that, but if it is an attack from direction of the existing bloodstain that would add 1 damage to that bloodstain making it even higher, with the current logic the warriors would just stand there getting attacked. i think i need to have them attack, that would make the most sense, and they would still retreat if it went badly. but maybe if they retreat all the way back to the base they should refuse to retreat more, and become agressive.
+
+
+
+
+
+so i need to :
+add a takeDamage method to the creature
+add a new bloodstain variable to the map, 
+creatures will follow shortest explored path back to base on ecountering a bloodstain, will also pick up resource if possible
+creature will lay warning trail
+creatures that encounter warning trail will only travel on it if the explored number is lower than current, so it can go a different direction and keep exploring, or it can follow the trail to base
+warning trail will work similar to resource marker trail, only the first creature will lay it down, unless it is killed then another can resume it. 
+when the creature takes the warning trail to the base, the base will try to produce a warrior.
+
+
+
+if a warrior sees the warning trail it will follow if the reinforcing trail is high enough 
+the warrior will not edit the warning trail, but will lay a reinforcing trail, if that is equal to or exceeds the warning trail then workers can ignore it
+
+warriors will be saved for some other time. 
