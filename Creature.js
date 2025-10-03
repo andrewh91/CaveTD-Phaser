@@ -33,6 +33,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //this is a simple way to give the player a colour based on it's index, so each player should look a little different
         this.setTint(colour);
         this.text = scene.add.text(this.x, this.y, 'c'+this.index, { fontSize: '20px', fill: '#fff'});
+        this.shoutOutText = scene.add.text(this.x, this.y, '', { fontSize: '20px', fill: '#ff7307ff'});
+        this.shoutOutTimer=0;
+        this.shoutOutTimerMax = 1000;
         //pass in a reference to the map data, so we can query the map to see if there is a wall etc
         this.map=map;
         this.priorityArray=priorityArray;
@@ -50,6 +53,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     reset()
     {
         Helper.centreText(this);
+        Helper.centreShoutOutText(this);
         this.goal={tx:this.tx,ty:this.ty};
         this.oldGoal={tx:undefined,ty:undefined};
         //we may start tunnelling if we change direction, that's assuming that we changed direction due to hitting a wall, if we changed direction due to getting a new goal, then we set this flag so that we ignore that change in direction for tunnelling purposes
@@ -102,12 +106,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.alive=true;
         this.visible=true;
         this.text.visible=true;
+        this.shoutOutText.visible=true;
         this.proposedPosSprite.visible=true;
         this.proposedPosSprite.x=undefined;
         this.proposedPosSprite.y=undefined;
     }
     resetPreferredDirection()
     {
+        this.shoutOut('new direction');
         let tempx;
         let tempy;
         //i don't want this to be random while testing
@@ -134,6 +140,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         if(this.alive)
         {
+            this.fadeShoutOut();
             //the timing of this update will happen in the main.js 
             //save the old proposed pos so we can clear the contested data if this creature is killed, or decides to change direction 
             this.oldProposedPos=this.proposedPos;
@@ -788,8 +795,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.skipMovement=false;
         }
     }
+    
+    takeDamage()
+    {
+        this.shoutOut('ouch!');
+    }
     kill()
     {
+        this.shoutOut('avenge me!');
         this.map.setCreature({tx:this.tx,ty:this.ty},-1);
         //if the creature is destroyed we must clear its contested data or else creatures could end up teleporting
         //this.map.clearContested({tx:this.tx,ty:this.ty});
@@ -820,7 +833,23 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.alive=false;
         this.visible=false;
         this.text.visible=false;
+        this.shoutOutText.visible=false;
         this.proposedPosSprite.visible=false;
+        this.fadeShoutOut();
+    }
+    //this is what i use for the creature to explain succintly what it is doing
+    shoutOut(newText)
+    {
+        this.shoutOutText.text +='\n'+ newText;
+        this.shoutOutText.visible=true;
+        //as well as briefly displaying the shout out, add it to the log, which you can see in debug
+        this.scene.updateShoutOutLog('c'+this.index+': '+newText);
+    }
+    //call this on update
+    fadeShoutOut()
+    {
+        this.shoutOutText.text='';
+        this.shoutOutText.visible=false;
     }
     proposedDirection()
     {
@@ -912,6 +941,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)>this.exploredNumber)
                     {
                         this.map.setExploredNumber(v,this.exploredNumber);
+                        this.shoutOut('exploring');
                     }
                     
                     this.exploringWhileCarrying=false;
@@ -926,9 +956,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         //problem:newlyDiscovered
                         //when we pick up the resource we will find out if we are the first to discover it, which will alter how we return to the base
                         this.newlyDiscovered= this.scene.collectResource(resourceIndex);
+                        if(this.newlyDiscovered)
+                        {
+                            this.shoutOut('found new resource');
+                        }
                         //normally the tail will stop you going back on yourself, but if we just picked up a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
                         this.memory[0]=Object.assign({}, v);
                         this.carryingResource=true;
+                        this.shoutOut('pick up resource');
                         //we have picked up a resource, we need to count how many resources remain from that location so we can leave a trail for others to follow
                         this.noOfResourcesDiscovered=this.scene.getResourceHealth(resourceIndex);
                     }
@@ -940,6 +975,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     if(this.map.getResourceMarker(v)==-1)
                     {
                         this.scene.setResourceMarkerOnMap(v,this.noOfResourcesDiscovered);
+                        this.shoutOut('set resource trail');
                     }
                 }
                 //if we are not carrying a resource and we are following a resource marker trail, we should subtract 1 from it. this will have the result of a number of creatures equal to the number of reported resources following the resource trail 
@@ -948,6 +984,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     if(this.map.getResourceMarker(v)>-1)
                     {
                         this.scene.decrementResourceMarkerOnMap(v);
+                        this.shoutOut('reduce resource trail');
                     }
                 }
                 
@@ -962,6 +999,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.map.setTerrain(v,terrain-1);
                 //we add a trailer to the current position - note that we have not actually updated our position yet
                 this.addTrailer();
+                this.shoutOut('digging');
             }           
             else
             {  
@@ -970,6 +1008,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
             if(this.map.isRubble(v)==true)
             {
+                this.shoutOut('careful, rubble');
                 //...slow down the movement by skipping the next movement
                 this.skipMovement=true;
             }
@@ -983,6 +1022,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.x=tempV.x;
             this.y=tempV.y;
             Helper.centreText(this);
+            Helper.centreShoutOutText(this);
             
         }
         //if we have a resource and are next to a creatureBase, add it to that creature base and set carryingresource to false
@@ -1007,10 +1047,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     this.carryingResource=false;
                     this.scene.addResourceToCreatureBase(creatureBaseIndex);
+                    this.shoutOut('dropping resource');
                     //we now need to decrement the trail - this is normally done when we move onto a tile with a resource marker and we are not carrying a resource, but when we stepped on this tile adjacent to the creature base we were carrying one, so decrement it now
                     this.scene.decrementResourceMarkerOnMap({tx:this.tx,ty:this.ty});
                 }
-                //if we returned to base because there was a dead end, then alter the preferred direction - randomly- note that if testing it will just use the same direction again
+                //if we returned to base because there was a dead end, then alter the preferred direction - randomly- note that if testing it will increment the direction through the 8 available directions
                 if(this.exploredDeadEnd)
                 {
                     this.resetPreferredDirection()
@@ -1118,6 +1159,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(oldMemoryDirection!=this.memoryDirection&&oldMemoryDirection!=STATIONARY&&this.shortcutMode==false&&this.newGoal==false&&this.encounteredWall)
             {
                 this.addTunnel();
+                this.shoutOut('tunnel');
             }
         }
 
@@ -1223,6 +1265,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.map.isPath({tx:this.trailerArray[0].tx,ty:this.trailerArray[0].ty})==true)
             {                    
                 this.killTrailer();
+                this.shoutOut('dumping');
             }
         }
     }
@@ -1232,11 +1275,13 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.memory=[];
             this.memory.push(v);
+            this.shoutOut('a wall');
         }
     }
     //v is the proposed pos
     swapCreatureWith(v)
     {
+        this.shoutOut('swapping pos');
         //this creature wants to move to the given position but it is occupied by a creature that wants to move to this creature's position, so we can swap them
         //save the other creature's index
         let creatureBIndex = this.map.getCreatureIndex(v);

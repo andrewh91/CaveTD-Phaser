@@ -9,6 +9,11 @@ export default class Helper
     {
         o.text.setPosition(o.x-o.text.width/2,o.y-o.text.height/2);
     }
+    
+    static centreShoutOutText(o)
+    {
+        o.shoutOutText.setPosition(o.x-o.shoutOutText.width/2,o.y-o.shoutOutText.height/2+gridStep);
+    }
     //the player may be at position 100,50 or something on the screen, but that could be position 0,0 on the map, if it moves right one place it would be 100+gridstep, but on the map that would just be 1,0, so i need to translate it 
     static translatePosToMapPos(v)
     {

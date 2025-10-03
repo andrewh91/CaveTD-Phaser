@@ -798,3 +798,19 @@ if a warrior sees the warning trail it will follow if the reinforcing trail is h
 the warrior will not edit the warning trail, but will lay a reinforcing trail, if that is equal to or exceeds the warning trail then workers can ignore it
 
 warriors will be saved for some other time. 
+
+20251001 
+rereading my last log, i've been away from this for over 2 months now, i think i was onto an interesting idea, the creatures should have a confidence value, which is like a multiplier for the reinforcement score, after retreating from a battle the surviving warriors should reduce their confidence, which will result in a larger force being required before they persue a threat. I think i need the bloodstain to also have a direction, which will point in the direction of the threat, this should help assist in retreating and attacking, and also i could have bloodstains with no direction. all of this should allow you to do an interesting ambush and trick the enemies. 
+
+20251003
+added a takeDamage method to creature, added a bloodStain variable to tile, added a getter and setter for blood stain to the map data
+
+added warningMarker to tile and map data with getters and setters, 
+
+i need to treat the warning trail and the bloodstain like the resource and the resource marker, in that only the first creature to visit it should go back and lay a trail, and if that creature is killed it needs to leave info so another can resume the trail, although it will be different because now another creature has been killed, i guess i should just add that to the bloodstain value. 
+
+I think before i resume this i should create some kind of speech bubble feature, so the creatures can visibly call out what they are doing and make it easier to see what is happening 
+
+i'll call this system shoutOut I should add this to the creature, but also record them in a log, this seems to work ok, a bit easier to tell what is going on now, 
+
+so next time i need to resume the bloodstain stuff

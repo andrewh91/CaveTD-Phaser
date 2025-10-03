@@ -22,10 +22,12 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     //these are used by the explorer pathfinding
     this.exploredNumber=-1;
     this.resourceMarker=-1;
+    this.warningMarker=-1;
     //gridstep is a global variable
     this.setScale(gridStep);
     this.setTint(colour);
     this.resourceIndex=-1;
+    this.bloodStain=-1;
     this.creatureBaseIndex=-1;
     this.text = scene.add.text(this.x, this.y, '', { fontSize: '10px', fill: '#fff'});
     Helper.centreText(this);

@@ -42,6 +42,22 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].exploredNumber;
     }
+    setBloodStain(v,n)
+    {
+        this.tiles[this.getIndexFromCoords(v)].bloodStain = n;
+    }
+    getBloodStain(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].bloodStain;
+    }
+    setWarningMarker(v,n)
+    {
+        this.tiles[this.getIndexFromCoords(v)].warningMarker = n;
+    }
+    getWarningMarker(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].warningMarker;
+    }
     //when i build a map from a text file, i don't want to use the setTerrain method, as that requires a map coord, i just want to use the index
     setTerrainByIndex(a)
     {

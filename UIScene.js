@@ -35,6 +35,12 @@ export default class UIScene extends Phaser.Scene {
         this.popupText.setScrollFactor(0); 
         this.uiLayer.add(this.popupText);
         this.popupText.depth=9;
+
+        this.shoutOutText = this.add.text(20, 20, '', { fontSize: '32px', fill: '#fff', wordWrap: { width: 560 } });         
+        this.shoutOutText.setScrollFactor(0); 
+        this.uiLayer.add(this.shoutOutText);
+        this.shoutOutText.depth=9;
+        
     }  
     updatePopupText(t,v)
     {

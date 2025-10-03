@@ -27,6 +27,7 @@ var pathfindingN=0;
 var movementN=0;
 var pathfindingSegmentSize;
 var movementSegmentSize;
+var shoutOutLog=[];
 
 var latestKey;
 import UIScene, { drawGridCoords } from './uiScene.js';
@@ -101,7 +102,7 @@ class Game extends Phaser.Scene
             right:Phaser.Input.Keyboard.KeyCodes.D}));
             
         window.debug={
-            players: players, scene: this,uiScene:this.ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray,creatureBases:creatureBases
+            players: players, scene: this,uiScene:this.ui,mapData:mapData,vehicles:vehicles,creatures:creatures,priorityArray:priorityArray,creatureBases:creatureBases,shoutOutLog:shoutOutLog
         }
         if(testing)
         {
@@ -618,6 +619,11 @@ class Game extends Phaser.Scene
     {
         let terrain = mapData.getTerrain(v);
         mapData.setTerrain(v,terrain+1);
+    }
+    //this will be called from the creature class everytime it does something
+    updateShoutOutLog(text)
+    {
+        shoutOutLog.push(text);
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something
