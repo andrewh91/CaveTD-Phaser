@@ -814,3 +814,14 @@ I think before i resume this i should create some kind of speech bubble feature,
 i'll call this system shoutOut I should add this to the creature, but also record them in a log, this seems to work ok, a bit easier to tell what is going on now, 
 
 so next time i need to resume the bloodstain stuff
+
+20251007
+i'll make the k button kill a creature, set up a new map too
+i've made a narrow corridor, 2 creatures move up, the bottom creature starts going back and forth because the other creature already explored the path.
+
+this is what is happening, creature one moves north marking each location with an explored number first 0 then 1 then 2 etc, creature 2 is doing the same but soon enough it encounters a tile that was marked as explored 0 by creature 1, here it will only have 2 ways to go, both ways are already explored, it wants to go to the highest explored number - as theoretically that would be furthest from the base, but the highest explored number is the tile it just came from which is explored=1, to go north would be explored=0 which is creature 1's starting space, so the highest explored number is backwards or in other words equal to the creature's tail, this sets the dead end flag to true. when the dead end flag is true we start looking for low explored numbers the logic being we are backtracking from the dead end
+we reset the dead end flag when we return to base, find a resource, move to an unexplored tile, find a resource trail
+this error has mainly happened because i spawned 2 creatures starting at different locations, i'll spawn them at the same place instead
+
+killing a creature now adds a blood stain to the map, the blood stain will be added to any existing bloodstain 
+now i need to set up the pathfinding to react to the blood stain and create a warning trail etc. also now i need to create different creatures, because warriors will have different behaviour. also i need to give warriors a higher blood stain value 

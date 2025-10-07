@@ -17,7 +17,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {tx:-1,ty: 0},
         {tx:-1,ty:-1}
     ];
-    constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray) 
+    constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray,bloodStainValue) 
     {
         super(scene, x, y, texture);
         this.scene=scene;
@@ -44,6 +44,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         scene.add.existing(this.proposedPosSprite);
         this.proposedPosSprite.setTint(0x00ff00);
         this.proposedPosSprite.setScale(5);
+        this.bloodStainValue=bloodStainValue;
         
         //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
         this.reset();
@@ -514,7 +515,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         //move to the neighbour that has the highest explored number, unless it is our tail, in which case trigger the dead end flag.
                         if(Helper.vectorEquals(neighboursByHighestExploredNumber[i],this.memory[0]))
                         {
-                            this.exploredDeadEnd=true;
+                            //20251007 if the neighbour is our tail, continue through the list, perhaps there is another neighbour with the same explored number that is not our tail
+                            continue;
                         }
                         else
                         {
@@ -523,6 +525,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         }
                     }
                 }
+                //if we go thorugh all the neighbours and don't find one that is not our tail, then we say dead end
+                this.exploredDeadEnd=true;
+                this.shoutOut('deadend!');
             }
             //if the explorer has found a dead end we should still be looking for resource marker first, then unexplored, but failing that choose a low explored number neighbour, so that we backtrack until we find unexplored tiles
             if(this.exploredDeadEnd==true)
@@ -819,6 +824,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.scene.addResource({tx:this.tx,ty:this.ty},1);
         }
+        //20251007
+        this.scene.addBloodStain({tx:this.tx,ty:this.ty},this.bloodStainValue);
         //reset all the things that would be reset on visiting the base 
         this.exploredNumber=0;
         this.exploredDeadEnd=false;

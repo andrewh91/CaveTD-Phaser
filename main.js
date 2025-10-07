@@ -28,6 +28,7 @@ var movementN=0;
 var pathfindingSegmentSize;
 var movementSegmentSize;
 var shoutOutLog=[];
+var bloodStainValue=1;
 
 var latestKey;
 import UIScene, { drawGridCoords } from './uiScene.js';
@@ -80,6 +81,7 @@ class Game extends Phaser.Scene
 
         this.input.keyboard.on('keydown-P', this.onPressP, this);
         this.input.keyboard.on('keydown-R', this.onPressR, this);
+        this.input.keyboard.on('keydown-K', this.onPressK, this);
         if(testing)
         {
             this.input.keyboard.on('keydown-C', this.onPressC, this);
@@ -143,6 +145,10 @@ class Game extends Phaser.Scene
     {
         removeCamera(this);
     }
+    onPressK()
+    {
+        creatures[0].kill();
+    }
     onPressC()
     {
         Creature.playerMoveTimer=0;
@@ -200,7 +206,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[4]);
+        mapData.loadFromText(savedMaps.mapsArray[5]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -419,7 +425,7 @@ class Game extends Phaser.Scene
             creatureIndexToUse = creatureIndex;
     
             let tempV = Helper.translateTilePosToWorldPos(v);
-            let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndexToUse,Helper.incrementColour(creatureIndexToUse,3),mapData,priorityArray);
+            let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndexToUse,Helper.incrementColour(creatureIndexToUse,3),mapData,priorityArray,bloodStainValue);
             /*the v data might include a goal vector gx,gy*/
             if(v.gx!=undefined)
             {
@@ -482,6 +488,12 @@ class Game extends Phaser.Scene
             mapData.setResourceIndex({tx:r.tx,ty:r.ty},r.index);
         }
     }
+    addBloodStain(v,value)
+    {
+        let currentBloodStain = mapData.getBloodStain(v);
+        mapData.setBloodStain(v,currentBloodStain+value);
+    }
+    
     setUpResources()
     {
         resourceIndex=-1;
@@ -574,6 +586,7 @@ class Game extends Phaser.Scene
     setUpCreatures4()
     {
         creatureIndex=-1;
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
         priorityArray.loopThroughAll();
     }
