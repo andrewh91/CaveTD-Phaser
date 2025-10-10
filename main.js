@@ -147,7 +147,14 @@ class Game extends Phaser.Scene
     }
     onPressK()
     {
-        creatures[0].kill();
+        if(creatures[0].alive)
+        {
+            creatures[0].kill();
+        }
+        else if(creatures[1].alive)
+        {
+            creatures[1].kill();
+        }
     }
     onPressC()
     {

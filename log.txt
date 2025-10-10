@@ -825,3 +825,33 @@ this error has mainly happened because i spawned 2 creatures starting at differe
 
 killing a creature now adds a blood stain to the map, the blood stain will be added to any existing bloodstain 
 now i need to set up the pathfinding to react to the blood stain and create a warning trail etc. also now i need to create different creatures, because warriors will have different behaviour. also i need to give warriors a higher blood stain value 
+
+20251010
+i do want to create multiple types of creatures, workers and warriors at least, which will have different behaviours, workers will retreat from bloodstains back to the creature base to recruit warriors, but even warriors will not take on any threat, the idea is that warriors will muster a group of a certain strength that they think will overcome the threat level of the bloodstain, when their group is compromised they too will retreat, so in that respect it's not the type of creature that changes the behaviour it is the creature's strength level vs the level of the bloodstain, and workers will have very low strength value. so warriors will just be different in that that join a formation and combine their strength.
+
+thinking about how a battle might proceed, if the warriors are all killed, then potentially a worker might only report on the first bloodstain it finds, but if it took just one more step forwards it would have seen another bloodstain, so the solution i think the bloodstains should combine with adjacent bloodstains, so if there are 2 adjacent bloodstains with a value of 1, then we should add the values together to make 2 adjacent bloodstains of value 2. in this way a huge blood bath with indicate a serious threat. 
+
+perhaps there should be a scavenger creature, maybe unrelated to the other creatures, it eats carcasses, so it can destroy the bloodstain.
+
+so first of all have the bloodstains check all 8 adjacent tile for bloodstains, if there was already a lot of blood on the map this could potentially result in updating every tile on the map, which i might want to avoid, maybe it would be wise to instead have the tiles hold a reference to a blood stain, then if a bloodstain is created adjacent to another blood stain, we can update the value of the bloodstain and have them both point to the same bloodstain, if any tile included in that bloodstain has another dead body increase its value then we just increment that one value that all those blood stains point to. 
+
+so i need an array of bloodstains, the tile will point to the array, i need a system of incrementing and decrementing these bloodstains, adding new ones and removing ones without messing up the reference, so it could be similar to the creatures which can die and be reused. 
+
+when a creature dies it will leave a bloodstain equal to its strength, this value will be stored in a bloodstain class in an array of bloodstains. 
+a reference to that bloodstain in the array will be stored in the tile. 
+if another creature dies it will check if there is an adajcent bloodstain in the 8 surrounding tiles, if there is then this tile gains a reference to the existing bloodstain and the existing bloodstain value is incremented by the recently deceased creature strength value. 
+what if the creature that dies has more than one existing adjacent bloodstain? should these blood stains be combined into one? perhaps taking on the higher value? i think that makes more sense.
+what if a bloodstain on one tile is removed, and that causes a large bloodstain to be split in 2? 
+that would require recalculating each tile referencing that to find define which should now reference the new bloodstain... i want to avoid that, 
+maybe i should not allow them to be destroyed? 
+or maybe the whole bloodstain should be destroyed all at once - or decremented back down to 0 all at once. 
+i think it would be better to be able to interact with it on an individual scale, as the player could then interact with a bloodstain in order to manipulate the creatures. 
+
+so perhaps a better idea would be for the bloodstain to spill into the 8 surrounding tiles, but no more than that. that would also allow the creatures to detect it before being right next to the dead creature. it would also allow the player to make small scale changes to the blood stain and allow other creatures to come and interact with the blood stain too. it also means if you want to hide a dead body you need to prevent a creature coming adjacent to the 8 tiles around it, which means covering those 12 spots with rocks (the creature's can't detect blood diagonally)
+TODO: perhaps this could also splash onto the player, coating them or any vehicle in blood, potentially leaving a trail where they travel. 
+
+so after all that, just add the creature's strength value to the tile and 8 adjacent tiles. 
+
+this works, so now we add a big blood splat to the map when a creature dies,
+
+next i need to have the creatures react to this blood, 

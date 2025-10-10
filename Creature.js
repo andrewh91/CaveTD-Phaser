@@ -824,8 +824,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.scene.addResource({tx:this.tx,ty:this.ty},1);
         }
-        //20251007
-        this.scene.addBloodStain({tx:this.tx,ty:this.ty},this.bloodStainValue);
+        /*20251010 I need to add the blood to this tile as well as the 8 surrounding tiles, that includes the diagonal ones, this could result in an error if v was at the edge of the map although that should not happen as i add a border to the edge of the map */
+        this.add9BloodStains({tx:this.tx,ty:this.ty},this.bloodStainValue);
+        /*this.scene.addBloodStain({tx:this.tx,ty:this.ty},this.bloodStainValue);*/
         //reset all the things that would be reset on visiting the base 
         this.exploredNumber=0;
         this.exploredDeadEnd=false;
@@ -843,6 +844,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.shoutOutText.visible=false;
         this.proposedPosSprite.visible=false;
         this.fadeShoutOut();
+    }
+    /*20251010 this will add the value of the dead creature to the tile and also spills over the the 8 adjacent tiles */ 
+    add9BloodStains(pos,value)
+    {
+        this.scene.addBloodStain({tx:pos.tx-1,ty:pos.ty-1},value);
+        this.scene.addBloodStain({tx:pos.tx-0,ty:pos.ty-1},value);
+        this.scene.addBloodStain({tx:pos.tx+1,ty:pos.ty-1},value);
+        this.scene.addBloodStain({tx:pos.tx-1,ty:pos.ty+0},value);
+        this.scene.addBloodStain({tx:pos.tx-0,ty:pos.ty+0},value);
+        this.scene.addBloodStain({tx:pos.tx+1,ty:pos.ty+0},value);
+        this.scene.addBloodStain({tx:pos.tx-1,ty:pos.ty+1},value);
+        this.scene.addBloodStain({tx:pos.tx-0,ty:pos.ty+1},value);
+        this.scene.addBloodStain({tx:pos.tx+1,ty:pos.ty+1},value);
     }
     //this is what i use for the creature to explain succintly what it is doing
     shoutOut(newText)
