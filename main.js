@@ -147,13 +147,16 @@ class Game extends Phaser.Scene
     }
     onPressK()
     {
-        if(creatures[0].alive)
+        if(testing)
         {
-            creatures[0].kill();
-        }
-        else if(creatures[1].alive)
-        {
-            creatures[1].kill();
+            for(let i = 0 ; i < creatures.length ; i ++ )
+            {
+                if(creatures[i].alive)
+                {
+                    creatures[i].kill();
+                    break;
+                }
+            }
         }
     }
     onPressC()
@@ -501,6 +504,11 @@ class Game extends Phaser.Scene
         mapData.setBloodStain(v,currentBloodStain+value);
     }
     
+    setBloodStain(v,value)
+    {
+        mapData.setBloodStain(v,value);
+    }
+    
     setUpResources()
     {
         resourceIndex=-1;
@@ -593,6 +601,8 @@ class Game extends Phaser.Scene
     setUpCreatures4()
     {
         creatureIndex=-1;
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
         priorityArray.loopThroughAll();

@@ -855,3 +855,65 @@ so after all that, just add the creature's strength value to the tile and 8 adja
 this works, so now we add a big blood splat to the map when a creature dies,
 
 next i need to have the creatures react to this blood, 
+
+20251013
+I have previously mentioned how the blood stain should have a direction. 
+
+consider a worker moving north from its base, it encounters a bloodstain, it retreats to the base, leaving a warning trail, it will then explore some other direction while the warriors deal with the threat. that should work well. it will look like the worker is scared of the violence and is going to get help. 
+
+but now consider a worker moving north from its base, finds a resource and is now moving south bringing it back to the base, now it finds a brand new bloodstain on its way back, this blood stain is between the creature and the base, should it turn around? should it walk through this crime scene? should it attempt to skirt around the blood stain? 
+
+if they just ignore the danger the blood represents, then endless creatures might walk into this bloodbath and get killed, but they would only be the ones returning from exploring, new creatures encountering the blood on an outward journey away from the base would have better luck 
+
+i could have them attempt to skirt around the blood, but that might lead to them not actually returning to the base. 
+
+TODO: i feel like, in reality the best option is to continue to take the shortest route to the base, ignoring the danger. lay a warning trail back to the base. workers should avoid this trail, the base should work on creating warriors to match the strength of the warning. 
+
+the other idea with bloodstains having a direction, is related to a group of warriors getting ambushed. if a line of warriors on its way to a bloodstain are ambushed from the east, then they should respond to that immediate threat. they will need to lay information down, saying a group of x strength has proceeded in this direction - that way any follow up creatures will know that the original bloodstain was not addressed. 
+
+I need to fully consider some different weapons the player will be using on the enemies. as well as how the warriors like to operate. The warriors attack in an unbroken line. if the line is broken in the middle they should try to rejoin the line. for this purpose i suggest the warriors should have 2 speeds. fast and slow, with fast being double the speed of slow. they should most of the time move slowly. reserving the fast speed to help rejoin the line and also a final charge when they are close to the enemy. 
+if a group of warriors takes too much damage they should retreat, they can move fast then, until they are a safe distance from the enemy. 
+
+when the warriors reach their destination they can take a formation, still in an unbroken line, but they could surround a resource or form a block or coil shape waiting for the enemy. 
+
+what happens when the warriors meet a larger threat or are attacked from both sides, or walk into a minefield or are attacked by some other threat that they don't know how to attack, such as a stelth ambush and they don't even know where the attack is coming from? they should retreat. 
+
+
+
+TODO: #bloodstain #warriors #builders : if a threat is too great for the warriors, for example the threat level is higher than the number of warriors that can be produced then a different tactic could be to send some warriors and some builders to seal off the dangerous path.  laying rubble then walls on top or next to the blood stain. after doing so delete the resource marker and warning marker etc so that the workers and warriors give up on that route .
+
+TODO: #builders #hypostyle #stockpile: I think i should have a creature with a behaviour that spirals out from the base, digging up any rubble or walls that could potentially get in the way and depositing the rubble in a particular pattern - hypostyle. 
+
+consider if the creature base starts off in a complex maze with lots of dead ends such that it might be difficult for a worker to return to the base if its normal route is cut off. this new creature behaviour will seek to rectify this situation and make the area near the base more easily navigated by turning the random rubble and walls into a hypostyle structure
+
+so the behaviour will prefer and seeks to make the scenery resemble a grid of pillars, that is a single wall surrounded by 8 paths, with no rubble. perhaps even being agreeable to fat pillars, that is 4 walls is a square formation, but still surrounded by path. i've believe its accurate to call this pattern hypostyle 
+
+this will result in a few things, the player will recognise these patterns of walls as being near to a creature base. creatures will be able to pathfind more easily close to the base. perhaps the shape of the pattern could even prevent larger creatures or vehicles from accessing the base, serving as a defence. additionally with this alternative grid of path-wall-path-wall, it means you can quickly create a large wall by inserting a few choice walls. to facilitate this perhaps they should also routinely deposit lots of rubble material in stockpiles. say a 9 tile square. 
+
+i will call this system stockpile and hypostyle. so the behaviour will be to spiral out from the base, identifying the terrain. some of the terrain might already resemble a stockpile and this will be identified and recorded. the creature will be minded to add or take away material in order to make this more cloesly resemble a textbook stockpile - that is exactly 9 walls in a square. any left over material will be arranged in a hypostyle pillar pattern, giving a priority to using this around the base as a form of defence. I need to figure out a way for the creature to decide which it wants to do, i could leave it entirely dependent on the existing terrain. 
+I could also leave a space of 9 tiles which would serve as a handy staging area for a group of warriors to wait - out of the way of the workers- while enough warriors are created. 
+
+conversely large creatures could exhibit a sort of opposite behaviour, prefering lots of rubble that would slow down small creatures, but that they can easily move over, as well as larger corridors that they fit through. 
+
+TODO: I need to experiment with what would happen to the pathfinding and resource trail laying of the regular worker creatures once i introduce this new hypostyle and stockpile behaviour. 
+
+20251014
+a creature should have a valueOfDiscoveredBloodStain variable, set to -1 initially, if it finds blood it takes on the value of the bloodstain, if this value is therefore more than -1 the creature should return to the base in a similar way to when it finds a resource, it should lay a warningTrail equal to the value of the bloodstain. 
+if a higher bloodstain is encountered on the way back then start laying a warningTrail of that value. 
+
+if this creature is killed before it gets back to the base, it should leave a bloodstain equal to this bloodstain it was reporting on plus it's own bloodstain value. that way another creature that stumbles upon it can resume 
+
+other workers that encounter the warning trail should follow it back to the base - away from danger
+
+so far i have made it identify bloodstains and record a bloodstain trail, i'm lending the same method as when carrying a resource to get back to the base
+
+this seems to work with one basic test
+
+
+testing this the warning trail is one space away from the bloodStain, because we only set it when we move, as a one off we should set it when we find the bloodstain --- alternatively maybe i should only detect the bloodstain when the creature is on top of it? that seems ok since i already increased the size of the bloodStain to be a 9 tile square
+
+
+i have a broken line of creatures moving north in a corridor, i kill the northen most one, the next sees the blood and goes south, the next one sees the blood but carries on north ... i think when we discover the dead body we should delete the memory of our tail, i think that is the problem, yeah that fixed it. 
+
+TODO: 
+i need to do the logic to avoid the warning trail 

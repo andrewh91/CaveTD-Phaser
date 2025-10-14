@@ -104,6 +104,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //problem:newlyDiscovered
         //this variable will be true if the creature picked up the first resource in a resource pool, it will help the creature decide to follow the shortest explored number path, normally we would follow the resource marker path but if this is newly discovered then there likely is no resource marker path and if there is it will be going back to where the resource was, not back to the base as this would likely only happen if the previous creature to carry it was killed.  
         this.newlyDiscovered=false;
+
+        this.valueOfDiscoveredBloodStain=-1;
         this.alive=true;
         this.visible=true;
         this.text.visible=true;
@@ -394,6 +396,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
 
         this.proposedPos=undefined;
+        
+
         //if the creature is going diagonal
         if(this.explorerDirectionDiagonal)
         {
@@ -404,8 +408,24 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         //this is the adjacent 4 tiles, the first tile should be in the direction of the explorerDirection, then the one clockwise, then anti clockwise, then opposite the explorerDirection
         let neighbours = this.getAdjacent();
+
+
+    /*20251014 every update check if we are on a bloodstain, record the value. if the value is higher than the previous value ( we found a new bloodstain, or one more severe than the one we were aware of) then start recording that on the way back to the base*/   
+        {
+            let tempBloodStain = this.map.getBloodStain({tx:this.tx,ty:this.ty});
+            if( tempBloodStain !=-1)
+            {                
+                this.valueOfDiscoveredBloodStain = tempBloodStain;
+                this.shoutOut('found blood');                        
+                //normally the tail will stop you going back on yourself, but if we just found blood, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
+                this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
+            }
+        }
+
+
         //if the creature is carrying a resource...
-        if(this.carryingResource)
+        /*20251014 ... or has discovered a bloodstain*/
+        if(this.carryingResource|| this.valueOfDiscoveredBloodStain>-1)
         {
             //the neighbours are sorted by the exploreDirection, but if it has a resource i want to go back to the base, so reverse this sorted order
             let neighboursReversed = Helper.reverseArray(neighbours);
@@ -456,7 +476,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         this.proposedPos = neighboursReversed[i];
                         this.exploredDeadEnd=false;
                         //set this to true so that we continue to set the explored number of the tiles
-                        this.exploringWhileCarrying=true;
+                        /*20251014 now that this method doubles as a way to return to base when you discover blood as well as a resource, add an if statement here*/
+                        if(this.carryingResource)
+                        {
+                            this.exploringWhileCarrying=true;
+                        }
                         return this.proposedPos;
                     }
                 }
@@ -825,7 +849,15 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.scene.addResource({tx:this.tx,ty:this.ty},1);
         }
         /*20251010 I need to add the blood to this tile as well as the 8 surrounding tiles, that includes the diagonal ones, this could result in an error if v was at the edge of the map although that should not happen as i add a border to the edge of the map */
-        this.add9BloodStains({tx:this.tx,ty:this.ty},this.bloodStainValue);
+        /*20251014 if the creature is killed while laying a warning trail after it discovered a blood stain, then it should lay a blood stain value equal to that discovered bloodstain plus it's own bloodstain value so that another creature can resume the trail*/
+        if(this.valueOfDiscoveredBloodStain>-1)
+        {
+            this.add9BloodStains({tx:this.tx,ty:this.ty},this.valueOfDiscoveredBloodStain+this.bloodStainValue);
+        }
+        else
+        {
+            this.add9BloodStains({tx:this.tx,ty:this.ty},this.bloodStainValue);
+        }
         /*this.scene.addBloodStain({tx:this.tx,ty:this.ty},this.bloodStainValue);*/
         //reset all the things that would be reset on visiting the base 
         this.exploredNumber=0;
@@ -848,22 +880,22 @@ export default class Creature extends Phaser.GameObjects.Sprite
     /*20251010 this will add the value of the dead creature to the tile and also spills over the the 8 adjacent tiles */ 
     add9BloodStains(pos,value)
     {
-        this.scene.addBloodStain({tx:pos.tx-1,ty:pos.ty-1},value);
-        this.scene.addBloodStain({tx:pos.tx-0,ty:pos.ty-1},value);
-        this.scene.addBloodStain({tx:pos.tx+1,ty:pos.ty-1},value);
-        this.scene.addBloodStain({tx:pos.tx-1,ty:pos.ty+0},value);
-        this.scene.addBloodStain({tx:pos.tx-0,ty:pos.ty+0},value);
-        this.scene.addBloodStain({tx:pos.tx+1,ty:pos.ty+0},value);
-        this.scene.addBloodStain({tx:pos.tx-1,ty:pos.ty+1},value);
-        this.scene.addBloodStain({tx:pos.tx-0,ty:pos.ty+1},value);
-        this.scene.addBloodStain({tx:pos.tx+1,ty:pos.ty+1},value);
+        this.scene.setBloodStain({tx:pos.tx-1,ty:pos.ty-1},value);
+        this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty-1},value);
+        this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty-1},value);
+        this.scene.setBloodStain({tx:pos.tx-1,ty:pos.ty+0},value);
+        this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty+0},value);
+        this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty+0},value);
+        this.scene.setBloodStain({tx:pos.tx-1,ty:pos.ty+1},value);
+        this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty+1},value);
+        this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty+1},value);
     }
     //this is what i use for the creature to explain succintly what it is doing
     shoutOut(newText)
     {
         this.shoutOutText.text +='\n'+ newText;
         this.shoutOutText.visible=true;
-        //as well as briefly displaying the shout out, add it to the log, which you can see in debug
+        //as well as briefly displaying the shout out, set it to the log, which you can see in debug
         this.scene.updateShoutOutLog('c'+this.index+': '+newText);
     }
     //call this on update
@@ -999,6 +1031,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         this.shoutOut('set resource trail');
                     }
                 }
+                /**20251014 if we have discovered a bloodstain we will return to base and lay this warningTrail if the existing warningtrail has less value than this bloodstain */
+                if(this.valueOfDiscoveredBloodStain>-1)
+                {
+                    if(this.map.getWarningMarker(v)<this.valueOfDiscoveredBloodStain)
+                    {
+                        this.map.setWarningMarker(v,this.valueOfDiscoveredBloodStain);
+                        this.shoutOut('set warning trail');
+                    }
+
+                }
                 //if we are not carrying a resource and we are following a resource marker trail, we should subtract 1 from it. this will have the result of a number of creatures equal to the number of reported resources following the resource trail 
                 if(this.carryingResource==false)
                 {
@@ -1052,6 +1094,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
 
     //for each adjacent tile, check if there is a creature base there, if so add our carried resource to that base
+    /*20251014 also end the warning trail , so set it to -1*/
     checkIfReturnedToBase()
     {
         let n = this.getAdjacent();
@@ -1063,6 +1106,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
             creatureBaseIndex=this.map.getCreatureBaseIndex(n[i]);
             if(creatureBaseIndex>-1)
             { 
+                /*20251014 once we reach the base we can stop laying the warning trail*/
+                if(this.valueOfDiscoveredBloodStain>-1)
+                {
+                    this.valueOfDiscoveredBloodStain=-1;
+                    this.shoutOut('warned the base');
+                }
                 //if we are carrying a resource, drop it off and reset 
                 if(this.carryingResource)
                 {
