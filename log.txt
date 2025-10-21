@@ -917,3 +917,24 @@ i have a broken line of creatures moving north in a corridor, i kill the northen
 
 TODO: 
 i need to do the logic to avoid the warning trail 
+
+20251017
+if a creature sees a warning trail, the trail will not really have a direction, it will just say the bloodstain value. in order to follow the trail back to the base it should just go to the lower explored number. but do i want the creatures to do that? or would i prefer they carry on exploring? 
+when a creature encounters a warning trail, i could have it just turn around, delete its tail, choose a new tile that is not a warning trail. but this could result in some circular motions, repeatedly escaping the warning trail only to join a path leading back to it.
+instead if i encounter a warning trail, maybe i should still favour unexplored tiles, but failing that, follow the warning trail until you get to an unexplored tile? or get to the base at which point you are given a new direction
+if the only choices are warning trails choose the lowest explored number one 
+
+ok so the priority should be unexplored tile, then a warning trail with the lowest explored number, don't move to an explored tile if we are in range of a warning tile. this means exploring new directions takes priority, otherwise follow the warning home until you get to the base and get a new direction. 
+
+the warning trail will be replaced with a strength trail when a warrior group sets off from the base. 
+
+i feel like a bloodstain near the base will cripple the workers, they would just go back and forth wouldn't they? so i need to have the warriors clean up the blood once the threat has gone?
+
+20251021
+so when the creatures see a warning trail, i want them to follow the explored numbers back to the base, unless they see an unexplored tile, in which case they should forget that they are following a warning trail. 
+
+so how do i want to do this specifically? if the adjacent tiles have a warning marker, i should set a flag on the creature like warningSeen. when that is true i should try to return to the base. I can turn it to false when i return to base or i find an unexplored tile. 
+
+made a warningInAdjacent5 in the creature method which returns true if there is a warning nearby, i created a bool for the creature called seenWarningBool this is set to true if there is a warning nearby. if that is set to true we will follow the same logic as when we have a resource or found blood - which means we are trying to return to base, but i will set the bool to false again if we are adjacent to an unexplored tile - that is accessible or we return to base
+
+need to test that out, probably need a new map 

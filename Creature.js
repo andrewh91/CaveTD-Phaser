@@ -45,6 +45,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPosSprite.setTint(0x00ff00);
         this.proposedPosSprite.setScale(5);
         this.bloodStainValue=bloodStainValue;
+        /*20251021 when it sees a warning set to true, set to false if retrned to base or finds an unexplored tile*/
+        this.seenWarningBool=false;
         
         //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
         this.reset();
@@ -113,6 +115,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPosSprite.visible=true;
         this.proposedPosSprite.x=undefined;
         this.proposedPosSprite.y=undefined;
+
+        this.seenWarningBool=false;
     }
     resetPreferredDirection()
     {
@@ -422,10 +426,36 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
         }
 
+        /*20251021 check if there is a warning trail in the 4 adjacent tiles, or the tile we are on*/
+        if(this.seenWarningBool==false)
+        {
+            if(warningInAdjacent5({tx:this.tx,ty:this.ty},neighbours)==true)
+            {
+                this.shoutOut('found warning');
+                this.seenWarningBool=true;
+            }
+        }
+        /*20251021 if we are following a warning, then check for an unexplored path adjacent to us, if there is one that we can get to, then forget the warning */
+        if(this.seenWarningBool==true)
+        {
+            for(let i = 0 ; i < neighbours.length; i ++)
+            {
+                if(this.map.isWall(neighbours[i])==false && this.map.isEdge(neighbours[i])==false && this.map.getExploredNumber(neighbours[i])==-1)
+                {
+                    this.proposedPos = neighbours[i];
+                    this.exploredDeadEnd=false;
+                    this.shoutOut('found unexplored path');
+                    this.shoutOut('forget warning');
+                    this.seenWarningBool=false;
+                    return this.proposedPos;
+                }
+            } 
+        }
 
         //if the creature is carrying a resource...
         /*20251014 ... or has discovered a bloodstain*/
-        if(this.carryingResource|| this.valueOfDiscoveredBloodStain>-1)
+        /*20251021 ... or has discovered a warning*/
+        if(this.carryingResource|| this.valueOfDiscoveredBloodStain>-1 || this.seenWarningBool)
         {
             //the neighbours are sorted by the exploreDirection, but if it has a resource i want to go back to the base, so reverse this sorted order
             let neighboursReversed = Helper.reverseArray(neighbours);
@@ -890,6 +920,21 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty+1},value);
         this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty+1},value);
     }
+    /*20251021 this will return true if the pos or any of the 4 adjacent pos have a warning marker*/
+    warningInAdjacent5(pos,array)
+    {
+        let tempPosArray=[];
+        tempPosArray.push(pos);
+        tempPosArray.push(array);
+        for(let i = 0 ; i < tempPosArray.length; i ++)
+        {
+            if(this.map.getWarningMarker(tempPosArray[i])>-1)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
     //this is what i use for the creature to explain succintly what it is doing
     shoutOut(newText)
     {
@@ -1121,16 +1166,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     //we now need to decrement the trail - this is normally done when we move onto a tile with a resource marker and we are not carrying a resource, but when we stepped on this tile adjacent to the creature base we were carrying one, so decrement it now
                     this.scene.decrementResourceMarkerOnMap({tx:this.tx,ty:this.ty});
                 }
+
                 //if we returned to base because there was a dead end, then alter the preferred direction - randomly- note that if testing it will increment the direction through the 8 available directions
                 if(this.exploredDeadEnd)
                 {
-                    this.resetPreferredDirection()
+                    this.shoutOut('try new direction');
+                    this.resetPreferredDirection();
                 }
-                //even if we are not carrying a resource, reset the explored number to 0, and reset dead end flag, and reset the number of resources discovered
+                /*20251021 */
+                else if(this.seenWarningBool)
+                {
+                    this.shoutOut('forget warning');
+                    this.shoutOut('try new direction');
+                    this.resetPreferredDirection();
+                }
+                
+                //even if we are not carrying a resource, reset the explored number to 0, and reset dead end flag, and reset the number of resources discovered and set the warning bool to false
                 {
                     this.exploredNumber=0;
                     this.exploredDeadEnd=false;
                     this.noOfResourcesDiscovered=0;
+                    this.seenWarningBool=false;
                 }
             }
         }
