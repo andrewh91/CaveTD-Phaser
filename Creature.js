@@ -423,13 +423,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.shoutOut('found blood');                        
                 //normally the tail will stop you going back on yourself, but if we just found blood, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
                 this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
+                /*20251022 when we find blood we should also count this as seeing the warning */
+                this.seenWarningBool=true;
             }
         }
 
-        /*20251021 check if there is a warning trail in the 4 adjacent tiles, or the tile we are on*/
+        /*20251021 check if there is a warning trail on the tile we are on*/
         if(this.seenWarningBool==false)
         {
-            if(warningInAdjacent5({tx:this.tx,ty:this.ty},neighbours)==true)
+            /*20251022 decided against checking 5 tiles for each creature on each update, just check the current tile*/
+            /*if(this.warningInAdjacent5({tx:this.tx,ty:this.ty},neighbours)==true)*/
+            if(this.warningOnTile({tx:this.tx,ty:this.ty})==true)
             {
                 this.shoutOut('found warning');
                 this.seenWarningBool=true;
@@ -923,15 +927,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
     /*20251021 this will return true if the pos or any of the 4 adjacent pos have a warning marker*/
     warningInAdjacent5(pos,array)
     {
+        /*this code would result in tempPosArray having 2 elements, the second of with element would be an array of 4 elements, instead use the ... spread operator 
         let tempPosArray=[];
         tempPosArray.push(pos);
-        tempPosArray.push(array);
+        tempPosArray.push(array);*/
+        /*the ... spread operator will instead add each item from the array*/
+        let tempPosArray=[pos,...array];
         for(let i = 0 ; i < tempPosArray.length; i ++)
         {
             if(this.map.getWarningMarker(tempPosArray[i])>-1)
             {
                 return true;
             }
+        }
+        return false;
+    }
+    /*20251022 this is the same as warningInAdjacent5 except it only checks the current tile, not the adjacents. this will result in slightly different although similar behaviour but will be more efficient */ 
+   warningOnTile(pos)
+    {
+        if(this.map.getWarningMarker(pos)>-1)
+        {
+            return true;
         }
         return false;
     }
@@ -1014,7 +1030,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
-
+        /* 20251022 we call this on pathfinding and on move or else sometimes it looks like you get the shout out twice*/
+        this.fadeShoutOut();
         this.updateMemory(v);
         //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
         if(this.map.getCreatureIndex({tx:this.tx,ty:this.ty})==this.index)
@@ -1181,9 +1198,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.resetPreferredDirection();
                 }
                 
-                //even if we are not carrying a resource, reset the explored number to 0, and reset dead end flag, and reset the number of resources discovered and set the warning bool to false
+                //even if we are not carrying a resource, reset the explored number to 1, and reset dead end flag, and reset the number of resources discovered and set the warning bool to false
                 {
-                    this.exploredNumber=0;
+                    /*20251022we should reset the explored number to 1 when next to the creature base, not 0*/
+                    this.exploredNumber=1;
                     this.exploredDeadEnd=false;
                     this.noOfResourcesDiscovered=0;
                     this.seenWarningBool=false;
