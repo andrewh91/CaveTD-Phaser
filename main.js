@@ -126,6 +126,7 @@ class Game extends Phaser.Scene
         console.log("press p to create a new player with camera, follow prompt to set up controls for that player ");
         console.log("press r to remove the most recent camera");
         console.log("press c to advance time");
+        console.log("press k to kill the first creature in the array");
         console.log("the godMode and testing variable in the index file can be altered to help testing and debug and map creation etc");
         console.log("");
     }
@@ -435,7 +436,7 @@ class Game extends Phaser.Scene
             creatureIndexToUse = creatureIndex;
     
             let tempV = Helper.translateTilePosToWorldPos(v);
-            let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndexToUse,Helper.incrementColour(creatureIndexToUse,3),mapData,priorityArray,bloodStainValue);
+            let c = new Creature(this, tempV.x,tempV.y, 'dot','trailer',creatureIndexToUse,Helper.incrementColour(creatureIndexToUse,3),mapData,priorityArray,bloodStainValue,v.type);
             /*the v data might include a goal vector gx,gy*/
             if(v.gx!=undefined)
             {
@@ -454,6 +455,7 @@ class Game extends Phaser.Scene
             creatures[creatureIndexToUse].y=tempV.y;
             creatures[creatureIndexToUse].tx=v.tx;
             creatures[creatureIndexToUse].ty=v.ty;
+            creatures[creatureIndexToUse].type=v.type;
             creatures[creatureIndexToUse].reset();
             /*the v data might include a goal vector gx,gy*/
             if(v.gx!=undefined)
@@ -525,40 +527,40 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
         //these 2 creatures are on the top row and should hit each other 
-        this.addCreatureToWaitingRoom({tx:20,ty:0,gx:1,gy:0});
-        this.addCreatureToWaitingRoom({tx:11,ty:0,gx:26,gy:0});
+        this.addCreatureToWaitingRoom({tx:20,ty:0,gx:1,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:11,ty:0,gx:26,gy:0,type:WORKER});
         //this is a continuous row of creatures that go east, notice that they get in each others way (without the priority array)
-        this.addCreatureToWaitingRoom({tx:3,ty:16,gx:16,gy:16});
-        this.addCreatureToWaitingRoom({tx:4,ty:16,gx:16,gy:16});
-        this.addCreatureToWaitingRoom({tx:5,ty:16,gx:16,gy:16});
+        this.addCreatureToWaitingRoom({tx:3,ty:16,gx:16,gy:16,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:4,ty:16,gx:16,gy:16,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:5,ty:16,gx:16,gy:16,type:WORKER});
         //this is a continuous row of creatures that go west, notice that these ones do not get in each other's way
-        this.addCreatureToWaitingRoom({tx:14,ty:16,gx:3,gy:16});
-        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:3,gy:16});
-        this.addCreatureToWaitingRoom({tx:16,ty:16,gx:3,gy:16});
+        this.addCreatureToWaitingRoom({tx:14,ty:16,gx:3,gy:16,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:3,gy:16,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:16,ty:16,gx:3,gy:16,type:WORKER});
         //a dotted line moving down
-        this.addCreatureToWaitingRoom({tx:5,ty:1,gx:5,gy:11});
-        this.addCreatureToWaitingRoom({tx:5,ty:3,gx:5,gy:11});
-        this.addCreatureToWaitingRoom({tx:5,ty:5,gx:5,gy:11});
+        this.addCreatureToWaitingRoom({tx:5,ty:1,gx:5,gy:11,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:5,ty:3,gx:5,gy:11,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:5,ty:5,gx:5,gy:11,type:WORKER});
         //a dotted line moving east
-        this.addCreatureToWaitingRoom({tx:0,ty:7,gx:11,gy:7});
-        this.addCreatureToWaitingRoom({tx:2,ty:7,gx:11,gy:7});
-        this.addCreatureToWaitingRoom({tx:4,ty:7,gx:11,gy:7});
+        this.addCreatureToWaitingRoom({tx:0,ty:7,gx:11,gy:7,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:2,ty:7,gx:11,gy:7,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:4,ty:7,gx:11,gy:7,type:WORKER});
         //4 creatures colliding from 4 directions
-        this.addCreatureToWaitingRoom({tx:17,ty:11,gx:17,gy:17});
-        this.addCreatureToWaitingRoom({tx:17,ty:17,gx:17,gy:11});
-        this.addCreatureToWaitingRoom({tx:14,ty:14,gx:20,gy:14});
-        this.addCreatureToWaitingRoom({tx:20,ty:14,gx:14,gy:14});
+        this.addCreatureToWaitingRoom({tx:17,ty:11,gx:17,gy:17,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:17,ty:17,gx:17,gy:11,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:14,ty:14,gx:20,gy:14,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:20,ty:14,gx:14,gy:14,type:WORKER});
 
         //a continuous line of creatures going down
-        this.addCreatureToWaitingRoom({tx:25,ty:1,gx:25,gy:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:2,gx:25,gy:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:3,gx:25,gy:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:4,gx:25,gy:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:5,gx:25,gy:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:6,gx:25,gy:18});
-        this.addCreatureToWaitingRoom({tx:25,ty:7,gx:25,gy:18});
+        this.addCreatureToWaitingRoom({tx:25,ty:1,gx:25,gy:18,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:25,ty:2,gx:25,gy:18,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:25,ty:3,gx:25,gy:18,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:25,ty:4,gx:25,gy:18,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:25,ty:5,gx:25,gy:18,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:25,ty:6,gx:25,gy:18,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:25,ty:7,gx:25,gy:18,type:WORKER});
         //one creature trying to go across
-        this.addCreatureToWaitingRoom({tx:26,ty:7,gx:20,gy:7});
+        this.addCreatureToWaitingRoom({tx:26,ty:7,gx:20,gy:7,type:WORKER});
 
         //once we added all the creatures loopThroughAll in the priority array to set teh concat array
         priorityArray.loopThroughAll();
@@ -567,9 +569,9 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
 
-        this.addCreatureToWaitingRoom({tx:25,ty:5,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:25,ty:5,gx:0,gy:0,type:WORKER});
 
-        this.addCreatureToWaitingRoom({tx:23,ty:16,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:23,ty:16,gx:0,gy:0,type:WORKER});
 
         priorityArray.loopThroughAll();
     }
@@ -577,9 +579,9 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
 
-        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2),gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:(mapWidth-2),ty:(mapHeight-2),gx:0,gy:0,type:WORKER});
 
-        this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2),gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:12,ty:(mapHeight-2),gx:0,gy:0,type:WORKER});
 
         priorityArray.loopThroughAll();
     }
@@ -587,24 +589,24 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
 
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:10,gx:0,gy:0,type:WORKER});
 
         priorityArray.loopThroughAll();
     }
     setUpCreatures4()
     {
         creatureIndex=-1;
-        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
-        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
         priorityArray.loopThroughAll();
     }
     setUpDeadCreatures()
@@ -633,6 +635,11 @@ class Game extends Phaser.Scene
     addResourceToCreatureBase(index)
     {
         creatureBases[index].addResource();
+    }
+    /*20251027 when the creature is adjacent to the creature base and it warned the base of a new bloodstain, the base should start producing warriors to address that threat */
+    warnCreatureBase(index,bloodStainValue)
+    {
+        creatureBases[index].addThreat(bloodStainValue);
     }
     //problem:newlyDiscovered
     //this will return true if it is a newlyDiscovered resource

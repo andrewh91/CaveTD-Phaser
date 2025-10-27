@@ -958,3 +958,27 @@ when the warriors follow the warning trail they should arrive at a blood stain r
     if enough time passes or if they successfully defeat a threat they should consume the blood stain deleting it from the map and follow their reinforcing trail to return to the base. 
     they will delete the reinforcing trail and warning trail as they go
 although perhaps they will not arrive at the blood stain, maybe the player or some other creature has interacted with the warning trail or the blood stain or the terrain like walls to impede the warriors. in such an instance the warriors will basically retreat, explore, patrol or perhaps garrison at the end of the trail, waiting for a threat. 
+
+20251027
+TODO: the creature class has a method called checkIfReturnedToBase, this checks the adjacent tiles for a creature base each update, instead i could mark the adjacent tiles of a creature base as being adjacent to that creature base, then the creature would only need to check its own tile each update. 
+
+i have made the creature base increase its threatLevel when warned of a blood stain, it will create a creature if it has enough resources to do so, i need to make that creature a warrior or else it will just run away from the threat like the worker creatures.
+
+the creature now has a type, which can be warrior or worker, i need to make changes to the pathfinding, because warriors will not run from warnings, also warriors must have an awarness of their adjacent warriors as they form a group with a combined strength
+
+
+the warriors should basically only follow warning trails, so i could set up a new pathfinding for them. 
+they start on the creature base, they need to vacate the creature base so they will follow the warning trail adjacent to the base. after that initial move, they will wait until their strength exceeds the value of the warning trail. their strength will increase when they are adjacent to another warrior then they combine their strength. when a new warrior is created at the creaturebase it will see the adjacent warrior that is waiting for it and will try to move to be on top of it, this will cause the first warrior to move forwards along the warning trail allowing room for the new warrior, but then they will still wait if they are not strong enough.
+I need some method to calculate when the warriors are all adjacent to each other, and calculate their combined strength, if they discover a new warning trail that is significantly more of a threat, they will wait for more reinforcements, if they are under attack and their strength level is too low for the threat they should retreat, but i also need to make sure this method cannot be deceived by just killing the middle warrior such that the warriors no longer form an unbroken chain, in such an event the backend should speed up to rejoin the chain.  
+
+also when they are being attacked they should be moving towards the attacker, not following the warning trail, and they should be going at top speed when attacking
+
+alternatively perhaps they should just have perfect knowledge of their group, when one is attacked, they should all charge the enemy, not just the ones at the back who want to rejoin the line. when their combined strength is too low, they should all retreat 
+
+TODO so next time i need to create this pathfinding method for the warriors
+
+todo: i have a corridor of 4 creautres going north to a resource, they pick up the resource and head south to the base. if i wait until the first creature picks up a resource, swaps position with the other so that it is now the southern most creature and then kill it, the others will see the blood stain on their way south and will just stop moving 
+
+todo: if multiple creatures find a bloodstain, even if discovering it from the same position as the previous creature discovered it, they will all report it and over exagerate how much blood there is 
+
+TODO: in the current state the creatures get stuck sometimes, i think with the warnings, but in fairness with my small map there are not many places for them to go 

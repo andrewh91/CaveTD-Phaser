@@ -17,7 +17,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {tx:-1,ty: 0},
         {tx:-1,ty:-1}
     ];
-    constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray,bloodStainValue) 
+    constructor(scene, x, y, texture,trailerTexture,index,colour,map,priorityArray,bloodStainValue,type) 
     {
         super(scene, x, y, texture);
         this.scene=scene;
@@ -45,6 +45,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPosSprite.setTint(0x00ff00);
         this.proposedPosSprite.setScale(5);
         this.bloodStainValue=bloodStainValue;
+        /*20251027 the type will be WORKER or WARRIOR, this will effect its behaviour for example if it runs from warnings*/
+        this.type=type;
         /*20251021 when it sees a warning set to true, set to false if retrned to base or finds an unexplored tile*/
         this.seenWarningBool=false;
         
@@ -249,7 +251,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         else
         {
-            proposedPathfindingPosition = this.pathfindingMethod();
+            if(this.type==WORKER)
+            {
+                proposedPathfindingPosition = this.pathfindingMethod();
+            }
+            else if(this.type==WARRIOR)
+            {
+                proposedPathfindingPosition = this.warriorPathfinding8();
+            }
         }
         //so the creature will store its proposed position, and we will add this creature's index to the priority array for the direction it is travelling, we also store either the x or y pos to aid sorting
         this.proposePathfinding();
@@ -605,7 +614,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPos = {tx:this.tx,ty:this.ty};
         return this.proposedPos;
     }
-    
+    /*20251027 I need to make a new pathfinding method exclusively for warriors, they should be born at the creature base, they need to vacate the base to allow more to be born, they will move onto the warning trail, here they will wait until their combined strength is sufficient to take on the warning trail value. while they wait and more warriors are born they will also want to move adjacent to the creature base to vacate it, doing so will force the existing warriors to move up to make way for them*/
+    warriorPathfinding8()
+    {
+
+    }
     //this method is used in the explorer7 pathfinding, we don't just want to get the adjacent, we want to return them in order of the creature's preference
     getAdjacent()
     {
@@ -1171,6 +1184,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /*20251014 once we reach the base we can stop laying the warning trail*/
                 if(this.valueOfDiscoveredBloodStain>-1)
                 {
+                    /*20251027 if we warn the base of a new threat, the base should begin making warriors to send out to that threat. */
+                    this.scene.warnCreatureBase(creatureBaseIndex,this.valueOfDiscoveredBloodStain);
                     this.valueOfDiscoveredBloodStain=-1;
                     this.shoutOut('warned the base');
                 }
