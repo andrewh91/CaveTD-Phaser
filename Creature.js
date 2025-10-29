@@ -49,6 +49,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.type=type;
         /*20251021 when it sees a warning set to true, set to false if retrned to base or finds an unexplored tile*/
         this.seenWarningBool=false;
+
+        /* 20251030 this indicates that the warrior has just been born and has not moved off the base yet*/
+        this.stepOff = true;
         
         //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
         this.reset();
@@ -119,6 +122,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPosSprite.y=undefined;
 
         this.seenWarningBool=false;
+        this.stepOff = true;
     }
     resetPreferredDirection()
     {
@@ -617,7 +621,57 @@ export default class Creature extends Phaser.GameObjects.Sprite
     /*20251027 I need to make a new pathfinding method exclusively for warriors, they should be born at the creature base, they need to vacate the base to allow more to be born, they will move onto the warning trail, here they will wait until their combined strength is sufficient to take on the warning trail value. while they wait and more warriors are born they will also want to move adjacent to the creature base to vacate it, doing so will force the existing warriors to move up to make way for them*/
     warriorPathfinding8()
     {
-
+        this.proposedPos=undefined;
+        /*get the 4 neighbours*/ 
+        let neighbours = this.getAdjacent();
+        /*if we are still on the creature base - this should only happen immediately after being born*/
+        if(this.stepOff)
+        {
+            /* turn the neighbours into an array of only the neighbours with a warning value, and sort it in order of lowest (warning value - strength value) that is not negative */
+            let neighboursWithLowestWarningValue= this.getStepOffPos(neighbours);
+            /* go through that array and set that as the proposed pos if there is no wall*/
+            let temppp = this.checkForWallsThenProposePos(neighboursWithLowestWarningValue);
+            if(temppp!=false)
+            {
+                this.proposedPos = temppp;                
+                this.shoutOut('move off base to lowest warning marker');
+                return this.proposedPos;
+            }
+            /*if we still have not returned a proposed pos we must not have a warning trail that has not been dealt with, look for a garrison marker and move onto that, failing that just move in some available direction*/
+            let neighboursWithGarrisonMarker = this.refineAdjacentGarrisonMarker(neighbours);
+            /* go through that array and set that as the proposed pos if there is no wall*/
+            temppp = this.checkForWallsThenProposePos(neighboursWithGarrisonMarker);
+            if(temppp!=false)
+            {
+                this.proposedPos = temppp;
+                this.shoutOut('move off base to garrison');
+                return this.proposedPos;
+            }
+            /*so if we still have not moved, just check any direction for no walls */
+            temppp = this.checkForWallsThenProposePos(neighbours);
+            if(temppp!=false)
+            {
+                this.proposedPos = temppp;
+                this.shoutOut('move off base');
+                return this.proposedPos;
+            }
+            /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
+            this.shoutOut('stuck on base');
+            return this.proposedPos;
+        }
+        return this.proposedPos;
+    }
+    /*20251030 return the first pos in the array if that is not a wall or the edge of the map, this will return false otherwise*/
+    checkForWallsThenProposePos(array)
+    {
+        for(let i = 0 ; i < array.length; i ++)
+        {
+            if(this.map.isWall(array[i])==false&&this.map.isEdge(array[i])==false)
+            {                
+                return array[i];;
+            }
+        }
+        return false;
     }
     //this method is used in the explorer7 pathfinding, we don't just want to get the adjacent, we want to return them in order of the creature's preference
     getAdjacent()
@@ -665,6 +719,110 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         return returnArray;
     }
+    /*20251030 pass in the neighbours, and get a list of neighbours with warning marker values*/
+    refineAdjacentWarningMarker(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that have a warning marker, so go through my adjacents and eliminate any that don't have a warning marker 
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getWarningMarker(a[i])==-1)
+            {
+                //so we are removing the neighbours that do not have a warning marker
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /*20251030 pass in the neighbours, and get a list of neighbours with Garrison marker values*/
+    refineAdjacentGarrisonMarker(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that have a Garrison marker, so go through my adjacents and eliminate any that don't have a Garrison marker 
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getGarrisonMarker(a[i])==-1)
+            {
+                //so we are removing the neighbours that do not have a Garrison marker
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /* 20251030 take the neighbours as an argument, return the neighbours but sorted in order of which has the lowest non negative value of the warning marker minus the strength marker. the intention is for the warrior to step off the creature base onto a neighbour giving priority to a neighbour with the lowest threat that has not already been dealt with*/
+    getStepOffPos(neighbours)
+    {
+        let returnArray=[];
+        neighboursLoop:
+        for(let i = 0 ; i < neighbours.length ; i ++)
+        {
+            //store the warningValue of the first neighbour
+            let warningValue=this.map.getWarningMarker(neighbours[i]);         
+            /* if the strength value is not -1 then subtract that from the warning value*/
+            let strengthValue = this.map.getStrengthMarker(neighbours[i]);
+            if(strengthValue!=-1)
+            {
+                warningValue = warningValue - strengthValue;
+            }
+            //if the neighbour does not actually have warning value i.e. it is -1, or the strength value is greater than the warning value such that the warning is considered to be dealt with , then we will not return this neighbour
+            if(warningValue<=-1)
+            {
+                //go to next neighbour in neighboursLoop for loop
+                continue neighboursLoop;
+            }
+            else
+            {
+                //else if it does have a warning value
+                neighboursReturnLoop:
+                //compare it to any other warning value we've added to the return array so far
+                for(let j = 0 ; j < returnArray.length ; j ++)
+                {
+                    let warningValue2 =this.map.getWarningMarker(returnArray[j]);
+                    if(warningValue2!=-1)
+                    {
+                        /* if the strength value is not -1 then subtract that from the warning value*/
+                        let strengthValue2 =this.map.getStrengthMarker(returnArray[j]);
+                        if(strengthValue2!=-1)
+                        {
+                            warningValue2 = warningValue2 - strengthValue2;
+                        }
+                        //check if the warning value is positive, after subtracting the strength value i.e check that there is actually a warning that has not been dealt with.
+                        if(warningValue2>-1)
+                        {
+                            //if the neighbour warning value is less than any of the warning values in the returnarray, then add this neighbour before that, and continue the loop to the next neighbour
+                            if(warningValue<warningValue2)
+                            {
+                                returnArray.splice(j,0,neighbours[i]);
+                                //if we add to the array then move to the next neighbour in the neighboursLoop
+                                continue neighboursLoop;
+                            }
+                        }
+                    }
+                }
+                //if we reach this stage we must not have added to the return array yet, or our neighbour warning value is larger than those in the array , so add it in now at the end
+                returnArray.push(neighbours[i]);
+            }
+        }
+        return returnArray;
+    }
     sortAdjacentLowestExploredNumber(neighbours)
     {
         let returnArray=[];
@@ -672,9 +830,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
             //store the explorednumber of the first neighbour
-            let exploredNumber1=this.map.getExploredNumber(neighbours[i]);
+            let warningValue=this.map.getExploredNumber(neighbours[i]);
             //if the neighbour does not actually have an explored number
-            if(exploredNumber1==-1)
+            if(warningValue==-1)
             {
                 //go to next neighbour in neighboursLoop for loop
                 continue neighboursLoop;
@@ -688,7 +846,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
                     //if the neighbour explored number is less than any of the explored numbers in the returnarray, then add this neighbour before that, and continue the loop to the next neighbour
-                    if(exploredNumber1<exploredNumber2 && exploredNumber2!=-1)
+                    if(warningValue<exploredNumber2 && exploredNumber2!=-1)
                     {
                         returnArray.splice(j,0,neighbours[i]);
                         //if we add to the array then move to the next neighbour in the neighboursLoop
@@ -707,9 +865,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         neighboursLoop:
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
-            let exploredNumber1=this.map.getExploredNumber(neighbours[i]);
+            let warningValue=this.map.getExploredNumber(neighbours[i]);
             //sort the neighbours into a new array based on lowest exploredNumber
-            if(exploredNumber1==-1)
+            if(warningValue==-1)
             {
                 //got to next neighbour in neighboursLoop for loop
                 continue neighboursLoop;
@@ -720,7 +878,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 for(let j = 0 ; j < returnArray.length ; j ++)
                 {
                     let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
-                    if(exploredNumber1>exploredNumber2 && exploredNumber2!=-1)
+                    if(warningValue>exploredNumber2 && exploredNumber2!=-1)
                     {
                         returnArray.splice(j,0,neighbours[i]);
                         //if we add to the array then move to the next neighbour in the neighboursLoop
@@ -1043,7 +1201,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
-        /* 20251022 we call this on pathfinding and on move or else sometimes it looks like you get the shout out twice*/
+        /* 20251022 we call fadeShoutOut on pathfinding and on move or else sometimes it looks like you get the shout out twice*/
         this.fadeShoutOut();
         this.updateMemory(v);
         //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
@@ -1149,6 +1307,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.shoutOut('careful, rubble');
                 //...slow down the movement by skipping the next movement
                 this.skipMovement=true;
+            }
+            if(this.type==WARRIOR)
+            {
+                /*20251030 the stepOff bool is just to handle the initial movement off the creature base*/
+                if(this.stepOff==true)
+                {
+                    this.stepOff=false;
+                }
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
             //this.map.clearContested(v);

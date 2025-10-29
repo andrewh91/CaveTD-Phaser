@@ -23,6 +23,8 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     this.exploredNumber=-1;
     this.resourceMarker=-1;
     this.warningMarker=-1;
+    this.strengthMarker=-1;
+    this.garrisonMarker=-1;
     //gridstep is a global variable
     this.setScale(gridStep);
     this.setTint(colour);

@@ -58,6 +58,23 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].warningMarker;
     }
+    setStrengthMarker(v,n)
+    {
+        this.tiles[this.getIndexFromCoords(v)].strengthMarker = n;
+    }
+    getStrengthMarker(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].strengthMarker;
+    }
+    setGarrisonMarker(v,n)
+    {
+        this.tiles[this.getIndexFromCoords(v)].garrisonMarker = n;
+    }
+    getGarrisonMarker(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].garrisonMarker;
+    }
+    
     //when i build a map from a text file, i don't want to use the setTerrain method, as that requires a map coord, i just want to use the index
     setTerrainByIndex(a)
     {
