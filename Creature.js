@@ -52,6 +52,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         /* 20251030 this indicates that the warrior has just been born and has not moved off the base yet*/
         this.stepOff = true;
+        /*20251030 the strength of the combined group*/
+        this.reportedStrength=2;
+        /*20251030 this is a multiplier for the warning value, if it is less than 1 then the group could pursue the threat even though they are not strong enough, if it is more than 1, like for example if it was 3 then the group will wait until they are 3 times stronger than the threat.*/
+        this.cautiousness = 1;
         
         //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
         this.reset();
@@ -123,6 +127,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         this.seenWarningBool=false;
         this.stepOff = true;
+        this.reportedStrength=2;
+        this.cautiousness = 1;
     }
     resetPreferredDirection()
     {
@@ -659,6 +665,57 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.shoutOut('stuck on base');
             return this.proposedPos;
         }
+        /*if not stepOff */
+        else
+        {
+            /*sort the neighbours by warning trail with highest explored number. */
+            let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+            let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+            /*if there is a neigbour with a warning marker */
+            if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
+            {    
+                /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
+                let tempWarning = this.map.getWarningMarker(neighboursWithWarningMarkerByHighestExploredNumber[0]);
+                /*if the group's reported strength is greater than the warning value*/
+                if(this.reportedStrength >= (tempWarning * this.cautiousness) )
+                {           
+                    this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                    this.shoutOut('we are strong enough');
+                    return this.proposedPos;
+                }
+                /*else if the group is too weak, we either move forwards just to get off the garrison or we stay still */
+                else
+                {
+                    /* if the warrior is on the garrison then it needs to move forwards */
+                    if(this.map.getGarrisonMarker({tx:this.tx,ty:this.ty})>-1)
+                    {
+                        this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                        this.shoutOut('move one away from the base');
+                        return this.proposedPos;
+                    }
+                    this.shoutOut('wait for reinforcements');
+                    return this.proposedPos;
+                }
+            }    
+            else
+            {
+                /* there is no neighbour with a warning marker*/
+                /*try to move off the garrison if possible. move away from the base*/
+                /* if we are on the garrison..*/
+                if(this.map.getGarrisonMarker({tx:this.tx,ty:this.ty})>-1)
+                {
+                    /* get the neighbours that do not have a base*/
+                    let neighboursWithNoBase = this.refineAdjacentNoBase(neighbours);
+                    /* move to one of them*/
+                    if(neighboursWithNoBase.length>0)
+                    {
+                        this.proposedPos = neighboursWithNoBase[0];
+                        this.shoutOut('move one away from the base');
+                        return this.proposedPos;
+                    }
+                }
+            }
+        }
         return this.proposedPos;
     }
     /*20251030 return the first pos in the array if that is not a wall or the edge of the map, this will return false otherwise*/
@@ -719,6 +776,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         return returnArray;
     }
+   
     /*20251030 pass in the neighbours, and get a list of neighbours with warning marker values*/
     refineAdjacentWarningMarker(neighbours)
     {
@@ -756,6 +814,30 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.map.getGarrisonMarker(a[i])==-1)
             {
                 //so we are removing the neighbours that do not have a Garrison marker
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /*20251030 pass in the neighbours, and get a list of neighbours with no creature base*/
+    refineAdjacentNoBase(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that don't have a creaturebase, so go through my adjacents and eliminate any that do have a creaturebase 
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getCreatureBaseIndex(a[i])>-1)
+            {
+                //so we are removing the neighbours that do have a creature base
                 a.splice(i,1);
             }
         }
@@ -1313,7 +1395,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /*20251030 the stepOff bool is just to handle the initial movement off the creature base*/
                 if(this.stepOff==true)
                 {
+                    /*set the tile we just moved to as a garrison tile */
                     this.stepOff=false;
+                    this.map.setGarrisonMarker(v,1);
                 }
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
