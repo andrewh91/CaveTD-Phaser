@@ -45,6 +45,7 @@ export default class MapData
     setBloodStain(v,n)
     {
         this.tiles[this.getIndexFromCoords(v)].bloodStain = n;
+        this.tiles[this.getIndexFromCoords(v)].updateBlood();
     }
     getBloodStain(v)
     {
@@ -370,6 +371,7 @@ export default class MapData
         this.tiles[this.getIndexFromCoords(v)].resourceMarker=i;
         
         this.tiles[this.getIndexFromCoords(v)].updateText('R'+('00'+i).slice(-2));
+        this.tiles[this.getIndexFromCoords(v)].updateLines(true);
     }
     setResourceIndex(v,n)
     {

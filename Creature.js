@@ -43,7 +43,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPosSprite = new Phaser.GameObjects.Sprite(scene,undefined,undefined,texture);
         scene.add.existing(this.proposedPosSprite);
         this.proposedPosSprite.setTint(0x00ff00);
-        this.proposedPosSprite.setScale(5);
+        this.proposedPosSprite.setScale(gridStep/5);
         this.bloodStainValue=bloodStainValue;
         /*20251027 the type will be WORKER or WARRIOR, this will effect its behaviour for example if it runs from warnings*/
         this.type=type;
@@ -175,6 +175,38 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 let tempV = Helper.translateTilePosToWorldPos(this.proposedPos);
                 this.proposedPosSprite.x=tempV.x;
                 this.proposedPosSprite.y=tempV.y;
+                this.proposedPosSprite.visible=true;
+                /*20251101 make the proposed pos sprite a line instead of a dot*/
+                if(this.proposedDirection()==NORTH)
+                {
+                    this.proposedPosSprite.scaleY=gridStep/3;
+                    this.proposedPosSprite.scaleX=gridStep/5;
+                    this.proposedPosSprite.y+=gridStep/3;
+                }
+                else if(this.proposedDirection()==SOUTH)
+                {
+                    this.proposedPosSprite.scaleY=gridStep/3;
+                    this.proposedPosSprite.scaleX=gridStep/5;
+                    this.proposedPosSprite.y+=-gridStep/3;
+                }
+                else if(this.proposedDirection()==EAST)
+                {
+                    this.proposedPosSprite.scaleX=gridStep/3;
+                    this.proposedPosSprite.scaleY=gridStep/5;
+                    this.proposedPosSprite.x+=-gridStep/3;
+                }
+                else if(this.proposedDirection()==WEST)
+                {
+                    this.proposedPosSprite.scaleX=gridStep/3;
+                    this.proposedPosSprite.scaleY=gridStep/5;
+                    this.proposedPosSprite.x+=gridStep/3;
+                }
+                else
+                {
+                    this.proposedPosSprite.scaleY=gridStep/5;
+                    this.proposedPosSprite.scaleX=gridStep/5;
+                }
+
             }
         }
     }
@@ -671,7 +703,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             /*sort the neighbours by warning trail with highest explored number. */
             let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
             let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
-            /*if there is a neigbour with a warning marker */
+            /*if there is a neighbour with a warning marker */
             if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
             {    
                 /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
@@ -1286,6 +1318,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         /* 20251022 we call fadeShoutOut on pathfinding and on move or else sometimes it looks like you get the shout out twice*/
         this.fadeShoutOut();
         this.updateMemory(v);
+        /* 20251101 hide the proposed pos*/
+        this.proposedPosSprite.visible=false;
         //update the position of where the creature used to be in the map with -1 to show there is now no creature there -  but only if that old position has this creature's index, if we just did swapCreatureWith() then this should be false and we don't set it to -1
         if(this.map.getCreatureIndex({tx:this.tx,ty:this.ty})==this.index)
         {
@@ -1399,6 +1433,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.stepOff=false;
                     this.map.setGarrisonMarker(v,1);
                 }
+                
+                this.map.setStrengthMarker(v,this.reportedStrength);
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
             //this.map.clearContested(v);

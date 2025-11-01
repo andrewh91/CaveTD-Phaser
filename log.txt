@@ -1057,3 +1057,9 @@ the warrior will now move off the creature base, 2 steps, allowing other creatur
 TODO: it would make more sense to swap the garrison tile to instead be a variable of the creature base, 
 TODO: adjust the cautiousness value of the creature, 
 TODO: with the bloodstains and the warning trails we could record the explored number that it was found at, that way the warriors that go to investigate it can roughly know how far away it is, then i could have behaviours like wait for reinforcements x tiles away from the danger. 
+
+20251101 
+going to make some visual indicators of the blood and warnings and stuff to make this easier to test
+i have made the proposedPosSprite imply direction 
+i have set up a system to have the warning, strength and resource markers be drawn to the tiles
+seems to work well

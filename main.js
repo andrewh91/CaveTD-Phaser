@@ -213,7 +213,7 @@ class Game extends Phaser.Scene
         mapData = new MapData();
         for(let i = 0 ; i < mapWidth*mapHeight ; i ++ )
         {
-           mapData.tiles.push(new Tile(this,'dot',i,mapData.terrainColours[pathTerrain],pathTerrain));
+           mapData.tiles.push(new Tile(this,mapData,'dot',i,mapData.terrainColours[pathTerrain],pathTerrain));
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
