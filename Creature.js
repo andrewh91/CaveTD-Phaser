@@ -487,11 +487,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.warningOnTile({tx:this.tx,ty:this.ty})==true)
             {
                 this.shoutOut('found warning');
+                this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
                 this.seenWarningBool=true;
             }
         }
-        /*20251021 if we are following a warning, then check for an unexplored path adjacent to us, if there is one that we can get to, then forget the warning */
-        if(this.seenWarningBool==true)
+        /*20251021 if we are following a warning but not a bloodstain, then check for an unexplored path adjacent to us, if there is one that we can get to, then forget the warning */
+        if(this.seenWarningBool==true && this.valueOfDiscoveredBloodStain==-1)
         {
             for(let i = 0 ; i < neighbours.length; i ++)
             {
@@ -516,9 +517,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
             let neighboursReversed = Helper.reverseArray(neighbours);
             //get a list of the neighbours with a resource marker 
             let resourceNeighbours=this.refineAdjacent(neighboursReversed);
+            /*20251103 i have changed my mind on this problem:newlyDiscovered, i should only follow resource trails in one direction, TO the reosurce, I should not follow them to get back to the base, leave that to the lowest explored number */
             //problem:newlyDiscovered
             //in the specific scenario where a creature is on the way back to base with the first resource - laying a resoure marker trail as it goes, if it is then killed, the only resource marker adjacent to it will be leading back to the resource, not back to the base, i will set a flag on the creature if it is the first to get a resource, if so then don't follow the resourcemarker, instead make your own way back to base. 
-            if(resourceNeighbours.length>0 && this.newlyDiscovered==false)
+            /*if(resourceNeighbours.length>0 && this.newlyDiscovered==false)
             {
                 //of those neighbours that have resource markers, sort them by lowest explored number
                 let resourceNeighboursByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(resourceNeighbours);
@@ -536,9 +538,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     }
                 }
             }
+            */
             //if there are no neighbours with resource markers, that we can go to...
             {
-                //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail
+                //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail - bear in mind that we may have deleted our tail if we just picked up a resource or found a dead body etc
                 let currentExploredNumber = this.map.getExploredNumber({tx:this.tx,ty:this.ty});
                 let neighboursByLowestExploredNumber=this.sortAdjacentLowestExploredNumber(neighboursReversed);
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
@@ -1165,7 +1168,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //drop the carried resource, so we need to add the resource to the map and set a marker - or add to the marker
         if(this.carryingResource)
         {
-            this.scene.addResource({tx:this.tx,ty:this.ty},1);
+            this.scene.addResource({tx:this.tx,ty:this.ty},1); 
         }
         /*20251010 I need to add the blood to this tile as well as the 8 surrounding tiles, that includes the diagonal ones, this could result in an error if v was at the edge of the map although that should not happen as i add a border to the edge of the map */
         /*20251014 if the creature is killed while laying a warning trail after it discovered a blood stain, then it should lay a blood stain value equal to that discovered bloodstain plus it's own bloodstain value so that another creature can resume the trail*/
