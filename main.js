@@ -28,7 +28,11 @@ var movementN=0;
 var pathfindingSegmentSize;
 var movementSegmentSize;
 var shoutOutLog=[];
-var bloodStainValue=1;
+var bloodStainValue=2;
+
+/* 20251107*/
+var warriorGroupMap= new Map();
+var warriorGroupCounter = 0;
 
 var latestKey;
 import UIScene, { drawGridCoords } from './uiScene.js';
@@ -650,6 +654,51 @@ class Game extends Phaser.Scene
     getResourceHealth(index)
     {
         return resources[index].health;
+    }
+    getCreature(index)
+    {
+        return creatures[index];
+    }
+    /* 20251107 warriors will form groups, this is mainly a way for them to know the combined strength of the group. i'm using maps instead of arrays since i will want to delete the items in the array when all the creatures die, and then my groupId that i use to access the array would not work */
+    getWarriorGroupStrength(key)
+    {
+        return warriorGroupMap.get(key);
+    }
+    setWarriorGroupStrength(key,newCombinedStrength)
+    {
+        warriorGroupMap.set(key,newCombinedStrength);
+    }
+    newWarriorGroup(strength)
+    {
+        warriorGroupMap.set(warriorGroupCounter++,strength);
+        return warriorGroupCounter-1;
+    }
+    addWarriorGroupStrength(key,strength,otherWarriorIndex)
+    {
+        /* the key we pass in will be the group key of the other warrior that we just pushed into. if that is -1 then make a new group, use the strength of both warriors, and make sure to make that first warrior aware of the groupKey */
+        if(key==-1)
+        {
+            let otherWarrior = this.getCreature(otherWarriorIndex);
+            let newGroupKey= this.newWarriorGroup(strength+otherWarrior.strengthValue);
+            otherWarrior.warriorGroupKey = newGroupKey;
+            return newGroupKey;
+        }
+        let newCombinedStrength = this.getWarriorGroupStrength(key) + strength;
+        this.setWarriorGroupStrength(key,newCombinedStrength);
+        return key;
+    }
+    /* this method will remove the group if the strength is reduced to 0*/
+    subtractWarriorGroupStrength(key,strength)
+    {
+        let newCombinedStrength = this.getWarriorGroupStrength(key) - strength;
+        if(newCombinedStrength<=0)
+        {
+            warriorGroupMap.delete(key);
+        }
+        else
+        {
+            this.setWarriorGroupStrength(key,newCombinedStrength);
+        }
     }
     //sometimes trailers containing rubble will be destroyed - when the creature dies- and the rubble should be added to the map at the trailer position 
     addTrailerRubble(v)

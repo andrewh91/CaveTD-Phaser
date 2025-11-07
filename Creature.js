@@ -52,11 +52,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         /* 20251030 this indicates that the warrior has just been born and has not moved off the base yet*/
         this.stepOff = true;
-        /*20251030 the strength of the combined group*/
-        this.reportedStrength=2;
+
         /*20251030 this is a multiplier for the warning value, if it is less than 1 then the group could pursue the threat even though they are not strong enough, if it is more than 1, like for example if it was 3 then the group will wait until they are 3 times stronger than the threat.*/
         this.cautiousness = 1;
-        
+        /*20251106 useful for when pushing up */
+        this.waitingForReinforcements=false;
         //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
         this.reset();
 
@@ -127,8 +127,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         this.seenWarningBool=false;
         this.stepOff = true;
-        this.reportedStrength=2;
         this.cautiousness = 1;
+        this.waitingForReinforcements=false;
+        this.warriorGroupKey=-1;
+        this.strengthValue=1;
+
     }
     resetPreferredDirection()
     {
@@ -676,6 +679,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.proposedPos = temppp;                
                 this.shoutOut('move off base to lowest warning marker');
+                this.pushUpWarrior(this.proposedPos);
                 return this.proposedPos;
             }
             /*if we still have not returned a proposed pos we must not have a warning trail that has not been dealt with, look for a garrison marker and move onto that, failing that just move in some available direction*/
@@ -686,6 +690,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.proposedPos = temppp;
                 this.shoutOut('move off base to garrison');
+                this.pushUpWarrior(this.proposedPos);
                 return this.proposedPos;
             }
             /*so if we still have not moved, just check any direction for no walls */
@@ -694,10 +699,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.proposedPos = temppp;
                 this.shoutOut('move off base');
+                this.pushUpWarrior(this.proposedPos);
                 return this.proposedPos;
             }
             /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
             this.shoutOut('stuck on base');
+            this.pushUpWarrior(this.proposedPos);
             return this.proposedPos;
         }
         /*if not stepOff */
@@ -712,10 +719,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
                 let tempWarning = this.map.getWarningMarker(neighboursWithWarningMarkerByHighestExploredNumber[0]);
                 /*if the group's reported strength is greater than the warning value*/
-                if(this.reportedStrength >= (tempWarning * this.cautiousness) )
+                if(this.getReportedStrength() >= (tempWarning * this.cautiousness) )
                 {           
                     this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
                     this.shoutOut('we are strong enough');
+                    this.waitingForReinforcements=false;
+                    this.pushUpWarrior(this.proposedPos);
                     return this.proposedPos;
                 }
                 /*else if the group is too weak, we either move forwards just to get off the garrison or we stay still */
@@ -726,9 +735,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     {
                         this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
                         this.shoutOut('move one away from the base');
+                    this.pushUpWarrior(this.proposedPos);
                         return this.proposedPos;
                     }
                     this.shoutOut('wait for reinforcements');
+                    this.waitingForReinforcements=true;
+                    this.pushUpWarrior(this.proposedPos);
                     return this.proposedPos;
                 }
             }    
@@ -746,12 +758,53 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     {
                         this.proposedPos = neighboursWithNoBase[0];
                         this.shoutOut('move one away from the base');
+                        this.pushUpWarrior(this.proposedPos);
                         return this.proposedPos;
                     }
                 }
             }
         }
+        this.pushUpWarrior(this.proposedPos);
         return this.proposedPos;
+    }
+    /*20251105 before we return the proposed pos in pathfinding for the warrior, see if there is a warrior in that position that is waiting for reinforcements, if so we want to push up that warrior and all others in this group. */
+    pushUpWarrior(proposedPos)
+    {
+        /*the proposedPos can be undefined it we do not move, for example like when we are waiting for reinforcements, if the proposedPos is undefined then do nothing, */
+        if(proposedPos==undefined)
+        {
+
+        }
+        else
+        {  
+            /* get the creature index at the proposed pos*/
+            let creatureIndexAtProposedPos = this.map.getCreatureIndex(proposedPos);
+            /* if that index is not -1, there is a creature there */
+            if(creatureIndexAtProposedPos>-1)
+            {
+                let proposedPosCreature = this.scene.getCreature(creatureIndexAtProposedPos);
+                /* if that creature is a warrior*/
+                if(proposedPosCreature.type== WARRIOR)
+                {
+                    /* if that warrior is waiting for reinforcements*/
+                    if(proposedPosCreature.waitingForReinforcements==true)
+                    {
+                        /* then we need to push up */
+                        /* add your strength to the group . note that if the other warrior does not have a group, then one will be created with the strength of both warriors and both warriors will be given the key*/
+                        this.warriorGroupKey=this.scene.addWarriorGroupStrength(proposedPosCreature.warriorGroupKey,this.strengthValue,proposedPosCreature.index);
+                    }
+                }
+            }
+        }
+    }
+    /* 20251107 if the key is -1 there is no point checking what the group strength is, just use our own strength, but if there is a group this will give up the combined strength of the group */
+    getReportedStrength()
+    {
+        if(this.warriorGroupKey == -1)
+        {
+            return this.strengthValue;
+        }
+        return this.scene.getWarriorGroupStrength(this.warriorGroupKey);
     }
     /*20251030 return the first pos in the array if that is not a wall or the edge of the map, this will return false otherwise*/
     checkForWallsThenProposePos(array)
@@ -1154,6 +1207,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     kill()
     {
         this.shoutOut('avenge me!');
+        /* 20251107 if a warrior dies we need to update the group strength*/
+        this.scene.subtractWarriorGroupStrength(this.warriorGroupKey,this.strengthValue);
         this.map.setCreature({tx:this.tx,ty:this.ty},-1);
         //if the creature is destroyed we must clear its contested data or else creatures could end up teleporting
         //this.map.clearContested({tx:this.tx,ty:this.ty});
@@ -1437,7 +1492,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.map.setGarrisonMarker(v,1);
                 }
                 
-                this.map.setStrengthMarker(v,this.reportedStrength);
+                this.map.setStrengthMarker(v,this.getReportedStrength());
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
             //this.map.clearContested(v);
