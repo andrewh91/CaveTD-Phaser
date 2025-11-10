@@ -53,8 +53,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         /* 20251030 this indicates that the warrior has just been born and has not moved off the base yet*/
         this.stepOff = true;
 
-        /*20251030 this is a multiplier for the warning value, if it is less than 1 then the group could pursue the threat even though they are not strong enough, if it is more than 1, like for example if it was 3 then the group will wait until they are 3 times stronger than the threat.*/
-        this.cautiousness = 1;
+
         /*20251106 useful for when pushing up */
         this.waitingForReinforcements=false;
         //the rest of the variables i will put in this reset method, which will be called when the creature is reused after being killed
@@ -126,12 +125,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.proposedPosSprite.y=undefined;
 
         this.seenWarningBool=false;
-        this.stepOff = true;
-        this.cautiousness = 1;
+        this.stepOff = true;        
+        /*20251030 this is a multiplier for the warning value, if it is less than 1 then the group could pursue the threat even though they are not strong enough, if it is more than 1, like for example if it was 3 then the group will wait until they are 3 times stronger than the threat.*/
+        this.cautiousness = 3;
         this.waitingForReinforcements=false;
         this.warriorGroupKey=-1;
         this.strengthValue=1;
-
+        /* 20251110 if we have been told to push up this will be set to true, that will override the pathfinding to push up one space, when we push up it wil go back to false*/
+        this.pushUp = false;
+        /*20251110 if we push up we add our strength, and tell the warriors in front to move fowards, if they can't move forwards the strength would be added again, so this bool makes sure it happens just once. will need to reset it once the battle is over though... or when return to base*/
+        this.addedStrength = false;
     }
     resetPreferredDirection()
     {
@@ -708,6 +711,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
             return this.proposedPos;
         }
         /*if not stepOff */
+        /*20251110 if we have been told to push up then move along the strength line one space if possible, else move along the warning line*/
+        if(this.pushUp==true)
+        {
+            this.pushUp=false;
+            this.shoutOut('comply with push up');
+            let neighboursWithStrengthMarker = this.refineAdjacentStrengthMarker(neighbours);
+            let neighboursWithStrengthMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithStrengthMarker);
+            /* see if this position would actually be moving away from teh base- based on the explored number */
+            for(let i = 0 ; i < neighboursWithStrengthMarkerByHighestExploredNumber.length; i ++)
+            {
+                if(this.map.getExploredNumber(neighboursWithStrengthMarkerByHighestExploredNumber[0])>this.map.getExploredNumber({tx:this.tx,ty:this.ty}) )
+                {
+                    /* if so go there*/
+                    this.proposedPos = neighboursWithStrengthMarkerByHighestExploredNumber[0];
+                    this.pushUpWarrior(this.proposedPos);
+                    return this.proposedPos;
+                }
+            }
+            /* if none of the adjacent strength positions were of a higher explored number then try the warning positions*/
+            let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+            let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+            
+            this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+            this.pushUpWarrior(this.proposedPos);
+            return this.proposedPos;
+
+        }
         else
         {
             /*sort the neighbours by warning trail with highest explored number. */
@@ -716,6 +746,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             /*if there is a neighbour with a warning marker */
             if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
             {    
+                
                 /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
                 let tempWarning = this.map.getWarningMarker(neighboursWithWarningMarkerByHighestExploredNumber[0]);
                 /*if the group's reported strength is greater than the warning value*/
@@ -791,11 +822,24 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     {
                         /* then we need to push up */
                         /* add your strength to the group . note that if the other warrior does not have a group, then one will be created with the strength of both warriors and both warriors will be given the key*/
-                        this.warriorGroupKey=this.scene.addWarriorGroupStrength(proposedPosCreature.warriorGroupKey,this.strengthValue,proposedPosCreature.index);
+                        if(this.addedStrength==false)
+                        {
+                            this.addedStrength=true;
+                            proposedPosCreature.addedStrength=true;
+                            this.warriorGroupKey=this.scene.addWarriorGroupStrength(proposedPosCreature.warriorGroupKey,this.strengthValue,proposedPosCreature.index);
+                        }
+                        this.shoutOut('push up');
+                        this.scene.pushUpAdjacent(creatureIndexAtProposedPos);
+                        
                     }
                 }
             }
         }
+    }
+    /*20251110 the scene will call this method of the specified creature that needs to push up*/
+    complyWithPushUp()
+    {
+        this.pushUp=true;
     }
     /* 20251107 if the key is -1 there is no point checking what the group strength is, just use our own strength, but if there is a group this will give up the combined strength of the group */
     getReportedStrength()
@@ -878,6 +922,30 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.map.getWarningMarker(a[i])==-1)
             {
                 //so we are removing the neighbours that do not have a warning marker
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /*20251110 pass in the neighbours, and get a list of neighbours with strength marker values*/
+    refineAdjacentStrengthMarker(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that have a strength marker, so go through my adjacents and eliminate any that don't have a strength marker 
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getStrengthMarker(a[i])==-1)
+            {
+                //so we are removing the neighbours that do not have a strength marker
                 a.splice(i,1);
             }
         }
@@ -1561,9 +1629,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     /*20251022we should reset the explored number to 1 when next to the creature base, not 0*/
                     this.exploredNumber=1;
+                    /*20251110 we also need to set that on the map */
+                    this.map.setExploredNumber({tx:this.tx,ty:this.ty},this.exploredNumber);
                     this.exploredDeadEnd=false;
                     this.noOfResourcesDiscovered=0;
                     this.seenWarningBool=false;
+                    this.addedStrength=false;
                 }
             }
         }

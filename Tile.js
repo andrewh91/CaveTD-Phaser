@@ -128,20 +128,19 @@ export default class Tile extends Phaser.GameObjects.Sprite {
         {
             for(let i = 0 ; i < neighbours.length;i++)
             {
-                if(tempMethodArray[j](neighbours[i])>-1)
+                
+                    tempLinesArray[j][i].geom.x2 = 0;
+                    tempLinesArray[j][i].geom.y2 = 0;
+                /* 20251110 changed this so that the marker must be on this tile AND the neighbour*/
+                if(tempMethodArray[j]({tx:this.tx,ty:this.ty})>-1 && tempMethodArray[j](neighbours[i])>-1)
                 {
                     tempLinesArray[j][i].geom.x2 = neighbourPosHelper[i].x;
                     tempLinesArray[j][i].geom.y2 = neighbourPosHelper[i].y;
-                    /* also update the lines of that neighbouring tile, but set recursive to false so that the method does update all of that tile's neighbours as well */
+                    /* also update the lines of that neighbouring tile, but set recursive to false so that the method doesn't update all of that tile's neighbours as well */
                     if(recursive)
                     {
                         this.mapData.tiles[this.mapData.getIndexFromCoords(neighbours[i])].updateLines(false);
                     }
-                }
-                else
-                {
-                    tempLinesArray[j][i].geom.x2 = 0;
-                    tempLinesArray[j][i].geom.y2 = 0;
                 }
             }
         }

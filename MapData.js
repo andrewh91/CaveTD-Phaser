@@ -54,6 +54,7 @@ export default class MapData
     setWarningMarker(v,n)
     {
         this.tiles[this.getIndexFromCoords(v)].warningMarker = n;
+        this.tiles[this.getIndexFromCoords(v)].updateLines(true);
     }
     getWarningMarker(v)
     {
@@ -62,6 +63,7 @@ export default class MapData
     setStrengthMarker(v,n)
     {
         this.tiles[this.getIndexFromCoords(v)].strengthMarker = n;
+        this.tiles[this.getIndexFromCoords(v)].updateLines(true);
     }
     getStrengthMarker(v)
     {

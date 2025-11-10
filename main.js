@@ -28,7 +28,7 @@ var movementN=0;
 var pathfindingSegmentSize;
 var movementSegmentSize;
 var shoutOutLog=[];
-var bloodStainValue=2;
+var bloodStainValue=1;
 
 /* 20251107*/
 var warriorGroupMap= new Map();
@@ -79,7 +79,7 @@ class Game extends Phaser.Scene
         priorityArray=new PriorityArray();
         this.setUpResources();
         this.setUpCreatureBases();
-        this.setUpCreatures4();
+        this.setUpCreatures5();
         this.setUpDeadCreatures();
 
 
@@ -221,7 +221,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[5]);
+        mapData.loadFromText(savedMaps.mapsArray[6]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -520,7 +520,8 @@ class Game extends Phaser.Scene
         resourceIndex=-1;
         
         this.addResource({tx:15,ty:6},10);
-        this.addResource({tx:15,ty:3},4);
+        this.addResource({tx:12,ty:16},10);
+        this.addResource({tx:18,ty:16},10);
     }
     setUpCreatureBases()
     {
@@ -613,6 +614,13 @@ class Game extends Phaser.Scene
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
         priorityArray.loopThroughAll();
     }
+    setUpCreatures5()
+    {
+        creatureIndex=-1;
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
+        priorityArray.loopThroughAll();
+    }
     setUpDeadCreatures()
     {
         deadCreatures = [];
@@ -699,6 +707,11 @@ class Game extends Phaser.Scene
         {
             this.setWarriorGroupStrength(key,newCombinedStrength);
         }
+    }
+    /* 20251110 this will be called when a warrior wants to move on top of another warrior that is waiting for reinforcements*/
+    pushUpAdjacent(index)
+    {
+        creatures[index].complyWithPushUp();
     }
     //sometimes trailers containing rubble will be destroyed - when the creature dies- and the rubble should be added to the map at the trailer position 
     addTrailerRubble(v)

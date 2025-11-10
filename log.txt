@@ -1089,3 +1089,13 @@ this seems to work although once the warriors get to the blood i have not coded 
 
 TODO i think i should make the cautiousness a variable of the creature base not the creature
 TODO check how the bloodstains stack, i'm not sure it's working right when more than one creatures dies on a spot
+
+20251110 
+make a new map to test this out, give the creature base 10 resources by default so i don't have to wait for the creatures to fetch resources.
+when the warriors push up, there is a chance they could move to the wrong warning path, i should have them follow the strength marker instead
+that s bit better, i've accrued lots of TODOs that i should really sort out 
+
+
+TODO: creatures sometimes circle through 4 tiles repeatedly. they are just moving to the highest explored number tile like what they are supposed to, but they don't recognise that they are going in circles, maybe a larger memory trail would help? 
+TODO: if any creature finds itself on a creature base it should prioristise moving in any direction 
+TODO: sometimes the warning trail is not visible, seems to be when the creature doesn't move into blood but instead was so close to the dead creature when it died that the tile is was on became a blood stain
