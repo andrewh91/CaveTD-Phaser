@@ -527,6 +527,7 @@ class Game extends Phaser.Scene
     {
         creatureBaseIndex=-1;
         this.addCreatureBase({tx:15,ty:16});
+        /*this.addCreatureBase({tx:13,ty:9});*/
     }
     setUpCreatures()
     {
@@ -619,6 +620,19 @@ class Game extends Phaser.Scene
         creatureIndex=-1;
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
         this.addCreatureToWaitingRoom({tx:15,ty:16,gx:0,gy:0,type:WORKER});
+        priorityArray.loopThroughAll();
+    }
+    setUpCreatures6()
+    {
+        creatureIndex=-1;
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
         priorityArray.loopThroughAll();
     }
     setUpDeadCreatures()

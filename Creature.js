@@ -639,6 +639,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         else
                         {
                             this.proposedPos = neighboursByHighestExploredNumber[i];
+                            /* 20251113 if we move to a tile that has a lower explored number than the current tile then set the dead end flag*/
+                            
+                            
+                            if(this.map.getExploredNumber({tx:this.tx,ty:this.ty}) > this.map.getExploredNumber(neighboursByHighestExploredNumber[i]))
+                            {                                
+                                this.exploredDeadEnd=true;
+                                this.shoutOut('deadend!');
+                            }
                             return this.proposedPos;
                         }
                     }
