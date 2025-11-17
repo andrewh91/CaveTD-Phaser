@@ -177,6 +177,7 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].resourceMarker;
     }
+
     //return false if contested by our direction, or no direction, returns true if not contested by our direction and is contested by another direction  
     isContestedFromExcluding(v,dir)
     {
@@ -466,6 +467,7 @@ export default class MapData
         }
         return this.tiles[this.getIndexFromCoords(v)].terrain;
     }
+
     //this is for god mode only, add one to the terrain, then mod 3
     godModeIncrementTerrain(v)
     {

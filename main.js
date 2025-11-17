@@ -67,7 +67,7 @@ class Game extends Phaser.Scene
         this.mainCamera = this.cameras.main;
         
         
-        this.setUpMap();
+        this.setUpMap(8);
 
         vehicleIndex=-1;
         this.addVehicle({tx:3,ty:2});
@@ -79,7 +79,7 @@ class Game extends Phaser.Scene
         priorityArray=new PriorityArray();
         this.setUpResources();
         this.setUpCreatureBases();
-        this.setUpCreatures5();
+        this.setUpCreatures7();
         this.setUpDeadCreatures();
 
 
@@ -212,7 +212,7 @@ class Game extends Phaser.Scene
         }
         latestKey=e;
     }
-    setUpMap()
+    setUpMap(n)
     {
         mapData = new MapData();
         for(let i = 0 ; i < mapWidth*mapHeight ; i ++ )
@@ -221,7 +221,7 @@ class Game extends Phaser.Scene
         }
         //the map is 27 across by 18 down, 
         savedMaps = new SavedMaps();
-        mapData.loadFromText(savedMaps.mapsArray[6]);
+        mapData.loadFromText(savedMaps.mapsArray[n]);
     }
     //this will be called by the player when the player presses shift on the vehicle 
     enterVehicle(p,v)
@@ -526,7 +526,7 @@ class Game extends Phaser.Scene
     setUpCreatureBases()
     {
         creatureBaseIndex=-1;
-        this.addCreatureBase({tx:15,ty:16});
+        this.addCreatureBase({tx:13,ty:14});
         /*this.addCreatureBase({tx:13,ty:9});*/
     }
     setUpCreatures()
@@ -635,6 +635,14 @@ class Game extends Phaser.Scene
         this.addCreatureToWaitingRoom({tx:13,ty: 9,gx:0,gy:0,type:WORKER});
         priorityArray.loopThroughAll();
     }
+    setUpCreatures7()
+    {
+        creatureIndex=-1;
+        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});
+        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WARRIOR});
+        priorityArray.loopThroughAll();
+    }
     setUpDeadCreatures()
     {
         deadCreatures = [];
@@ -737,6 +745,33 @@ class Game extends Phaser.Scene
     updateShoutOutLog(text)
     {
         shoutOutLog.push(text);
+    }
+    /* 20251117, return true if there is a creature in the given position, and it is stationary AND it intends to remain stationary*/
+    remainStationary(v)
+    {
+        let i = mapData.getCreatureIndex(v);
+        if(i>-1)
+        {
+            if(creatures[i].remainStationary==true)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    intendsToRemainStationary(v)
+    {
+        let i = mapData.getCreatureIndex(v);
+        if(creatures[i].overridePathfinding==undefined)
+        {
+            return true;
+        }
+        return false;
+    }
+    /* 20251117 this will be called when a creature wants to swap position with a stationary creature, that creature will then call this method which will tell the other creature to try and move back to the pos where it was stationary */
+    overridePathfinding(index,v)
+    {
+        creatures[index].overridePathfinding = v;
     }
 }
 //I want additional players to be able to join at any time, that means we need to add a new camera and adjust the size of existing cameras on the fly. but you could also use this when you're not adding a new camera, maybe a gameplay feature would be to have another camera to keep an eye on something

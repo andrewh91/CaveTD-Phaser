@@ -135,6 +135,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.pushUp = false;
         /*20251110 if we push up we add our strength, and tell the warriors in front to move fowards, if they can't move forwards the strength would be added again, so this bool makes sure it happens just once. will need to reset it once the battle is over though... or when return to base*/
         this.addedStrength = false;
+        /*20251117 if a stationary creature is told to swap position with another creature then it will be instructed to move back to where it was being stationary.*/
+        this.overridePathfinding=undefined;
+        /* 20251117 this is the way that i detect if a creature is stationary and intends to be stationary, so if surrounded by walls it's pathfinding will return its own position and this will be set to true, or if the warrior is waiting this will be set to true*/
+        this.remainStationary=false;
+        this.remainStationary2=false;
     }
     resetPreferredDirection()
     {
@@ -455,7 +460,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     explorer7()
     {
-
+        this.remainStationary=false;
         this.proposedPos=undefined;
         
 
@@ -671,12 +676,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         //if we still have not returned return current position, we must have been surrounded by walls or something
         this.proposedPos = {tx:this.tx,ty:this.ty};
+        this.remainStationary=true;
         return this.proposedPos;
     }
     /*20251027 I need to make a new pathfinding method exclusively for warriors, they should be born at the creature base, they need to vacate the base to allow more to be born, they will move onto the warning trail, here they will wait until their combined strength is sufficient to take on the warning trail value. while they wait and more warriors are born they will also want to move adjacent to the creature base to vacate it, doing so will force the existing warriors to move up to make way for them*/
     warriorPathfinding8()
     {
         this.proposedPos=undefined;
+        this.remainStationary=false;
+        if(this.remainStationary2==true)
+        {
+            this.remainStationary2=false;
+            this.remainStationary=true;
+        }
+        /* 20251117 this will be called when a stationary creature was moved out of another creature's way, this will now tell it to move back to where it was*/
+        if(this.overridePathfinding!=undefined)
+        {
+            this.proposedPos=this.overridePathfinding;
+            /*we will set this remainStationary2 flag to true, when this is true remainStationary will be set to true after this creature next does pathfinding*/
+            this.remainStationary2=true;
+            return this.proposedPos;
+        }
         /*get the 4 neighbours*/ 
         let neighbours = this.getAdjacent();
         /*if we are still on the creature base - this should only happen immediately after being born*/
@@ -758,7 +778,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
                 let tempWarning = this.map.getWarningMarker(neighboursWithWarningMarkerByHighestExploredNumber[0]);
                 /*if the group's reported strength is greater than the warning value*/
-                if(this.getReportedStrength() >= (tempWarning * this.cautiousness) )
+                if(this.getReportedStrength() >= (tempWarning * this.cautiousness) &&false)
                 {           
                     this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
                     this.shoutOut('we are strong enough');
@@ -774,10 +794,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     {
                         this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
                         this.shoutOut('move one away from the base');
-                    this.pushUpWarrior(this.proposedPos);
+                        this.pushUpWarrior(this.proposedPos);
                         return this.proposedPos;
                     }
                     this.shoutOut('wait for reinforcements');
+                    this.remainStationary=true;
                     this.waitingForReinforcements=true;
                     this.pushUpWarrior(this.proposedPos);
                     return this.proposedPos;
@@ -802,6 +823,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     }
                 }
             }
+        }
+        if(this.proposedPos==undefined)
+        {
+            this.remainStationary=true;
         }
         this.pushUpWarrior(this.proposedPos);
         return this.proposedPos;
@@ -1204,6 +1229,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //if we entered rubble this.skipMovement would be true
         if(this.skipMovement==false)
         {
+ 
             if(this.proposedPos)
             {
                 //if the proposed position is not outside the map
@@ -1247,6 +1273,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                     else
                                     {
                                         this.map.setContestedFrom(this.proposedPos,this.oppositeDirection(dir));
+                                    }                                                                   
+                                    /*20251117 check if the pos is held by a creature that is stationary and intends to remain stationary, if so we can swap with that but instruct it to return to that position next time.*/
+                                    /*check if it is stationary ...*/
+                                    if(this.scene.remainStationary(this.proposedPos))
+                                    {
+                                        /*...check if it intends to remain stationary */
+                                        if(this.scene.intendsToRemainStationary(this.proposedPos))
+                                        {
+                                            let otherCreatureIndex = this.map.getCreatureIndex(this.proposedPos);
+                                            this.swapCreatureWith(this.proposedPos);
+                                            /* so now this creature will occupy the proposedPos, and the other creature should be instructed to try to get back to the proposedPos*/
+                                            this.scene.overridePathfinding(otherCreatureIndex,this.proposedPos);
+                                        }
                                     }
                                 }
                             }
@@ -1449,6 +1488,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
+
+        /*20251117 set this to false so that we can't swap more than once in an update */
+        this.remainStationary=false;
+
         /* 20251022 we call fadeShoutOut on pathfinding and on move or else sometimes it looks like you get the shout out twice*/
         this.fadeShoutOut();
         this.updateMemory(v);
@@ -1461,7 +1504,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         if(this.cancelMove==false)
         {    
-
+            /* 20251117 only reset the overridePathfinding once we have moved*/
+            this.overridePathfinding=undefined;
             //if we have moved such that the trailer is on a path, then drop 1 rubble if possible
             this.attemptDumpTrailer();
             //update the new position of the creature in the map
