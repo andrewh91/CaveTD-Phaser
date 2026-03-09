@@ -290,6 +290,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.allowAlterExplorerNumber=true;
                 this.pathfindingMethod=this.explorer7;
                 break;
+            case 8:
+                this.rememberTail=true;
+                this.rememberWall=false;
+                this.useTunnel=false;
+                this.wallRunnerDirection = RIGHT;
+                this.allowAlterExplorerNumber=true;
+                this.pathfindingMethod=this.warriorPathfinding8;
+                break;
                 
         }
     }
@@ -679,7 +687,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.remainStationary=true;
         return this.proposedPos;
     }
-    /*20251027 I need to make a new pathfinding method exclusively for warriors, they should be born at the creature base, they need to vacate the base to allow more to be born, they will move onto the warning trail, here they will wait until their combined strength is sufficient to take on the warning trail value. while they wait and more warriors are born they will also want to move adjacent to the creature base to vacate it, doing so will force the existing warriors to move up to make way for them*/
+    /*20251027 I need to make a new pathfinding method exclusively for warriors, they should be born at the creature base, they need to vacate the base to allow more to be born, they will move onto the warning trail, here they will wait until their combined strength is sufficient to take on the warning trail value. */
     warriorPathfinding8()
     {
         this.proposedPos=undefined;
@@ -696,140 +704,176 @@ export default class Creature extends Phaser.GameObjects.Sprite
             /*we will set this remainStationary2 flag to true, when this is true remainStationary will be set to true after this creature next does pathfinding*/
             this.remainStationary2=true;
             return this.proposedPos;
-        }
-        /*get the 4 neighbours*/ 
-        let neighbours = this.getAdjacent();
-        /*if we are still on the creature base - this should only happen immediately after being born*/
+        }        
+        /*the setp off flag will be set to true initially, when the warrior is born. it will be set to false when it moves off the base in the update function, it should then remain false.*/
         if(this.stepOff)
         {
-            /* turn the neighbours into an array of only the neighbours with a warning value, and sort it in order of lowest (warning value - strength value) that is not negative */
-            let neighboursWithLowestWarningValue= this.getStepOffPos(neighbours);
-            /* go through that array and set that as the proposed pos if there is no wall*/
-            let temppp = this.checkForWallsThenProposePos(neighboursWithLowestWarningValue);
-            if(temppp!=false)
-            {
-                this.proposedPos = temppp;                
-                this.shoutOut('move off base to lowest warning marker');
-                this.pushUpWarrior(this.proposedPos);
-                return this.proposedPos;
-            }
-            /*if we still have not returned a proposed pos we must not have a warning trail that has not been dealt with, look for a garrison marker and move onto that, failing that just move in some available direction*/
-            let neighboursWithGarrisonMarker = this.refineAdjacentGarrisonMarker(neighbours);
-            /* go through that array and set that as the proposed pos if there is no wall*/
-            temppp = this.checkForWallsThenProposePos(neighboursWithGarrisonMarker);
-            if(temppp!=false)
-            {
-                this.proposedPos = temppp;
-                this.shoutOut('move off base to garrison');
-                this.pushUpWarrior(this.proposedPos);
-                return this.proposedPos;
-            }
-            /*so if we still have not moved, just check any direction for no walls */
-            temppp = this.checkForWallsThenProposePos(neighbours);
-            if(temppp!=false)
-            {
-                this.proposedPos = temppp;
-                this.shoutOut('move off base');
-                this.pushUpWarrior(this.proposedPos);
-                return this.proposedPos;
-            }
-            /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
-            this.shoutOut('stuck on base');
-            this.pushUpWarrior(this.proposedPos);
-            return this.proposedPos;
-        }
-        /*if not stepOff */
-        /*20251110 if we have been told to push up then move along the strength line one space if possible, else move along the warning line*/
-        if(this.pushUp==true)
-        {
-            this.pushUp=false;
-            this.shoutOut('comply with push up');
-            let neighboursWithStrengthMarker = this.refineAdjacentStrengthMarker(neighbours);
-            let neighboursWithStrengthMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithStrengthMarker);
-            /* see if this position would actually be moving away from teh base- based on the explored number */
-            for(let i = 0 ; i < neighboursWithStrengthMarkerByHighestExploredNumber.length; i ++)
-            {
-                if(this.map.getExploredNumber(neighboursWithStrengthMarkerByHighestExploredNumber[0])>this.map.getExploredNumber({tx:this.tx,ty:this.ty}) )
-                {
-                    /* if so go there*/
-                    this.proposedPos = neighboursWithStrengthMarkerByHighestExploredNumber[0];
-                    this.pushUpWarrior(this.proposedPos);
-                    return this.proposedPos;
-                }
-            }
-            /* if none of the adjacent strength positions were of a higher explored number then try the warning positions*/
+            /*when the warrior steps off the base, it must decide which direction. it should go to the tile with highest warning level so long as that tile does not have a strength level that matches or exceeds that warning level*/
+            /*get the 4 neighbours*/ 
+            let neighbours = this.getAdjacent();
+            /*sort them by highest warning level*/
             let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
             let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
-            
-            this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
-            this.pushUpWarrior(this.proposedPos);
-            return this.proposedPos;
 
-        }
-        else
-        {
-            /*sort the neighbours by warning trail with highest explored number. */
-            let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
-            let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
-            /*if there is a neighbour with a warning marker */
-            if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
-            {    
+            /*of those */
+            let neighboursWithWarningMarkerByHighestExploredNumberMinusHighStrengthMarkers = this.refineWarningTilesByStrengthMarker(neighboursWithWarningMarkerByHighestExploredNumber);
+
+            /*now try to go to the priority, but these might be empty arrays.
+            the priority is to go to a tile with a high warning marker value, which has not been met by the strength value already*/
+            if(neighboursWithWarningMarkerByHighestExploredNumberMinusHighStrengthMarkers.length>0)
+            {
+                this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumberMinusHighStrengthMarkers[0];
+                this.shoutOut('move off base - priority = highest warning');
+                return this.proposedPos;
+            }
+            /*if all the tiles with warning markers have all had this warning marker value met by the strength value, then just go to the highest warning value*/
+            else if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
+            {
+                this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                this.shoutOut('move off base - priority = highest remaining warning');
+                return this.proposedPos;
+            }
+            /*if there are no tiles with a warning value, pick a tile to move to that is not a wall*/
+            else 
+            {
                 
-                /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
-                let tempWarning = this.map.getWarningMarker(neighboursWithWarningMarkerByHighestExploredNumber[0]);
-                /*if the group's reported strength is greater than the warning value*/
-                if(this.getReportedStrength() >= (tempWarning * this.cautiousness) &&false)
-                {           
-                    this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
-                    this.shoutOut('we are strong enough');
-                    this.waitingForReinforcements=false;
+                let temppp = this.checkForWallsThenProposePos(neighbours);
+                if(temppp!=false)
+                {
+                    this.proposedPos = temppp;
+                    this.shoutOut('move off base');
+                    return this.proposedPos;
+                }
+                /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
+                this.shoutOut('stuck on base');
+                return this.proposedPos;
+            }
+        }
+        /*20260309 i want to rework all this */
+        if(false)
+        {
+            /*if we are still on the creature base - this should only happen immediately after being born*/
+            if(this.stepOff)
+            {
+                /* turn the neighbours into an array of only the neighbours with a warning value, and sort it in order of lowest (warning value - strength value) that is not negative */
+                let neighboursWithLowestWarningValue= this.getStepOffPos(neighbours);
+                /* go through that array and set that as the proposed pos if there is no wall*/
+                let temppp = this.checkForWallsThenProposePos(neighboursWithLowestWarningValue);
+                if(temppp!=false)
+                {
+                    this.proposedPos = temppp;                
+                    this.shoutOut('move off base to lowest warning marker');
                     this.pushUpWarrior(this.proposedPos);
                     return this.proposedPos;
                 }
-                /*else if the group is too weak, we either move forwards just to get off the garrison or we stay still */
-                else
+
+                /*so if we still have not moved, just check any direction for no walls */
+                temppp = this.checkForWallsThenProposePos(neighbours);
+                if(temppp!=false)
                 {
-                    /* if the warrior is on the garrison then it needs to move forwards */
-                    if(this.map.getGarrisonMarker({tx:this.tx,ty:this.ty})>-1)
+                    this.proposedPos = temppp;
+                    this.shoutOut('move off base');
+                    this.pushUpWarrior(this.proposedPos);
+                    return this.proposedPos;
+                }
+                /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
+                this.shoutOut('stuck on base');
+                this.pushUpWarrior(this.proposedPos);
+                return this.proposedPos;
+            }
+            /*if not stepOff */
+            /*20251110 if we have been told to push up then move along the strength line one space if possible, else move along the warning line*/
+            if(this.pushUp==true)
+            {
+                this.pushUp=false;
+                this.shoutOut('comply with push up');
+                let neighboursWithStrengthMarker = this.refineAdjacentStrengthMarker(neighbours);
+                let neighboursWithStrengthMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithStrengthMarker);
+                /* see if this position would actually be moving away from teh base- based on the explored number */
+                for(let i = 0 ; i < neighboursWithStrengthMarkerByHighestExploredNumber.length; i ++)
+                {
+                    if(this.map.getExploredNumber(neighboursWithStrengthMarkerByHighestExploredNumber[0])>this.map.getExploredNumber({tx:this.tx,ty:this.ty}) )
                     {
-                        this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
-                        this.shoutOut('move one away from the base');
+                        /* if so go there*/
+                        this.proposedPos = neighboursWithStrengthMarkerByHighestExploredNumber[0];
                         this.pushUpWarrior(this.proposedPos);
                         return this.proposedPos;
                     }
-                    this.shoutOut('wait for reinforcements');
-                    this.remainStationary=true;
-                    this.waitingForReinforcements=true;
-                    this.pushUpWarrior(this.proposedPos);
-                    return this.proposedPos;
                 }
-            }    
+                /* if none of the adjacent strength positions were of a higher explored number then try the warning positions*/
+                let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+                let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+                
+                this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                this.pushUpWarrior(this.proposedPos);
+                return this.proposedPos;
+
+            }
             else
             {
-                /* there is no neighbour with a warning marker*/
-                /*try to move off the garrison if possible. move away from the base*/
-                /* if we are on the garrison..*/
-                if(this.map.getGarrisonMarker({tx:this.tx,ty:this.ty})>-1)
-                {
-                    /* get the neighbours that do not have a base*/
-                    let neighboursWithNoBase = this.refineAdjacentNoBase(neighbours);
-                    /* move to one of them*/
-                    if(neighboursWithNoBase.length>0)
-                    {
-                        this.proposedPos = neighboursWithNoBase[0];
-                        this.shoutOut('move one away from the base');
+                /*sort the neighbours by warning trail with highest explored number. */
+                let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+                let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+                /*if there is a neighbour with a warning marker */
+                if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
+                {    
+                    
+                    /* for the highest explored number warning trail, see if our group strength exceeds the warning value*/
+                    let tempWarning = this.map.getWarningMarker(neighboursWithWarningMarkerByHighestExploredNumber[0]);
+                    /*if the group's reported strength is greater than the warning value*/
+                    if(this.getReportedStrength() >= (tempWarning * this.cautiousness) &&false)
+                    {           
+                        this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                        this.shoutOut('we are strong enough');
+                        this.waitingForReinforcements=false;
                         this.pushUpWarrior(this.proposedPos);
                         return this.proposedPos;
                     }
+                    /*else if the group is too weak, we either move forwards just to get off the garrison or we stay still */
+                    else
+                    {
+                        /* if the warrior is on the garrison then it needs to move forwards */
+                        if(this.map.getGarrisonMarker({tx:this.tx,ty:this.ty})>-1)
+                        {
+                            this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                            this.shoutOut('move one away from the base');
+                            this.pushUpWarrior(this.proposedPos);
+                            return this.proposedPos;
+                        }
+                        this.shoutOut('wait for reinforcements');
+                        this.remainStationary=true;
+                        this.waitingForReinforcements=true;
+                        this.pushUpWarrior(this.proposedPos);
+                        return this.proposedPos;
+                    }
+                }    
+                else
+                {
+                    /* there is no neighbour with a warning marker*/
+                    /*try to move off the garrison if possible. move away from the base*/
+                    /* if we are on the garrison..*/
+                    if(this.map.getGarrisonMarker({tx:this.tx,ty:this.ty})>-1)
+                    {
+                        /* get the neighbours that do not have a base*/
+                        let neighboursWithNoBase = this.refineAdjacentNoBase(neighbours);
+                        /* move to one of them*/
+                        if(neighboursWithNoBase.length>0)
+                        {
+                            this.proposedPos = neighboursWithNoBase[0];
+                            this.shoutOut('move one away from the base');
+                            this.pushUpWarrior(this.proposedPos);
+                            return this.proposedPos;
+                        }
+                    }
                 }
             }
+            if(this.proposedPos==undefined)
+            {
+                this.remainStationary=true;
+            }
+            this.pushUpWarrior(this.proposedPos);
+            return this.proposedPos;
         }
-        if(this.proposedPos==undefined)
-        {
-            this.remainStationary=true;
-        }
-        this.pushUpWarrior(this.proposedPos);
-        return this.proposedPos;
     }
     /*20251105 before we return the proposed pos in pathfinding for the warrior, see if there is a warrior in that position that is waiting for reinforcements, if so we want to push up that warrior and all others in this group. */
     pushUpWarrior(proposedPos)
@@ -955,6 +999,30 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.map.getWarningMarker(a[i])==-1)
             {
                 //so we are removing the neighbours that do not have a warning marker
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /*20260309 for when the warrior steps off the base, i will have an array of tiles sorted in order of highest warning marker, i want to check if the strength marker is more than or equal to the warning marker, if so then don't prioritise that tile.*/
+    refineWarningTilesByStrengthMarker(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+
+        /*go through the array in reverse order, if the strength is more than the warning marker remove that tile*/
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getStrengthMarker(a[i])>=this.map.getWarningMarker(a[i]))
+            {
+                //so we are removing the neighbours that have a strength marker that matches or exceeds the warning marker
                 a.splice(i,1);
             }
         }
@@ -1607,12 +1675,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /*20251030 the stepOff bool is just to handle the initial movement off the creature base*/
                 if(this.stepOff==true)
                 {
-                    /*set the tile we just moved to as a garrison tile */
+
+                    /*if the warrior is able to move off the base this will be set to false, we must now be adjacent to the base.  */
+                    /*if the warrior could not move off the base in pathfinding then this code will no be reached, stepOff will only be set to false when the warrior moves. */
                     this.stepOff=false;
-                    this.map.setGarrisonMarker(v,1);
+                    this.shoutOut('step off');
+                    /*now that we have stepped off, we can for one time only update the strength */
+                    /*check that there is a warning marker in our space */
+                    if(this.map.getWarningMarker(v)>-1)
+                    {
+                        /*if so add our strength to the tile, and then this warrior will record that total strength */
+                        /*example strengthValue should be 1, the map strength should default to -1, add them to get 0, the warrior now updates its strength to be 0, it will spread that everywhere it goes if this value is higher - do that outside of this if statement because it will try to spread the value always */
+                        this.strengthValue += this.map.getStrengthMarker(v);
+                    }
+                }
+                /*everywhere the warrior goes, it should try to update the strength marker to match its strength*/
+                if(this.map.getStrengthMarker(v)<this.strengthValue)
+                {
+                    /*this function sets the strength as the value of the 2nd argument */
+                    this.map.setStrengthMarker(v,this.strengthValue);
                 }
                 
-                this.map.setStrengthMarker(v,this.getReportedStrength());
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
             //this.map.clearContested(v);
