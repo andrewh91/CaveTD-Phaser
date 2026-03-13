@@ -1155,3 +1155,48 @@ so far i only have the step off movement, after that it stays still, next i need
 todo
 resume implementing the 20260303 notes. 
 delete the garrison stuff, the push up stuff, get rid of warrior groups and reported strength
+
+20260313
+so i should assign the waiting point in the step off if statement since this only needs to happen once per warrior. the number should be at least 2 - to give room around the base, should be high for the first warrior and low for the last warrior. so we should see how high the warning is as that determines how many warriors are needed. 
+if there are 2 warning marker paths that lead back to the base, they could both end on the same tile adjacent to the base. would these numbers combined to make a higher number? they should do or else the strength marker would exceed the warning before the correct amount of warriors for both threats have been produced... but combining the warnings would result in the warriors waiting further away from the base than they need to, and might even set a waiting point that is further away than the threat
+
+find out if the warning markers combine to make a higher warning marker, i think that would be best, and i think i need to reevaluate the warningpoint every update. if there are 2 threats in the same direction, then what will happen is the base will produce warriors until it has enough for both threats, once the threat level is met they should decide to charge, if the warning path then splits into 2 different directions, then the correct number of warriors should head down each path...
+
+i think i've changed my mind. first of all the warriors should target a minimum of 5 explored number away from the base. once they reach that target they just wait, first come first served. then next warrior will want to wait at the target tile but it will be occupied. so it will just move up the warning path in a specific way. 
+
+the warrior should want to wait at the tile with the explored number equal to the the target , this means each new warrior will overtake all existing warriors which will update the strength of all those tiles to the latest strength number. it would be nice to have them bunch up, if allowed by terrain. so just check the neighbours of the warning path in a specific order, check if there is a warrior there, if so continue, if not wait on that tile
+
+if the explored number is less than the target try to move towards the target, along the warning trail, if your proposedPos already has a warrior on it, set queue bool to true
+    else if the explored number is more than or equal to the target
+        if current pos is on warning trail
+            if queue bool == true
+                list adjacent tiles that are not warning trails, and not a wall.
+                for each tile in the list
+                    check for a warrior 
+                        if there is no warrior in a tile, move there
+                    else if there are warriors in all listed tiles 
+                        try to move up the warning trail, 
+                            if your proposedPos already has a warrior on it, 
+                                set queue bool to true
+                            else 
+                                set queue bool to false
+            else if queue bool == false
+                then we can wait here
+        else if current pos is not a warning trail, 
+            check the warning trail tile for a warrior 
+            if there is no warrior
+                move there
+            else if there is a warrior 
+                wait
+
+
+when a worker reports on a bloodstain, it could record a bloodstain in 2 ways. 
+a)it could set the warning trail equal to the bloodstain value
+b) it could increment the warning trail by the bloodstain value
+
+i've checked the code and currently the warning trail is using option a) this means, if there were 2 blood stains, in the same direction and 2 workers reported on them, the warning trail leading back to the base, would only report on the higher value one. so the 2nd bloodstain would sort of go unnoticed, until the higher bloodstain is dealt with - that means the warning markers are exceeded by the strength of the warriors that pursued the threat. once that happens workers can move over that 1st resolved warning trail, until they get to the 2nd warning trail that is still unresolved, once they see this warning trail that does not have any strength markers on it, they should report back - but since the warning trail is still of less value than the 1st warning trail, they warning trail would not be updated. 
+therefore when the strength exceeds the warning, and workers can move on those tiles again, they should reset those values. that means if the worker finds a warning trail that is not exceeded by the strength, then it should report back- finally completing the warning trail for that 2nd bloodstain
+
+so implement this above pseudo code. 
+i think i have done that now, but have no time to test it, 
+test it next time 

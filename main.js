@@ -689,6 +689,15 @@ class Game extends Phaser.Scene
     {
         return creatures[index];
     }
+    getCreatureTypeOnTile(v)
+    {
+        tempi = mapData.getCreatureIndex(v);
+        if(tempi=-1)
+        {
+            return -1;
+        }
+        return this.getCreature(i).type;
+    }
     /* 20251107 warriors will form groups, this is mainly a way for them to know the combined strength of the group. i'm using maps instead of arrays since i will want to delete the items in the array when all the creatures die, and then my groupId that i use to access the array would not work */
     getWarriorGroupStrength(key)
     {

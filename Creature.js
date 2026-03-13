@@ -140,6 +140,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         /* 20251117 this is the way that i detect if a creature is stationary and intends to be stationary, so if surrounded by walls it's pathfinding will return its own position and this will be set to true, or if the warrior is waiting this will be set to true*/
         this.remainStationary=false;
         this.remainStationary2=false;
+        this.waitingPoint = undefined;
+        this.queue = false;
     }
     resetPreferredDirection()
     {
@@ -705,7 +707,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.remainStationary2=true;
             return this.proposedPos;
         }        
-        /*the setp off flag will be set to true initially, when the warrior is born. it will be set to false when it moves off the base in the update function, it should then remain false.*/
+        /*the step off flag will be set to true initially, when the warrior is born. it will be set to false when it moves off the base in the update function, it should then remain false.*/
         if(this.stepOff)
         {
             /*when the warrior steps off the base, it must decide which direction. it should go to the tile with highest warning level so long as that tile does not have a strength level that matches or exceeds that warning level*/
@@ -718,20 +720,22 @@ export default class Creature extends Phaser.GameObjects.Sprite
             /*of those */
             let neighboursWithWarningMarkerByHighestExploredNumberMinusHighStrengthMarkers = this.refineWarningTilesByStrengthMarker(neighboursWithWarningMarkerByHighestExploredNumber);
 
+            let returnPos;
+            let shoutOut;
             /*now try to go to the priority, but these might be empty arrays.
             the priority is to go to a tile with a high warning marker value, which has not been met by the strength value already*/
             if(neighboursWithWarningMarkerByHighestExploredNumberMinusHighStrengthMarkers.length>0)
             {
                 this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumberMinusHighStrengthMarkers[0];
-                this.shoutOut('move off base - priority = highest warning');
-                return this.proposedPos;
+                shoutOut=('move off base - priority = highest warning');
+                returnPos = this.proposedPos;
             }
             /*if all the tiles with warning markers have all had this warning marker value met by the strength value, then just go to the highest warning value*/
             else if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
             {
                 this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
-                this.shoutOut('move off base - priority = highest remaining warning');
-                return this.proposedPos;
+                shoutOut=('move off base - priority = highest remaining warning');
+                returnpos= this.proposedPos;
             }
             /*if there are no tiles with a warning value, pick a tile to move to that is not a wall*/
             else 
@@ -741,13 +745,142 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 if(temppp!=false)
                 {
                     this.proposedPos = temppp;
-                    this.shoutOut('move off base');
-                    return this.proposedPos;
+                    shoutOut=('move off base');
+                    returnPos= this.proposedPos;
                 }
                 /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
-                this.shoutOut('stuck on base');
-                return this.proposedPos;
+                shoutOut=('stuck on base');
+                returnPos = this.proposedPos;
             }
+
+            {
+                this.shoutOut(shoutOut);
+                return returnPos;
+            }
+        }
+        /*step off will only be true until the creature moves for the first time, so most of the time it will be false*/
+        if(this.stepOff==false)
+        {
+            /*if the warning trail is of higher value than the strength trail, then the warriors need to assemble*/
+            if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})>this.map.getStrengthMarker({tx:this.tx,ty:this.ty}))
+            {
+                /*warriors should try to assemble at least 5 tiles away from the base*/
+                /*if the explored number is less than 5 then move along the warning trail */
+                if(this.map.getExploredNumber({tx:this.tx,ty:this.ty}<5))
+                {
+                    /*get the neighbour that is on the warning trail, that has the highest explored number*/
+                    let neighbours = this.getAdjacent();
+                    let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+                    let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+                    if(neighboursWithWarningMarkerByHighestExploredNumber.length==0)
+                    {
+                        this.shoutOut('there is no neighbour with warning marker')
+                        return this.proposedPos;
+                    }
+                    this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                    this.shoutOut('move to assembly');
+                    let tempCreatureTypeOnProposedPos = this.scene.getCreatureTypeOnTile(this.proposedPos);
+                    /*find out if there is a warrior in our proposedPos, if so set queue flag to true */
+                    if(tempCreatureTypeOnProposedPos == WARRIOR)
+                    {
+                        this.queue = true;
+                    }
+                    else
+                    {
+                        this.queue = false;
+                    }
+                    return this.proposedPos;
+                }
+                /*if the explored number is 5 or more then we need to wait, but here is some logic to wait in an orderly fashion*/
+                else
+                {
+                    /*if we are on the warning trail*/
+                    if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})>-1)
+                    {
+                        /*if there is a warrior in our way */
+                        if(this.queue==true)
+                        {
+                            /*check the adjacent tiles*/
+                            let neighbours= this.getAdjacent();
+                            /*find an adajcent tile with no warning marker */
+                            let neighboursWithNoWarningMarker = this.refineAdjacentNoWarningMarker(neighbours);
+                            /*make sure it has no walls*/
+                            let neighboursWithNoWarningMarkerAndNoWalls = this.refineAdjacentNoWalls(neighboursWithNoWarningMarker);
+                            for(let i = 0 ; i < neighboursWithNoWarningMarkerAndNoWalls.length;i++)
+                            {
+                                let tempCreatureTypeOnProposedPos = this.scene.getCreatureTypeOnTile(this.neighboursWithNoWarningMarkerAndNoWalls[i]);
+                                /*only try to move to a tile if there is no warrior */
+                                if(tempCreatureTypeOnProposedPos != WARRIOR)
+                                {
+                                    this.proposedPos = neighboursWithNoWarningMarkerAndNoWalls[i];
+                                    this.shoutOut('bunch up by the warning trail');
+                                    /*record the pos of the warning trail - we need this for when we move back to the warning trail, we could just check for an adjacent trail but that might be a separate trail */
+                                    this.warningTrailMemoryPos = {tx:this.tx,ty:this.ty};
+                                    return this.proposedPos;
+                                }
+                            }
+                            /*if we found a tile adjacent to the warnning trail with no warriors on it and no walls, then we would have set that as the proposedPos, if we reach this code then we must not have found such a tile */
+                            /*so we should try to move up the warning trail */
+                            /*get the neighbour that is on the warning trail, that has the highest explored number*/
+                            neighbours = this.getAdjacent();
+                            let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+                            let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+                            if(neighboursWithWarningMarkerByHighestExploredNumber.length==0)
+                            {
+                                this.shoutOut('there is no neighbour with warning marker')
+                                return this.proposedPos;
+                            }
+                            this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
+                            let tempCreatureTypeOnProposedPos = this.scene.getCreatureTypeOnTile(this.proposedPos);
+                            /*find out if there is a warrior in our proposedPos, if so set queue flag to true */
+                            if(tempCreatureTypeOnProposedPos == WARRIOR)
+                            {
+                                this.queue = true;
+                            }
+                            else
+                            {
+                                this.queue = false;
+                            }
+                            this.shoutOut('move up warning marker');
+                            return this.proposedPos;
+                        }
+                        /*else if queue == false */
+                        else
+                        {
+                            this.shoutOut('wait for reinforcements');
+                            return this.proposedPos;
+                        }
+                    }
+                    /*else if current pos is not on a warning trail  */
+                    else
+                    {
+                        /*check the warning trail tile for a warrior */
+                        let tempCreatureTypeOnProposedPos = this.scene.getCreatureTypeOnTile(this.warningTrailMemoryPos);
+                        /*find out if there is a warrior in our proposedPos*/
+                        if(tempCreatureTypeOnProposedPos == WARRIOR)
+                        {
+                            this.shoutOut('wait for reinforcements');
+                            return this.proposedPos;
+                        }
+                        else
+                        {
+                            this.proposedPos = this.warningTrailMemoryPos;
+                            this.warningTrailMemoryPos = undefined;
+                            this.shoutOut('move back to warning trail');
+                            return this.proposedPos;
+                        }
+                    }
+                }
+                /*we need to continually evaluate the waiting point, as sometimes there might be 2 threats that the base is creating warriors for, and they might both be in the same direction */
+                /*waiting point should be 2 (to allow room around the base) + the warningMarker - the strength marker. this will result in the first warriors waiting far from the base and each subsequent warrior waiting adjacent to that but nearer the base*/
+                this.waitingPoint = 2 + (this.map.getWarningMarker(returnPos)) - (this.map.getStrengthMarker(returnPos));
+            }
+            /*once the strength marker equals or exceeds the warning marker then the warriors should charge along the warning path*/
+            else
+            {
+                this.shoutOut('Charge!');
+            }
+            
         }
         /*20260309 i want to rework all this */
         if(false)
@@ -934,11 +1067,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             if(this.map.isWall(array[i])==false&&this.map.isEdge(array[i])==false)
             {                
-                return array[i];;
+                return array[i];
             }
         }
         return false;
-    }
+    }    
+
     //this method is used in the explorer7 pathfinding, we don't just want to get the adjacent, we want to return them in order of the creature's preference
     getAdjacent()
     {
@@ -999,6 +1133,52 @@ export default class Creature extends Phaser.GameObjects.Sprite
             if(this.map.getWarningMarker(a[i])==-1)
             {
                 //so we are removing the neighbours that do not have a warning marker
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /*20260313return an array of positions that are not a wall or the edge of the screen */
+    refineAdjacentNoWalls(neighbours)
+    {        
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            /*if the tile has a wall or the edge of the map then remove it */
+            if(this.map.isWall(array[i])==true||this.map.isEdge(array[i])==true)
+            {
+                //so we are removing the neighbours that have a wall or edge
+                a.splice(i,1);
+            }
+        }
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
+    /*20260313 refine neighbours by tiles that DO NOT have warning markers*/
+    refineAdjacentNoWarningMarker(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that have no warning marker, so go through my adjacents and eliminate any that do have a warning marker 
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getWarningMarker(a[i])>-1)
+            {
+                //so we are removing the neighbours that do have a warning marker
                 a.splice(i,1);
             }
         }
@@ -1689,12 +1869,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         this.strengthValue += this.map.getStrengthMarker(v);
                     }
                 }
+
                 /*everywhere the warrior goes, it should try to update the strength marker to match its strength*/
                 if(this.map.getStrengthMarker(v)<this.strengthValue)
                 {
                     /*this function sets the strength as the value of the 2nd argument */
                     this.map.setStrengthMarker(v,this.strengthValue);
                 }
+
                 
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
