@@ -639,18 +639,23 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
         this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});
-        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});
-        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WARRIOR});
+        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});77
         priorityArray.loopThroughAll();
     }
     setUpDeadCreatures()
     {
         deadCreatures = [];
     }
-    //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here
-    updateCreaturePos(id,v)
+    //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here. 
+    updateCreaturePos(id,creatureAPos)
     {
-        creatures[id].moveCreature(v);        
+        creatures[id].moveCreature(creatureAPos);             
+    }
+    //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here. the position that they were in before they moved will be set as the returnPosition, that way they can try to return there in the future
+    updateStationaryCreaturePos(id,creatureAPos,returnPosition)
+    {
+        creatures[id].moveCreature(creatureAPos);        
+        creatures[id].setReturnPosition(returnPosition);        
     }
     //when you create a new resource, either during set up or when the creature drops a resource, call this to set a marker equal to the health of the resource. also if the resource is dropped on an existing resource, we should combine the health of the resources and set a marker equal to the combined health
     setResourceMarkerOnMap(v,i)
@@ -691,7 +696,7 @@ class Game extends Phaser.Scene
     }
     getCreatureTypeOnTile(v)
     {
-        tempi = mapData.getCreatureIndex(v);
+        let tempi = mapData.getCreatureIndex(v);
         if(tempi=-1)
         {
             return -1;

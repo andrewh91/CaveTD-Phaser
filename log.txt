@@ -1200,3 +1200,17 @@ therefore when the strength exceeds the warning, and workers can move on those t
 so implement this above pseudo code. 
 i think i have done that now, but have no time to test it, 
 test it next time 
+
+20260316
+did a tiny bit of testing, fix a few errors, warriors don't swap position, which is something i need them to do 
+i thought i already did this, but when a creature is stationary i need to make it so that it will swap with any creature if prompted, then try to move back to where it was 
+
+20260415
+trying to get stationary creatures to move back to their position if they were forced to move, i'm calling it the returnPosition - that is the position that it is trying to return to. i'm trying to think; in what circumstances should the creature give up on the returnPosition? i've made it so that it will resolve regular pathfinding first, then if it did not move it will check if the return position is adjacent, if so move there. 
+i had to change the warrior pathfinding to set this.remainStationary=true; for every time pathfinding resulted in not moving, the warriors should be able to swap now and workers should be able to get past them etc 
+discovered an error, the creature base is blocked by walls on 3 sides, i killed a worker and another worker informed the base, 3 warriors came out, i think the worker got in the way of the 3rd warrior, the warrior said stuck on base,then it said exploring, step off and it somehow went up and left diagonally, which should never happen, first of all it went through a wall second it moved 2 tiles. when the 3rd creature runs the step off logic, it gets the neighbours around the creature base, it refines the neighbours to include only those with a warning marker, this omit all neighbours, for the first 2 warriors it left the east direction, but since they are charging they must delete the warning? so the neighbour array is empty, somehow the neighbours array includes the position diagonally left of the creature base... creature base is 13,14, there is a problem with explorerDirection, it is equal to 1,1, turned out it was because i forgot to paste in the code that translates the diagonal explore directions, should work now 
+
+this works better now the worker seems to be able to get past them. 
+however the worker just goes back and forth on the base maybe because it does not want to touch the warning trail? it says forget warning, try new direction, new direction. 
+in fairness it is in a dead end, and i should not design the maps to have the creature bases as dead ends. 
+also the warriors have not been programmed to do anything once they get to the blood stain 

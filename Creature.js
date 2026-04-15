@@ -142,6 +142,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.remainStationary2=false;
         this.waitingPoint = undefined;
         this.queue = false;
+        /*20260415 a stationary creature should be moved out of the way by other creatures trying to get past, but it should record that position so that it can return there. */
+        this.returnPosition = undefined;
     }
     resetPreferredDirection()
     {
@@ -166,7 +168,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         // i want the explorerDirectionOriginal to be one of 8 possible values, so it could be {1,1}, but i don't want the creatures to actually move diagonally, so i'm going to use these bools to turn either the x or y to a 0 then toggle the bool, this way the ones that want to go diagonally north east will just switch their preference between north and east every update
         this.explorerDirectionBoolToggle=false;
         //this will be true if the random direction ended up being diagonal
-        this.explorerDirectionDiagonal=tempx*tempy !==0;
+        this.explorerDirectionDiagonal=tempx*tempy!==0;
     }
     updatePathfinding(delta)
     {
@@ -684,6 +686,27 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 }
             }
         }
+        /* this is the end of the pathfinding, if we have not returned yet there must be no good place to move. now i will attempt to return to the returnPosition. the idea of return position is that the creature was statinary and swapped with another creature to let it through, now the first creature wants to return to that previous position, in theory it should only have moved one space away, but let's just make sure that is the case*/
+        //if there is a return position
+        if(this.returnPosition!=undefined)
+        {
+            //find out how far away the return position is from the current position
+            let tempx = this.tx - this.returnPosition.tx;
+            let tempy = this.ty - this.returnPosition.ty;
+            let tempDist = Math.abs(tempx)+ Math.abs(tempy);
+            //if it is exactly one tile away then try to go there. 
+            if(tempDist==1)
+            {
+                if(this.map.isWall(this.returnPosition)==false&&this.map.isEdge(this.returnPosition)==false)
+                {
+                    this.proposedPos = this.returnPosition;
+                    this.shoutOut('pathfind to return position');
+                    return this.proposedPos;
+                }
+            }
+        }
+
+
         //if we still have not returned return current position, we must have been surrounded by walls or something
         this.proposedPos = {tx:this.tx,ty:this.ty};
         this.remainStationary=true;
@@ -707,6 +730,16 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.remainStationary2=true;
             return this.proposedPos;
         }        
+
+         //if the creature is going diagonal
+        if(this.explorerDirectionDiagonal)
+        {
+            //make either the x or y value a zero, depending on if the toggle bool is true or false, then toggle the toggle bool
+            this.explorerDirection = this.explorerDirectionBoolToggle==true?{tx:0,ty:this.explorerDirectionOriginal.ty}:{tx:this.explorerDirectionOriginal.tx,ty:0};
+            this.explorerDirectionAlt = this.explorerDirectionBoolToggle==true?{tx:this.explorerDirectionOriginal.tx,ty:0}:{tx:0,ty:this.explorerDirectionOriginal.ty};
+            this.explorerDirectionBoolToggle= !this.explorerDirectionBoolToggle;
+        }
+        
         /*the step off flag will be set to true initially, when the warrior is born. it will be set to false when it moves off the base in the update function, it should then remain false.*/
         if(this.stepOff)
         {
@@ -735,7 +768,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
                 shoutOut=('move off base - priority = highest remaining warning');
-                returnpos= this.proposedPos;
+                returnPos= this.proposedPos;
             }
             /*if there are no tiles with a warning value, pick a tile to move to that is not a wall*/
             else 
@@ -750,6 +783,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 }
                 /*if we still have not been able to move we must be surrounded by walls, returning an undefined proposed pos will just result in no movement*/
                 shoutOut=('stuck on base');
+                
+                this.remainStationary=true;
                 returnPos = this.proposedPos;
             }
 
@@ -766,7 +801,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 /*warriors should try to assemble at least 5 tiles away from the base*/
                 /*if the explored number is less than 5 then move along the warning trail */
-                if(this.map.getExploredNumber({tx:this.tx,ty:this.ty}<5))
+                if(this.map.getExploredNumber({tx:this.tx,ty:this.ty})<5)
                 {
                     /*get the neighbour that is on the warning trail, that has the highest explored number*/
                     let neighbours = this.getAdjacent();
@@ -774,7 +809,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
                     if(neighboursWithWarningMarkerByHighestExploredNumber.length==0)
                     {
-                        this.shoutOut('there is no neighbour with warning marker')
+                        this.shoutOut('there is no neighbour with warning marker');
+                        this.remainStationary=true;
                         return this.proposedPos;
                     }
                     this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
@@ -827,7 +863,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                             let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
                             if(neighboursWithWarningMarkerByHighestExploredNumber.length==0)
                             {
-                                this.shoutOut('there is no neighbour with warning marker')
+                                this.shoutOut('there is no neighbour with warning marker');
+                                this.remainStationary=true;
                                 return this.proposedPos;
                             }
                             this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0];
@@ -848,6 +885,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         else
                         {
                             this.shoutOut('wait for reinforcements');
+                            this.remainStationary=true;
                             return this.proposedPos;
                         }
                     }
@@ -860,6 +898,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         if(tempCreatureTypeOnProposedPos == WARRIOR)
                         {
                             this.shoutOut('wait for reinforcements');
+                            this.remainStationary=true;
                             return this.proposedPos;
                         }
                         else
@@ -871,14 +910,25 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         }
                     }
                 }
-                /*we need to continually evaluate the waiting point, as sometimes there might be 2 threats that the base is creating warriors for, and they might both be in the same direction */
-                /*waiting point should be 2 (to allow room around the base) + the warningMarker - the strength marker. this will result in the first warriors waiting far from the base and each subsequent warrior waiting adjacent to that but nearer the base*/
-                this.waitingPoint = 2 + (this.map.getWarningMarker(returnPos)) - (this.map.getStrengthMarker(returnPos));
             }
             /*once the strength marker equals or exceeds the warning marker then the warriors should charge along the warning path*/
             else
             {
-                this.shoutOut('Charge!');
+                let neighbours = this.getAdjacent();
+                let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
+                let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
+                if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
+                {
+                    this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0]; 
+                    this.shoutOut('Charge!');
+                    return this.proposedPos;
+                }
+                else
+                {
+                    this.shoutOut('tried to charge, no adjacent warning marker ');
+                    this.remainStationary=true;
+                    return this.proposedPos;
+                }
             }
             
         }
@@ -1530,7 +1580,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                         if(this.scene.intendsToRemainStationary(this.proposedPos))
                                         {
                                             let otherCreatureIndex = this.map.getCreatureIndex(this.proposedPos);
-                                            this.swapCreatureWith(this.proposedPos);
+                                            this.swapStationaryCreatureWith(this.proposedPos);
                                             /* so now this creature will occupy the proposedPos, and the other creature should be instructed to try to get back to the proposedPos*/
                                             this.scene.overridePathfinding(otherCreatureIndex,this.proposedPos);
                                         }
@@ -1739,7 +1789,6 @@ export default class Creature extends Phaser.GameObjects.Sprite
 
         /*20251117 set this to false so that we can't swap more than once in an update */
         this.remainStationary=false;
-
         /* 20251022 we call fadeShoutOut on pathfinding and on move or else sometimes it looks like you get the shout out twice*/
         this.fadeShoutOut();
         this.updateMemory(v);
@@ -1895,6 +1944,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //if we have a resource and are next to a creatureBase, add it to that creature base and set carryingresource to false
         //if we return to the creature base we should set dead end to false
         this.checkIfReturnedToBase();
+        
+        /*if we reach the return position we can set it back to undefined*/
+        if(this.returnPosition!=undefined&&v.tx==this.returnPosition.tx&&v.ty==this.returnPosition.ty)
+        {
+            this.returnPosition=undefined;
+        }
     }
 
     //for each adjacent tile, check if there is a creature base there, if so add our carried resource to that base
@@ -2178,12 +2233,29 @@ export default class Creature extends Phaser.GameObjects.Sprite
         let creatureBIndex = this.map.getCreatureIndex(v);
         //save this creature's position
         let creatureAPos = {tx:this.tx,ty:this.ty};
-        //use the moveCreature method to update creatureB's position, we don't have access to that, just let the scene do it 
+        //use the moveCreature method to update creatureB's position, we don't have access to that, just let the scene do it, 
         this.scene.updateCreaturePos(creatureBIndex,creatureAPos);
+        this.moveCreature(this.proposedPos);
+    }
+    swapStationaryCreatureWith(v)
+    {
+        this.shoutOut('swapping pos');
+        //this creature wants to move to the given position but it is occupied by a creature that wants to move to this creature's position, so we can swap them
+        //save the other creature's index
+        let creatureBIndex = this.map.getCreatureIndex(v);
+        //save this creature's position
+        let creatureAPos = {tx:this.tx,ty:this.ty};
+        //use the moveCreature method to update creatureB's position, we don't have access to that, just let the scene do it, also pass in v, the creature we forced to move can then use v as the returnPosition, and it will try to move back their in the future
+        this.scene.updateCreaturePos(creatureBIndex,creatureAPos,v);
         this.moveCreature(this.proposedPos);
     }
     setGoal(v)
     {
         this.goal=v;
+    }
+    /*20260415 this should be used when a creature is forced to swap when it intended to be stationary, this is the pos it was forced to vacate, it should try to return there. */
+    setReturnPosition(v)
+    {
+        this.returnPosition = v;
     }
 }
