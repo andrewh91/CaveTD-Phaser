@@ -499,6 +499,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
                 /*20251022 when we find blood we should also count this as seeing the warning */
                 this.seenWarningBool=true;
+                /*20260929 i need the warning marker to be included on the current tile*/
+                if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})<this.valueOfDiscoveredBloodStain)
+                    {
+                        this.map.setWarningMarker({tx:this.tx,ty:this.ty},this.valueOfDiscoveredBloodStain);
+                        this.shoutOut('set warning trail');
+                    }
             }
         }
 

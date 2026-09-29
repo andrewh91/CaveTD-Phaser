@@ -1214,3 +1214,59 @@ this works better now the worker seems to be able to get past them.
 however the worker just goes back and forth on the base maybe because it does not want to touch the warning trail? it says forget warning, try new direction, new direction. 
 in fairness it is in a dead end, and i should not design the maps to have the creature bases as dead ends. 
 also the warriors have not been programmed to do anything once they get to the blood stain 
+
+20260616
+haven't touched this in 2 months. what needs to be done?
+creatures should not move onto the creature base, if a creature is approaching the creature base it should not see it as an option in its own pathfinding, but also consider if there is a new creature on the base that wants to step off, might it swap position with the other creature - resulting in that creature moving to the creature base?
+actually i don't think i made any logic to prevent creatures entering the creature base, it is a potential problem though, maybe not for the creature base but in general, if there is a creature on a space and it swaps with another creature i think the code assumes both spaces are available to travel to simply because there is already a creature there, and perhaps it might not be available...? 
+what i should be doing next is the bloodstain logic for warriors, i think i previously wrote about how i want them to patrol the bloodstain, maybe consuming it as they go? so basically i think i decided that when the warriors get to the bloodstain they will turn 90 degrees and patrol the outside edge. because the warning trail would have been exceeded by the strenth trail; workers should be able to visit the bloodstain and take blood like a resource, setting it to a minimum of 0 (not -1). i guess i have not worked out the details yet. 
+i need a way to methodically have the warriors patrol the blood while the workers harvest it, the workers are going to need to override their other behaviour because normally when they see blood they just run. maybe the workers should follow the same patrol pattern as the warriors, that way the workers can not run from blood if they see a patrol marker, but this would mean the warriors would need to spiral into the centre of the blood so that the workers follow, and there is potentially going to be a lot of creatures in a smaller and smaller space. 
+so my next todo is to figure out the best way to do these things:
+    warriors patrol the blood 
+    workers harvest all the blood
+    once all the blood has gone the warriors will return to the base, or some assembly point. or maybe just stay where they are? 
+
+20260929
+it has now been 5 months since i touched this! it's hard to get back into. 
+the warriors are not charging right, but maybe i've not done that bit yet? i think this is because they follow the warning mark but the warning mark only takes them to the edge of the blood stain, once at the edge of the blood stain they should begin some new logic, it looks like that is what i was trying to do last time. 
+
+yeah so during the charge they should follow the warning marker, but all the while should be testing to see if there is a blood stain. I want to search only the warrior's current tile rather than the surrounding tiles, just because that is cheaper, however the warning trail stops adjacent to the blood, could i have the warning trail start sooner? done that now. 
+
+so now they will charge on top of the blood. so during a charge i will test if we are on top of blood, if so we have probably reached the end of the warning trail, but maybe not! this could be a different blood stain 
+
+regardless, the warriors will now patrol the blood stain. the idea is that the warriors will explore the bloodstain, it could potentially be a huge blood stain, the enemy they are looking for could be close to it, but they don't know where.
+warriors have set their strength trail on top of the warning trail, does that mean that the workers should not fear the warning trail? or should they wait a bit longer, perhaps until after the warriors return to base? 
+the behaviour looks a bit strange on my map, because the creature base is in a deadend. so the worker only has one place to move, and that place has a warning, so it just goes back and forth, but technically, this is the correct behaviour. i think it is fine for creatures to walk on the creature base. 
+so forget about walking on the base, it is not a problem. 
+
+next i need to have the warrior test for blood, and when they do, i need them to patrol that blood. 
+should the warriors stick together to patrol?
+once the warriors patrol the perimeter, should they spiral inwards? covering all the blood. 
+what will happen with irregular shaped blood stains? 
+should i not allow blood stains to overlap walls?
+multiple blood stains?
+what if they find a blood stain that is a higher level than their strength? 
+
+the warrior will not know the size of the bloodstain, i need a method to explore the blood stain methodically and try to cover all of it. i feel like if it was just one person you would hit the bloodstain, turn 90 degrees in one direction and follow the edge, but it would look a little odd i think for the warriors to act like zoolander, it would look natural to split up. one group goes left another right. if i send twice as many warriors in terms of strength as the warning requires each group would still in theory be capable of handling the perceived threat. 
+
+if there is a higher level blood stain, they could just go around it. but really they should report that to get reinforcements. 
+
+i should be able to use something similar to the wall runner pathfinding. The idea behind that is to set a wall direction that the warrior is considered to be riding. for example if you approach a bloodstain from the south, you will hit it at the 6 o clock position, if you turn left, you will set the wall location as being left - relative to the warrior, so it is on the warriors left. now as the warrior moves, it will always check the 4 available directions in priority order, prioritising the wall location, then straight on, then the 180 degree opposite of the wall location, then back the way it just came. again this is relative to the way it is facing - which means if it just moved west, then it is facing west, then left would be south relative to the warriors' direction. so it will test these directions in priority order, if there is some unvisited blood there it will move there and mark it as bloodstainvisited, with this bloodstainvisited marker being an int equal to the blood stain level - so that if more blood is spilled there the warriors will be able to tell. 
+if a warrior find the priority location already has a bloodstainedvisited level equal to the bloodstain level, perhaps it has patrolled the entire perimeter and ended up where it started. or maybe it has met the other warrior that went the opposite direction and together they have patrolled the perimeter. if so they will simply test the next priorty direction and move inwards. 
+if there are no available directions - they all have a bloodstainvisited equal to the bloodstain value then this could mean several different things- it might have explored a dead end, the other warriors might have surrounded it, or it might have completed exploreing the blood stain.
+to be thorough, the warrior could retrace its steps until it reaches the starting point on the bloodstain to ensure there are no tiles that do not have a bloodstainedvisited value. this would require setting an explored number as they go so they know how to retrace their steps. 
+most blood stains would not really be complex shapes though. also instead of splitting the warriors into 2 groups that go left or right, i could alternate the wall each other warrior sticks to, so the first one goes left the next one goes right, the next one goes left etc and also have each warrior prioritise unvisited blood instead of just following the first warrior. but this means after the first few explore all the early options the following warriors would just stand still, instead i need them to follow their wall if there is no better unvisited option. but then there is a problem with hitting the same 4 tiles in a loop. which will happen if one of the later warriors explores the centre of the stain while the others explore the edge, this warrior would find itself surrounded by visited bloodstains, so it would default to just following its wall, but it does not have a wall, it is in the middle, so it would do a loop of 4 tiles. maybe if we do one loop of 4 tiles then we should just head in one direction and we will hit the true edge of the blood stain eventually, from there we can follow the wall. 
+this would be interesting to test. i could set this up and make some different shaped blood stains to see how it handles it. i think it would be good enough. 
+once the warrior reaches its starting place, it could wait there for the others or it could go home, would probably be best to wait. when all warriors join up they could go home, but what if one never does? because it is killed? they would wait forever
+one idea is that once the warrior reaches the starting point it considers itself to have explored the bloodstain, it will then set off around the outside again, looking for its friends, in the opposite wall direction . 
+so each warrior that reaches the start point should patrol the perimeter in the opposite direction to the direction it previously travelled. if it reaches the start point again without meeting anyone. that means either they are still exploring the centre or they are dead. it could reverse its wall again and patrol the perimeter again. but after a certain number of times doing that it would have to give up and assume the warrior is dead. i could then send reinforcements to do it all again but the blood would already have been visited so what would that achieve? i could have the warriors clear the warning and have the workers clean up the blood? 
+
+maybe the warriors should just clean up the blood as they go? specific shapes could lead the warriors to cut off blood that would have lead to more blood, so it would be wise to only clean blood that has just 2 adjacent blood tiles or less. i think this would be much more simple. the warriors can alternate which wall to follow to get it done faster. 
+some blood might get left over but that is fine, a worker might find it and we will do this all over again. 
+some warriors might end up surrounded by no blood. and will have to make their way back to the starting point. or simply return to the base following the explored numbers. 
+or they could return to the assembly point? 
+this way does not really have a way to determine if all warriors made it back. but if one is killed a worker would find it,  or one of the warriors. 
+if the warriors are attacked, they would be alone and disorganised. perhaps warriors should have warning calls that rally nearby warriors. i think i would need to implement something like that eventually anyway. warriors are going to have to react to gunfire and sounds and figure out where they are being attacked from. they should also have messengers that break engagement and retreat for reinforcements. in fact they should all fall back slightly, send one back to send a message and they all wait in a defensive pose for reinforcements.
+perhaps the creatures can act more cautiously, and avoid splitting up, all travelling as a group. this would make it harder to pick them off. 
+
+so implement the patrol logic where the warriors wall run around the blood deleting any blood that has 2 or fewer adjacent blood stains. when any of the are finished they can return to the base deleting the warning trail and strength trail - allowing workers to resume travelling that direction
