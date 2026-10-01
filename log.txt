@@ -1270,3 +1270,44 @@ if the warriors are attacked, they would be alone and disorganised. perhaps warr
 perhaps the creatures can act more cautiously, and avoid splitting up, all travelling as a group. this would make it harder to pick them off. 
 
 so implement the patrol logic where the warriors wall run around the blood deleting any blood that has 2 or fewer adjacent blood stains. when any of the are finished they can return to the base deleting the warning trail and strength trail - allowing workers to resume travelling that direction
+
+20261001
+if the warriors follow the warning marker up to the blood, but then start deleting the blood the next warrior wont see any blood at the end of the warning trail. to solve this, the warriors could reset the blood stain down to 0, not -1, and the warriors will still be able to detect that there was blood here, but it is now cleaned up. 
+
+but this raises another problem, once that blood is cleaned up it would be set to 0, if blood is spilled adjacent to that some time later, then the warriors that come to clean that up would potentially get distracted by the wrong blood stain. I could have warriors and workers reset any blood stain they find that = 0 down to -1 on the condition that they are returning to base with the all clear - so after finding no enemy, or eliminating all the enemies. 
+or instead of setting the blood stain down to 0, i could set it to -1, but extend the warning trail, so subsequent warriors don't just stop. oh actually they could just follow the strength trail
+
+
+
+
+
+regarding the workers not being able to walk on warnings - if a worker has no option but to walk on a warning, like it is surrounded by them, maybe it would be ok to walk on a warning - so long as that warning is less than the warning we are currently on, or at least the explored number is lower, so we can follow a warning trail to the creature base.  although maybe this is already what happens i can't remember 
+
+
+the workers set explored numbers as they go so they over time will learn the fastest routes back to base, but if that route then gets blocked off, they will still think it is fastest wont they? maybe when a wall is created i should delete the explored numbers adjacent to it. so for example the creature base is in the south, there is a path to a resource that is north, the workers have explored this path. and are going back and forth. if a road block wall is then placed, lets say on explored number 5, we delete the adjacent explored numbers, a creature coming from the base going north would see explored number 3 then an unexplored tile, it would reset that as explored number 4, which is what it used to be. but a worker coming from the north back to the base would have a high explored number, it would see this unexplored tile and set its explored number, maybe 20 or something. this would potentially tell returning workers that this route is not leading back to the base one tile before they would see that for themselves but that would not really be helpful. 
+perhaps I could start a chain reaction. 
+if the worker is on the way back to the base, and it is following established explored tiles, it is looking for any tile with an explored number less than that of the tile it is on, if it can't see an explored tile with a lower number, but it can see an unexplored tile maybe it could set that tiles explored number to the worker's explored number which would be high at this point. maybe under this condition it should then delete the 4 adjacent explored values. 
+... 
+instead it could examine the 4 adjacents, see which one has the lowest explored number and go there, 
+
+if at any point the worker is trying to get back to the base but the explored numbers of the adjacent tiles are not lower than the one they are one, then something must have blocked the path. under these conditions the worker should continue to seek out the lowest explored number but should overwrite it with it's own explored number - even though that would be a higher number. it should do this all the way back to the base, setting higher and higher numbers. any worker coming from the base would be free to set it back down to a lower number. 
+
+
+i think i already did some dead end logic, investigate to see if it is the same as what i just described. no that is different
+
+so if returning to base
+if there is no explored number lower then the current tile, 
+set a flag, carry on trying to return to base but reset all the tiles exlored numbers on the way to the workers current explored number - which will be higher than the exisiting explored number on the tile. 
+i have a case where when the return path is blocked - a corridor, the worker comes back out, it would explore some other way which also leads nowhere it would arrive back to the entrance of the corridor that it already should know is blocked, and it explores it again, this time when it comes out it explores a new direction, but it should not have went back in there - to prevent that i can set the blocked paths extra high, like the explored number plus 999, but it might still go in there because those numbers would still be lower after it wanders around for a bit and goes back to the enterance. so i can set this 999 extra to only happen until i find an unexplored tile, once i find an unexplored tile i can go back to regular numbers, but now i am incrementing explored numbers as i return to the base, when normally higher numbers mean you are further from the base... will this cause problems? i don't think adding 999 to the number really helps, it helps in my example because not much of the map was explored. the real problem is that although i have a tail to stop the creautres returning to where they just where, is they turn around more slowly like doing a little 4 tile loop and ending up where they used to be, that completely foils the tail. 
+
+consider this, there is a shortcut to a resource, it is 10 tiles away from the base, the workers collect this and head back to the base. but then the path is blocked, the worker goes back past the resource and has to explore some other way back to the base, it is setting explored numbers like 13, 14, 15 etc, it eventually finds a way back. the path ended up being 30 long. workers follow this new resource path. they see the explored number is like 30 so lower that to their explored number which would be like 1 or 2, this will keep happening, but eventually the worker will get to some point about mid way and its explored number will actually be higher than the exisiting one- becuase the first worker took a shortcut there. this means that the map will not be updated with the shortest route and the numbers will sort of go the wrong way. for this reason i think keeping the 999 is important, whenever the worker is exploring back to the base it should be setting high numbers that are easy to beat, or else they will not be updated. 
+
+the worker should prioritse unexplored tiles and tile with explored numbers that are 999 less than the current tile, and then just the lowest tile number. 
+
+this was easy to implement, for some reason the worker was getting the explored number of its current tile instead of just using its own current explored number and it was comparing that to the neighbours
+
+todo i think when contested creatures swap, i need to give them a tail?
+
+todo workers following the resource path need to prioritise higher explored numbers, and need to avoid travelling to their own tail, because they exhibit strange behaviour, moving back and forth until the resource trail is depleted. 
+
+todo implement the bloodstain cleaning logic for the warriors

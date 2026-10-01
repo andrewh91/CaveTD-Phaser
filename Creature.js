@@ -108,6 +108,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.exploringWhileCarrying=false;
         //if the explorer hits a dead end it should back track until it find unexplored tiles. 
         this.exploredDeadEnd=false;
+        //when an established path back to the base is blocked this will help the workers to recalculate the explored numbers
+        this.returnPathBlocked=false;
         //this is a variable to hold the pathfinding method function of choice
         this.pathfindingMethod;
         this.setPathfindingMethod(7);
@@ -571,13 +573,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
             //if there are no neighbours with resource markers, that we can go to...
             {
                 //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail - bear in mind that we may have deleted our tail if we just picked up a resource or found a dead body etc
-                let currentExploredNumber = this.map.getExploredNumber({tx:this.tx,ty:this.ty});
+                /**20261001 i should change this to this.exploredNumber */
+                /*let currentExploredNumber = this.map.getExploredNumber({tx:this.tx,ty:this.ty});*/
+                let currentExploredNumber = this.exploredNumber;
+                /*20261001 normally sortAdjacentLowestExploredNumber ignores explored numbers that are -1 aka unexplored tiles. but if exploringWhileCarrying== true we should consider unexplored tiles as well*/
                 let neighboursByLowestExploredNumber=this.sortAdjacentLowestExploredNumber(neighboursReversed);
+                
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                 {
                     if(Helper.vectorEquals(this.memory[0],neighboursByLowestExploredNumber[i])==false)
                     {
-                        if(this.map.isWall(neighboursByLowestExploredNumber[i])==false&&this.map.isEdge(neighboursByLowestExploredNumber[i])==false&&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber)
+                        if(this.map.isWall(neighboursByLowestExploredNumber[i])==false
+                        &&this.map.isEdge(neighboursByLowestExploredNumber[i])==false
+                        &&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber)
                         {
                             this.proposedPos = neighboursByLowestExploredNumber[i];
                             this.exploredDeadEnd=false;
@@ -588,7 +596,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored - with an exploredNumber less than the current tile - that are not our tail, so get a neighbour that is unexplored. 
                 for(let i = 0 ; i < neighboursReversed.length; i ++)
                 {
-                    if(this.map.isWall(neighboursReversed[i])==false&&this.map.isEdge(neighboursReversed[i])==false)
+                    /*20261001 add  &&this.map.getExploredNumber(neighboursReversed[i])==-1 to this if statement*/
+                    if(this.map.isWall(neighboursReversed[i])==false
+                    &&this.map.isEdge(neighboursReversed[i])==false
+                    &&this.map.getExploredNumber(neighboursReversed[i])==-1)
                     {
                         this.proposedPos = neighboursReversed[i];
                         this.exploredDeadEnd=false;
@@ -598,12 +609,18 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         {
                             this.exploringWhileCarrying=true;
                         }
+
                         return this.proposedPos;
                     }
                 }
+                /*20261001 if we still have not returned, then there is no adjacent tile with an explored number less than the current tile or unexplored. in this situation, perhaps the return path has become blocked, set a flag until we reach teh creature base, while this flag is true, we should set each visited tile with our explored number even if our explored number is higher - this will signify that the path is blocked, future workers can potentially set the explored number lower again*/
+                {
+                    this.returnPathBlocked=true;
+                    this.shoutOut('path blocked');
+                }
             }
         }
-        //else if the creature is not carrying a resource
+        //else if the creature is not carrying a resource, or otherwise returning to base
         else
         {
             //list of neighbours that have resource marker
@@ -1405,9 +1422,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
             //store the explorednumber of the first neighbour
-            let warningValue=this.map.getExploredNumber(neighbours[i]);
+            let exploredValue=this.map.getExploredNumber(neighbours[i]);
             //if the neighbour does not actually have an explored number
-            if(warningValue==-1)
+            if(exploredValue==-1)
             {
                 //go to next neighbour in neighboursLoop for loop
                 continue neighboursLoop;
@@ -1421,7 +1438,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
                     //if the neighbour explored number is less than any of the explored numbers in the returnarray, then add this neighbour before that, and continue the loop to the next neighbour
-                    if(warningValue<exploredNumber2 && exploredNumber2!=-1)
+                    if(exploredValue<exploredNumber2 && exploredNumber2!=-1)
                     {
                         returnArray.splice(j,0,neighbours[i]);
                         //if we add to the array then move to the next neighbour in the neighboursLoop
@@ -1440,9 +1457,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
         neighboursLoop:
         for(let i = 0 ; i < neighbours.length ; i ++)
         {
-            let warningValue=this.map.getExploredNumber(neighbours[i]);
+            let exploredValue=this.map.getExploredNumber(neighbours[i]);
             //sort the neighbours into a new array based on lowest exploredNumber
-            if(warningValue==-1)
+            if(exploredValue==-1)
             {
                 //got to next neighbour in neighboursLoop for loop
                 continue neighboursLoop;
@@ -1453,7 +1470,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 for(let j = 0 ; j < returnArray.length ; j ++)
                 {
                     let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
-                    if(warningValue>exploredNumber2 && exploredNumber2!=-1)
+                    if(exploredValue>exploredNumber2 && exploredNumber2!=-1)
                     {
                         returnArray.splice(j,0,neighbours[i]);
                         //if we add to the array then move to the next neighbour in the neighboursLoop
@@ -1658,6 +1675,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         //reset all the things that would be reset on visiting the base 
         this.exploredNumber=0;
         this.exploredDeadEnd=false;
+        this.returnPathBlocked=false;
+        this.exploringWhileCarrying=false;
         this.noOfResourcesDiscovered=0;
         this.carryingResource=false;
         //reset pos
@@ -1818,14 +1837,22 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {   
                 
                 //we should only overwrite the explored number if we are exploring, so if carryingResource is true then don't update the exploredNumber - unless we are unable to follow the exisitng path and we are exploring WITH a carried resource
-                if(this.carryingResource==false||this.exploringWhileCarrying)
+                if(this.carryingResource==false||this.exploringWhileCarrying||this.returnPathBlocked)
                 {
-                    this.exploredNumber++;
-                    if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)>this.exploredNumber)
+                    this.exploredNumber++;                   
+                    /*20261001 if the return path is blocked then we set out explored number even if it is higher than the existing one, to show that the return path is no longer the fastest way to the base */
+                    if(this.returnPathBlocked==true)
+                    {
+                        /*we need to set these numbers artifically high to show that it is not actually close to the base - maybe the tiles were close to the base, but now that there is a blocked path, they could be very far from the base! */
+                        this.map.setExploredNumber(v,this.exploredNumber+999);
+                        this.shoutOut('blocked - update explored number');
+                    }
+                    else if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)>this.exploredNumber)
                     {
                         this.map.setExploredNumber(v,this.exploredNumber);
                         this.shoutOut('exploring');
                     }
+
                     
                     this.exploringWhileCarrying=false;
                 }
@@ -2010,6 +2037,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     /*20251110 we also need to set that on the map */
                     this.map.setExploredNumber({tx:this.tx,ty:this.ty},this.exploredNumber);
                     this.exploredDeadEnd=false;
+                    this.returnPathBlocked=false;
                     this.noOfResourcesDiscovered=0;
                     this.seenWarningBool=false;
                     this.addedStrength=false;
