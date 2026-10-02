@@ -112,6 +112,7 @@ export function drawGridCoords(scene,creatures,mapData)
         let contestedCurrent ='';
         let exploredNumber ='';
         let carryingResource ='no';
+        let blocked ='';
         let resourceMark ='';
         let bloodStain ='';
         let warningMark ='';
@@ -119,6 +120,7 @@ export function drawGridCoords(scene,creatures,mapData)
         {
             contestedCurrent = mapData.getContestedFrom({tx:x,ty:y});
             exploredNumber = mapData.getExploredNumber({tx:x,ty:y});
+            blocked = mapData.getNewPathFromBlockedResource({tx:x,ty:y});
             resourceMark = mapData.getResourceMarker({tx:x,ty:y});
             bloodStain = mapData.getBloodStain({tx:x,ty:y});
             warningMark = mapData.getWarningMarker({tx:x,ty:y});
@@ -137,6 +139,7 @@ export function drawGridCoords(scene,creatures,mapData)
         contested=${contestedCurrent},
         explored=${exploredNumber},
         carryingR=${carryingResource},
+        blocked=${blocked},
         resourceMark=${resourceMark},
         bloodStain=${bloodStain},
         warningMark=${warningMark}

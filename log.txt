@@ -1311,3 +1311,40 @@ todo i think when contested creatures swap, i need to give them a tail?
 todo workers following the resource path need to prioritise higher explored numbers, and need to avoid travelling to their own tail, because they exhibit strange behaviour, moving back and forth until the resource trail is depleted. 
 
 todo implement the bloodstain cleaning logic for the warriors
+
+20261002 
+investigate the behaviour when following a resource trail. 
+
+i do need to make the workers ignore their tail when following a resource trail. 
+however the problem is that when the original return path was blocked, the worker had to improvise a return path and it set a resource trail as it went. it makes some wrong moves when its exploring and as such those explored numbers are higher so any subsequent workers will end up going to wherever that dead end was. 
+
+if we are exploring with a resource, i don't think we should set a resource trail, if we meet up with some already explored tiles, then we can start laying a resource trail - but workers can only follow that for as long as it exists, once it disappears that must mean we are into the territory that the worker that carried the resource was exploring for the first time, since that worker was exploring towards the base, the explored numbers getting lower should be close to the resource, so if a worker follows a resource trail but then the trail goes cold, it should look for the lowest explored number, eventually a worker will find the resource again, and will be able to lay a full resource trail using the new explored number that the workers have recently laid. 
+
+so if we are carrying a resource don't lay a resource marker on an unexplored tile.
+only set a resource trail on an already explored tile, and if we are blocked or anything like that, only on an explored tile that is less than our explored number. so if we have to explore our way back to the base with a resource, and we find some already explored tiles, we can lay the trail. butif we found some sky high ones like 999 more than our explored number it's because we are travelling on a part that we already labelled as blocked. 
+
+DONE if we follow a resource trail, set a flag so that if the trail goes cold, the worker should seek out the lowest explored numbers. 
+
+todo i think when contested creatures swap, i need to give them a tail?
+
+DONE workers following the resource path need to prioritise higher explored numbers, and need to avoid travelling to their own tail, because they exhibit strange behaviour, moving back and forth until the resource trail is depleted. 
+
+DONE instead of making the number 999 when blocked i should really make that a flag on the tile. 
+
+todo the blood stuff for warriors 
+
+workers following a resource trail will no longer consider their tail. 
+
+i'm going to change the 999 to a flag called newPathFromBlockedResource, this will be set to true instead of increasing the explored number by 999. and workers coming from the base will prioritise following these paths and reseting the explored numbers - if there are no resource trails
+
+the workers should not only set the newPathFromBlockedResource flag to false if they have a lower explored number, they should do so if they are not carrying a resource
+
+this works well. so if a worker finds a resource it will follow the lowest explored numbers back to the base setting a resource trail as it goes. if that path is blocked, it will mark those tiles as such and try to find an alternative way - during this time it will not lay resource trails as the path it is exploring might not actually go back to the base however it will lay explored numbers even if those numbers are higher than the existing explored numbers and it will lay blocked flags. if it travels to a tile that has already been explored - but is not marked as blocked - then it will resume laying a resource trail and will follow the lowest explored numbers back to the base, this results in partial resource trails - trails that stop before they get to a resource. any worker that is not carrying a resource will want to follow a resource trail it will set the explored numbers if it has a lower explored number, if the resource trail stops before it gets to a resource the worker will look for a tile marked as a blocked path, it will follow blocked paths with the lowest explored number as these will lead to the resource, once a worker refinds the resource it will follow its own trail of lowest explored numbers as normal - back to the base. 
+
+DONE consider deleting the worker's tail when it drops a resource
+
+DONE when a worker is following a blocked path and it has a choice between more than one resource trails it should choose the one that has no blocked flag
+
+TODO it would be nice for the worker to inform the base that a digger is needed to dig up the shortcut to the resource, use this.foundNewPathToBlockedResource this flag will tell us if a worker finds a blocked path, if this is true and it carries a resource to the base then it can ask for a digger and the digger will have a resource trail to follow. when the digger follows the resource trail it should find some resource trail that also has a blocked marker, once it reaches this it can check if any walls have an explored number on them, if so that wall must have appeared on top of an exisitng path, and it should dig it up. this is a whole new creature type, i'll probably need to mark that up with a dig trail, as the digger will have to dig, move somewhere to dump the rubble, then return to dig again. i have at least got the logic working which says 'need a digger'
+
+ok i think finally i can move on to the warriors blood cleaning up logic next time

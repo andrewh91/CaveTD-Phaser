@@ -110,6 +110,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.exploredDeadEnd=false;
         //when an established path back to the base is blocked this will help the workers to recalculate the explored numbers
         this.returnPathBlocked=false;
+        this.noLongerBlocked=false;
+        this.foundNewPathToBlockedResource=false;
+        
+        
         //this is a variable to hold the pathfinding method function of choice
         this.pathfindingMethod;
         this.setPathfindingMethod(7);
@@ -572,28 +576,36 @@ export default class Creature extends Phaser.GameObjects.Sprite
             */
             //if there are no neighbours with resource markers, that we can go to...
             {
-                //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail - bear in mind that we may have deleted our tail if we just picked up a resource or found a dead body etc
+                //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail - bear in mind that we may have deleted our tail if we just picked up a resource or found a dead body etc, also only if it is not a wall and if the tile has not been marked as a newPathFromBlockedResource
                 /**20261001 i should change this to this.exploredNumber */
                 /*let currentExploredNumber = this.map.getExploredNumber({tx:this.tx,ty:this.ty});*/
                 let currentExploredNumber = this.exploredNumber;
-                /*20261001 normally sortAdjacentLowestExploredNumber ignores explored numbers that are -1 aka unexplored tiles. but if exploringWhileCarrying== true we should consider unexplored tiles as well*/
-                let neighboursByLowestExploredNumber=this.sortAdjacentLowestExploredNumber(neighboursReversed);
-                
+              
+                let neighboursByLowestExploredNumber =this.sortAdjacentLowestExploredNumber(neighboursReversed);;
+               
                 for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                 {
-                    if(Helper.vectorEquals(this.memory[0],neighboursByLowestExploredNumber[i])==false)
+                    
+                    
+                    if(Helper.vectorEquals(this.memory[0],neighboursByLowestExploredNumber[i])==false
+                    &&this.map.isWall(neighboursByLowestExploredNumber[i])==false
+                    &&this.map.isEdge(neighboursByLowestExploredNumber[i])==false
+                    &&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber
+                    &&this.map.getNewPathFromBlockedResource(neighboursByLowestExploredNumber[i])==false)
                     {
-                        if(this.map.isWall(neighboursByLowestExploredNumber[i])==false
-                        &&this.map.isEdge(neighboursByLowestExploredNumber[i])==false
-                        &&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber)
+                        if(this.map.getExploredNumber(neighboursByLowestExploredNumber[i])==-1)
                         {
-                            this.proposedPos = neighboursByLowestExploredNumber[i];
-                            this.exploredDeadEnd=false;
-                            return this.proposedPos;
+                            this.exploringWhileCarrying=true;
                         }
+                        this.proposedPos = neighboursByLowestExploredNumber[i];
+                        this.exploredDeadEnd=false;
+                        /*if we were blocked, but find a tile that is less than our explored number set this flag so that we can lay a resource trail - if carrying resource obviously */
+                        this.noLongerBlocked=true;
+                        return this.proposedPos;
                     }
                 }
-                //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored - with an exploredNumber less than the current tile - that are not our tail, so get a neighbour that is unexplored. 
+                
+                //if we still haven't returned there must be no resource neighbours that are not our tail, and no neighbours that are already explored - with an exploredNumber less than the current tile - that are not our tail and not a newPathFromBlockedResource, so get a neighbour that is unexplored. 
                 for(let i = 0 ; i < neighboursReversed.length; i ++)
                 {
                     /*20261001 add  &&this.map.getExploredNumber(neighboursReversed[i])==-1 to this if statement*/
@@ -613,14 +625,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         return this.proposedPos;
                     }
                 }
+                /*20261002 if we are blocked we will be setting tile with newPathFromBlockedResource, we could end up with no adjacent tiles that have no newPathFromBlockedResource flag and no unexplored tiles, in this case go to the lowest explored number that is not our tail */
+                if(this.returnPathBlocked==true)
+                {
+                    for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
+                    {
+                        if(Helper.vectorEquals(this.memory[0],neighboursByLowestExploredNumber[i])==false)
+                        {
+                            if(this.map.isWall(neighboursByLowestExploredNumber[i])==false
+                            &&this.map.isEdge(neighboursByLowestExploredNumber[i])==false)
+                            {
+                                this.proposedPos = neighboursByLowestExploredNumber[i];
+                                this.exploredDeadEnd=false;
+                                return this.proposedPos;
+                            }
+                        }
+                    }
+
+                }
                 /*20261001 if we still have not returned, then there is no adjacent tile with an explored number less than the current tile or unexplored. in this situation, perhaps the return path has become blocked, set a flag until we reach teh creature base, while this flag is true, we should set each visited tile with our explored number even if our explored number is higher - this will signify that the path is blocked, future workers can potentially set the explored number lower again*/
+                
                 {
                     this.returnPathBlocked=true;
                     this.shoutOut('path blocked');
                 }
             }
         }
-        //else if the creature is not carrying a resource, or otherwise returning to base
+        //else if the creature is not carrying a resource, or is not otherwise returning to base
         else
         {
             //list of neighbours that have resource marker
@@ -629,11 +660,32 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 //of those neighbours that have resource markers, sort them by highest explored number
                 let resourceNeighboursByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(resourceNeighbours);
-                //find the neighbour with the highest explored number, that is not a wall and go there. 
+                //find the neighbour with the highest explored number, that is not a wall and not the tail and not blocked and go there. 
                 for(let i = 0 ; i < resourceNeighboursByHighestExploredNumber.length; i ++)
                 {
-                    if(this.map.isWall(resourceNeighboursByHighestExploredNumber[i])==false&&this.map.isEdge(resourceNeighboursByHighestExploredNumber[i])==false)
+                    if(this.map.isWall(resourceNeighboursByHighestExploredNumber[i])==false
+                    &&this.map.isEdge(resourceNeighboursByHighestExploredNumber[i])==false
+                    &&Helper.vectorEquals(this.memory[0],resourceNeighboursByHighestExploredNumber[i])==false
+                    &&this.map.getNewPathFromBlockedResource(resourceNeighboursByHighestExploredNumber[i])==false)
                     {
+                        this.proposedPos = resourceNeighboursByHighestExploredNumber[i];
+                        this.exploredDeadEnd=false;
+                        return this.proposedPos;
+                    }
+                }
+                /**20261002 if we have not returned, do the same for loop again but this time allow travelling to a blocked tile */
+                for(let i = 0 ; i < resourceNeighboursByHighestExploredNumber.length; i ++)
+                {
+                    if(this.map.isWall(resourceNeighboursByHighestExploredNumber[i])==false
+                    &&this.map.isEdge(resourceNeighboursByHighestExploredNumber[i])==false
+                    &&Helper.vectorEquals(this.memory[0],resourceNeighboursByHighestExploredNumber[i])==false)
+                    {
+                        /**20261002 if we find a blocked path set this flag */
+                        if(this.map.getNewPathFromBlockedResource(resourceNeighboursByHighestExploredNumber[i])==true)
+                        {
+                            this.foundNewPathToBlockedResource=true;
+                            this.shoutOut('found a blocked path');
+                        }
                         this.proposedPos = resourceNeighboursByHighestExploredNumber[i];
                         this.exploredDeadEnd=false;
                         return this.proposedPos;
@@ -643,12 +695,39 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //there might be more than one resourceadjacent to us, we can go to any but go to the first one, which will be our direction priority  
                 for(let i = 0 ; i < resourceNeighbours.length; i ++)
                 {
-                    if(this.map.isWall(resourceNeighbours[i])==false&&this.map.isEdge(resourceNeighbours[i])==false)
+                    if(this.map.isWall(resourceNeighbours[i])==false
+                    &&this.map.isEdge(resourceNeighbours[i])==false
+                    &&Helper.vectorEquals(this.memory[0],resourceNeighboursByHighestExploredNumber[i])==false)
                     {
                         this.proposedPos = resourceNeighbours[i];
                         this.exploredDeadEnd=false;
                         return this.proposedPos;
                     }
+                }
+                
+            }
+            /*20261002 if we still have not returned, then maybe the resource trail has vanished. this normally happens when a worker's path back to base was blocked so it had to explore back to base, it will not lay a resource trail unless the tiles already had an explored number - it does this because as it is exploring a new route it does not know if that route actually leads back to the base yet. in this case look for an adjacent tile flagged with newPathFromBlockedResource */
+            let newPathFromBlockedResourceNeighbours=this.refineAdjacentNewPathFromBlockedResource(neighbours);
+            //of those neighbours that are blocked, sort them by lowest explored number
+            let newPathFromBlockedResourceNeighboursByHighestExploredNumber = this.sortAdjacentLowestExploredNumber(newPathFromBlockedResourceNeighbours);
+            for(let i = 0 ; i < newPathFromBlockedResourceNeighboursByHighestExploredNumber.length; i ++)
+            {
+                if(this.map.isWall(newPathFromBlockedResourceNeighboursByHighestExploredNumber[i])==false
+                &&this.map.isEdge(newPathFromBlockedResourceNeighboursByHighestExploredNumber[i])==false
+                &&Helper.vectorEquals(this.memory[0],newPathFromBlockedResourceNeighboursByHighestExploredNumber[i])==false)
+                {
+                    
+                        /**20261002 if we find a blocked path set this flag 
+                         * doesn't need an if statement this time since this for loop only includes blocked tiles
+                        */
+                        /*if(this.map.getNewPathFromBlockedResource(resourceNeighboursByHighestExploredNumber[i])==true)*/
+                        {
+                            this.foundNewPathToBlockedResource=true;
+                            this.shoutOut('found a blocked path');
+                        }
+                    this.proposedPos = newPathFromBlockedResourceNeighboursByHighestExploredNumber[i];
+                    this.exploredDeadEnd=false;
+                    return this.proposedPos;
                 }
             }
             //if we haven't returned yet there must not be a neighbour with a resource marker that we can go to, so try to go to an unexplored neighbour
@@ -1359,6 +1438,30 @@ export default class Creature extends Phaser.GameObjects.Sprite
         }
         return returnArray;
     }
+    //this should be used with the getAdjacent method's returned array, 
+    refineAdjacentNewPathFromBlockedResource(neighbours)
+    {
+        //take a copy of the neighbours, so that we don't edit the neighbours
+        let a = neighbours.slice();
+        let returnArray=[];
+        //sometimes i only want a list of the adjacents that have a newPathFromBlockedResource, so go through my adjacents and eliminate any that don't have a newPathFromBlockedResource 
+        //do this in reverse order since i'm altering the array as i go through it
+        for(let i = a.length-1 ; i >-1 ; i -- )
+        {
+            if(this.map.getNewPathFromBlockedResource(a[i])==false)
+            {
+                //so we are removing the neighbours that do not have a newPathFromBlockedResource
+                a.splice(i,1);
+            }
+        }
+        //now we have 4 or less directions in the array in the correct order. and we need to use those to access the tile in the mapData
+        //some of the positions in the neighbourArray could be out of bounds if the currentPos is on the edge of the map, but i will make the edge of the map walls, so that the wall behaviour prevents them getting to the true edge of the map 
+        for(let i = 0 ; i < a.length; i ++ )
+        {
+            returnArray.push(a[i]);
+        }
+        return returnArray;
+    }
     /* 20251030 take the neighbours as an argument, return the neighbours but sorted in order of which has the lowest non negative value of the warning marker minus the strength marker. the intention is for the warrior to step off the creature base onto a neighbour giving priority to a neighbour with the lowest threat that has not already been dealt with*/
     getStepOffPos(neighbours)
     {
@@ -1430,6 +1533,37 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 continue neighboursLoop;
             }
             else
+            {
+                //else if it does have a exploredNumber
+                neighboursReturnLoop:
+                //compare it to any other explored numbers we've added to the return array so far
+                for(let j = 0 ; j < returnArray.length ; j ++)
+                {
+                    let exploredNumber2 =this.map.getExploredNumber(returnArray[j]);
+                    //if the neighbour explored number is less than any of the explored numbers in the returnarray, then add this neighbour before that, and continue the loop to the next neighbour
+                    if(exploredValue<exploredNumber2 && exploredNumber2!=-1)
+                    {
+                        returnArray.splice(j,0,neighbours[i]);
+                        //if we add to the array then move to the next neighbour in the neighboursLoop
+                        continue neighboursLoop;
+                    }
+                }
+                //if we reach this stage we must not have added to the return array yet, or our neighbour explored number is larger than those in the array , so add it in now at the end
+                returnArray.push(neighbours[i]);
+            }
+        }
+        return returnArray;
+    }
+    sortAdjacentLowestExploredNumberIncludingUnexplored(neighbours)
+    {
+        let returnArray=[];
+        neighboursLoop:
+        for(let i = 0 ; i < neighbours.length ; i ++)
+        {
+            //store the explorednumber of the first neighbour
+            let exploredValue=this.map.getExploredNumber(neighbours[i]);
+            
+            
             {
                 //else if it does have a exploredNumber
                 neighboursReturnLoop:
@@ -1676,6 +1810,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.exploredNumber=0;
         this.exploredDeadEnd=false;
         this.returnPathBlocked=false;
+        this.noLongerBlocked=false;
+        
         this.exploringWhileCarrying=false;
         this.noOfResourcesDiscovered=0;
         this.carryingResource=false;
@@ -1840,21 +1976,34 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 if(this.carryingResource==false||this.exploringWhileCarrying||this.returnPathBlocked)
                 {
                     this.exploredNumber++;                   
-                    /*20261001 if the return path is blocked then we set out explored number even if it is higher than the existing one, to show that the return path is no longer the fastest way to the base */
+                    /*20261001 if the return path is blocked then we set our explored number even if it is higher than the existing one, to show that the return path is no longer the fastest way to the base */
                     if(this.returnPathBlocked==true)
                     {
-                        /*we need to set these numbers artifically high to show that it is not actually close to the base - maybe the tiles were close to the base, but now that there is a blocked path, they could be very far from the base! */
-                        this.map.setExploredNumber(v,this.exploredNumber+999);
-                        this.shoutOut('blocked - update explored number');
+                        /*we need to set a flag called newPathFromBlockedResource to show that it is no longer a path to the base - maybe the tiles were close to the base, but now that there is a blocked path, they could be very far from the base! */
+                        this.map.setExploredNumber(v,this.exploredNumber);
+                        this.map.setNewPathFromBlockedResource(v,true);
+                        this.shoutOut('blocked - set newPathFromBlockedResource');
                     }
-                    else if(this.map.getExploredNumber(v)==-1||this.map.getExploredNumber(v)>this.exploredNumber)
+                    else if(this.map.getExploredNumber(v)==-1)
                     {
                         this.map.setExploredNumber(v,this.exploredNumber);
                         this.shoutOut('exploring');
                     }
+                    if(this.map.getExploredNumber(v)>this.exploredNumber)
+                    {
+                        this.map.setExploredNumber(v,this.exploredNumber);
+                        this.shoutOut('found shortcut');
+                    }
 
                     
-                    this.exploringWhileCarrying=false;
+                }
+                /*20261002 any worker that is not carrying a resource should set the bool for newPathFromBlockedResource back to false */
+                if(this.carryingResource==false)
+                {
+                    if(this.map.getNewPathFromBlockedResource(v)==true)
+                    {
+                        this.map.setNewPathFromBlockedResource(v,false);
+                    }
                 }
                 //if there is a resource at the proposed position
                 let resourceIndex=this.map.getResourceIndex(v);
@@ -1884,8 +2033,20 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     //returning to base laying a trail should only happen if there is no trail, editing the existing trail is the job of creatures that follow the trail to the resource
                     if(this.map.getResourceMarker(v)==-1)
                     {
-                        this.scene.setResourceMarkerOnMap(v,this.noOfResourcesDiscovered);
-                        this.shoutOut('set resource trail');
+                        /*20261002 if we are carrying a resource back to base, but we have to travel on an unexplored tile, this this.exploringWhileCarrying will be set to true. in this case, we do not want to lay a resource trail, becuase we don't know if we are going the right way. this this.exploringWhileCarrying variable will be reset to false after every move. when the worker carrying the resource travels on an explored tile again it might start laying the resource trail again. 
+                        */
+                        if(this.exploringWhileCarrying==true)
+                        {
+
+                        }
+                        /*if the returnPathBlocked ==true then we should not be laying a resource trail, unless the noLongerBlocked==true, in that case we must have moved to a tile with explored number less than*/
+                        else if(this.returnPathBlocked==false||this.noLongerBlocked==true)
+                        {
+                            this.scene.setResourceMarkerOnMap(v,this.noOfResourcesDiscovered);
+                            this.shoutOut('set resource trail');
+                            
+                            this.noLongerBlocked=false;
+                        }
                     }
                 }
                 /**20251014 if we have discovered a bloodstain we will return to base and lay this warningTrail if the existing warningtrail has less value than this bloodstain */
@@ -1908,6 +2069,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     }
                 }
                 
+                this.exploringWhileCarrying=false;
             }
             //if we step onto rubble - or even a wall - which implies that we dig the wall then we are on rubble ...
             if(this.map.isWall(v)==true)
@@ -2012,6 +2174,15 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.carryingResource=false;
                     this.scene.addResourceToCreatureBase(creatureBaseIndex);
                     this.shoutOut('dropping resource');
+                    //normally the tail will stop you going back on yourself, but if we just dropped off a resource, we might want to go back on ourself, but instead of deleting the tail i will set it to curretn position which means i wont get index out of bounds
+                    this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
+                    
+                    this.map.setNewPathFromBlockedResource({tx:this.tx,ty:this.ty},false);
+                    /*20261002 sometimes a worker finds a blocked resource and manages to find the way back to the base, it would be cool if this could trigger a unit that can dig to follow them to the resource and it will follow it to the tile that has a newPathFromBlockedResource flag and a resource trail, it will then try and dig up the path that used to exist.  */
+                    if(this.foundNewPathToBlockedResource==true)
+                    {
+                        this.shoutOut('need a digger');
+                    }
                     //we now need to decrement the trail - this is normally done when we move onto a tile with a resource marker and we are not carrying a resource, but when we stepped on this tile adjacent to the creature base we were carrying one, so decrement it now
                     this.scene.decrementResourceMarkerOnMap({tx:this.tx,ty:this.ty});
                 }
@@ -2038,6 +2209,10 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.map.setExploredNumber({tx:this.tx,ty:this.ty},this.exploredNumber);
                     this.exploredDeadEnd=false;
                     this.returnPathBlocked=false;
+                    this.foundNewPathToBlockedResource=false;
+                    
+                    this.noLongerBlocked=false;
+                    
                     this.noOfResourcesDiscovered=0;
                     this.seenWarningBool=false;
                     this.addedStrength=false;

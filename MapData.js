@@ -42,6 +42,15 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].exploredNumber;
     }
+    /*20261002  */
+    setNewPathFromBlockedResource(v,b)
+    {
+        this.tiles[this.getIndexFromCoords(v)].newPathFromBlockedResource = b;
+    }
+    getNewPathFromBlockedResource(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].newPathFromBlockedResource;
+    }
     setBloodStain(v,n)
     {
         this.tiles[this.getIndexFromCoords(v)].bloodStain = n;
