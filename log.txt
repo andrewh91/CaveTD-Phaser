@@ -1348,3 +1348,48 @@ DONE when a worker is following a blocked path and it has a choice between more 
 TODO it would be nice for the worker to inform the base that a digger is needed to dig up the shortcut to the resource, use this.foundNewPathToBlockedResource this flag will tell us if a worker finds a blocked path, if this is true and it carries a resource to the base then it can ask for a digger and the digger will have a resource trail to follow. when the digger follows the resource trail it should find some resource trail that also has a blocked marker, once it reaches this it can check if any walls have an explored number on them, if so that wall must have appeared on top of an exisitng path, and it should dig it up. this is a whole new creature type, i'll probably need to mark that up with a dig trail, as the digger will have to dig, move somewhere to dump the rubble, then return to dig again. i have at least got the logic working which says 'need a digger'
 
 ok i think finally i can move on to the warriors blood cleaning up logic next time
+
+20261005
+if warriors are created, it ought to be because a worker reported some blood stain warning, warriors will assemble some distance along the warning trail, waiting for reinforcements. once they are ready they can charge. most of the time they will then travel along the warning trail further and encounter blood. but they could discover blood at any point! and i think they should clean it up straight away. they should be laying a strength trail as they go, which they could follow back to where they started - towards lowest explored number. 
+when the warriors start cleaning up, they will split up
+but the way the strength values work means a warrior is born, it reads the strength value on the tile, and adopts it as its own, this is less of a strength indicator and more of a count of how many warriors have been sent to this one warning. so if they do split up, they should only spread a strength value equal to their actual strength rather than their count. 
+
+so, if a warrior ever sees blood, unless there is an enemy nearby, 
+it should start the blood cleaning logic, 
+when it does this it should set a strength marker equal to its actual strength, not the strength it recorded from the tile earlier. 
+if it finds itself in a position where there is no more blood to clean, then it can follow the strength markers back to where the blood started, there should still be a warning marker there and it can carry on as it was. but if some of the units have not returned how do we recalculate the strength? 
+
+maybe the strength should only be calculated when a unit overtakes another at the waiting point? so if 4 units are needed, the first 3 will wait, the 4th will over take 3 units, and it can count them as it goes. if they split up or anything they can forget the count, and when they finish cleaning blood they may return to that wait point and wait until someone counts the right number of units? 
+how does the base know when to stop sending warriors? 
+what if warriors overtake each other under some other circumstance, like a worker gets in the way? 
+one way to count the number of warriors at the assembly point, it to send a message through the line. the message is passed one way through the line, incrementing as it goes, once it reaches the end it gets sent back then all units will be aware. 
+
+i should break this down into separate problems. 
+
+1. I need the base to send an appropriate number of warriors. 
+2. I need the base to potentially send more warriors than needed, incase some don't make it. 
+3. perhaps i need it to constantly send them until a unit tells it to stop. 
+
+4. I need the warriors to follow the path until the assembly point. 
+5. I need the warriors to be able to split up and clean blood etc if needed and reassemble
+6. I need the warriors to be aware of when they have enough reinforcements- regardless of what formation they are in, a straight line, bent line, a block etc. 
+7. I need the warriors to move out of position temporarily if another units is moving across them. 
+
+for 6. what if, a unit will reach the wait point, it will set a flag that it is at the wait point. a new unit joins it, it sees the first has set the flag saying it is at the wait point, so it does not bother trying to overtake it. the new unit tells all adjacent units that it has arrived. all units increment their counters. all units pass on the new total. all units can have a flag so that they only increment once. 
+for 7. if a unit moves for some reason, query the counter with adjacent units and adopt the highest number. 
+
+so basically each unit can tell one other unit to count it one time. but all units will always share their total to every units they see? or at least units that are responding to the same threat. 
+
+20261006 
+i think i should leave this the way it is. warriors add their strength to the tile by the base, then adopt that strength and project it as they travel. the latest warrior will overtake all the warriors that are waiting, as it does so it will update the strength of the tiles they are on and they will all charge. now technically, some of them could have been diverted and killed and the strength numbers would not be accurate, but it's quite hard for them to count themselves. 
+if they split up to clean blood i can reset their projected strength while they do that, then they should regroup and adopt the strength once more. 
+
+i made the memory visible, it is a blue dash
+the warriors can pick up resources which is not right, fix that. 
+i only want to clean the blood if there is 0, or 1 or 2 adjacent blood - 
+TODO if blood is on a wall, i should delete the blood because it will mess up the clean up blood logic
+TODO warriors should not reduce the resource trail
+DONE when warriors swap position while cleaning blood they seem to prevent themselves from continuing to clean blood, i think it is due me setting a cleanBlood flag when the adajcnet tiles have no bloodstains, which can happen, but then they swap and will be adjacent to blood, but by then it is too late and the flag will be false, i have made a swapping flag, so that we only test for adjacent bloodstains if we are not moving because of a swap.
+TODO once the warriors clean the blood i need to make them move back to where they first found blood, follow the strength marker back following low explored numbers
+
+TODO make a way to save and load the state of the game for testing purposes. 

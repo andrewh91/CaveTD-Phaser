@@ -132,6 +132,8 @@ class Game extends Phaser.Scene
         console.log("press c to advance time");
         console.log("press k to kill the first creature in the array");
         console.log("the godMode and testing variable in the index file can be altered to help testing and debug and map creation etc");
+        console.log("use space to toggle the terrain that the player is on");
+        console.log("use console command:   window.debug.mapData.print()   to print the map to console, you can then save that text to the SavedMaps.js file");
         console.log("");
     }
     onPressP()
@@ -649,11 +651,13 @@ class Game extends Phaser.Scene
     //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here. 
     updateCreaturePos(id,creatureAPos)
     {
+        creatures[id].swapping=true;
         creatures[id].moveCreature(creatureAPos);             
     }
     //sometimes the creatures will swap position with another creature, but creature's don't have access to each other so do it here. the position that they were in before they moved will be set as the returnPosition, that way they can try to return there in the future
     updateStationaryCreaturePos(id,creatureAPos,returnPosition)
     {
+        creatures[id].swapping=true;
         creatures[id].moveCreature(creatureAPos);        
         creatures[id].setReturnPosition(returnPosition);        
     }
