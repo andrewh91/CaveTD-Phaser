@@ -1310,7 +1310,7 @@ todo i think when contested creatures swap, i need to give them a tail?
 
 todo workers following the resource path need to prioritise higher explored numbers, and need to avoid travelling to their own tail, because they exhibit strange behaviour, moving back and forth until the resource trail is depleted. 
 
-todo implement the bloodstain cleaning logic for the warriors
+DONE implement the bloodstain cleaning logic for the warriors
 
 20261002 
 investigate the behaviour when following a resource trail. 
@@ -1331,7 +1331,7 @@ DONE workers following the resource path need to prioritise higher explored numb
 
 DONE instead of making the number 999 when blocked i should really make that a flag on the tile. 
 
-todo the blood stuff for warriors 
+DONE the blood stuff for warriors 
 
 workers following a resource trail will no longer consider their tail. 
 
@@ -1393,3 +1393,53 @@ DONE when warriors swap position while cleaning blood they seem to prevent thems
 TODO once the warriors clean the blood i need to make them move back to where they first found blood, follow the strength marker back following low explored numbers
 
 TODO make a way to save and load the state of the game for testing purposes. 
+
+20261008
+
+if the warning trail leads north to a blood stain, the warriors will assemble to the south of the stain until they are at full strength, then they will charge. when the charging warriors see the blood stain, they will clean it up. once they finish cleaning it up, they should follow the strength markers and explored numbers back to teh assembly point, but this time they will line up north of the assembly point. the first one to reach the old assembly point will see the strength marker and adopt it as its strength again, it will then charge, even though it could be on its own. i guess this is ok, if this bloodstain is the blood stain the warriors were looking for they would either have been attacked by now or they have explored the blood and found no enemies. or if it was not the blood stain the warning leads to, then they will carry on to the next blood stain. 
+so the only thing wrong with the behaviour is that the group of warriors might charge before they are at appropriate strength. 
+when they split perhaps i could flag that on the tile, the warriors would return to the tile, they might need to overtake each other as they do so once each one returns to that one tile they can add their strength to it once more, one time only each. then if enough warriors return to it, or more warriors from the base arrive then they can carry on to the next blood stain. 
+
+so implement the logic :
+if the warrior detects blood, set that tile as a split point, set the strength to 0 (or-1?)on that tile.
+if a warrior has no adjacent blood return along the strength line to the split point. 
+each warrior will have a this.contributed flag saying if it has contributed its strength to a split point or not, if a warrior has not contributed its strength to a split point, it should do so when it visits that tile, but only if there is no longer any blood there - this is because if there was blood there then that warrior would not stick around, it would set off cleaning blood. 
+if a warrior does see the split point, it will not set the strength equal to its strength ( which could be high) it will instead increment the strength of the tile by one - each warrior can do this only once. this means that warriors will wait here until the further reinforcements mean they have enough strength, or the blood cleaning warriors return and then they have enough strength. 
+if the split tile strength is incremented so high that the warriors charge, then you can reset the split flag on that tile. 
+so basically. the first few warriors to detect blood will set off deleting the blood, the next warriors will need to wait at the split point as their strength will not be enough to charge. when the strength is enough to charge, they charge. if warriors do charge we should be able to reset the this.contributed flag back to false, that way if there is another blood stain and another split this will all happen again.
+
+
+todo - if the worker is following a resource trail and find a resource trail with a wall on it, it should go abck and get a digger. 
+
+20261009
+so i've given the warrior a this.splitPointSet=false flag, if it is false, that means it can set 1 split point, it will then be set to true so that it can not set another. this should be reset to false if the warrior charges. 
+in moveCreature method, if the creature is a warrior, and it encounters a splitPoint tile, we should set the warrior's flag to true, as we don't want to set an additional splitPoint. if there is no blood here then we don't want to split up and clean blood, we want to wait for reinforcements, the warrior will add its strength to the tile- only if it has not done so already. if that strength is high enough the group will charge - using the existing logic, this will reset some flag so that this process can occur again in the future, it will also reset the split point. 
+if we are on blood and we have not set a split point, or even seen another warrior's split point, we set the splitPoint on the tile and set the strength to -1, we set our strength to our oldStrengthValue - this means that instead of our strength being a count of the number in the group, it is just our own strength, this is appropriate because we are splitting from the group. 
+
+if the warrior has been cleaning blood, but there is no more blood, we should follow the explored path lowest numbers back along the strength trail to the splitpoint. during this time this.returnToWarning will be true. 
+reset this.returnToWarning to false when we charge
+
+if this.returnToWarning is true we should set it to false if we reach the warning
+
+testing
+we are setting the split point to false in the pathfinding, before any of the split point logic in the moveCreature method has a chance to run - move that to the moveCreature method instead
+one warrior cleans up blood in a corner and ends up surrounded by no blood, the pathfinding returns undefined. it seems the adjacents don't have a strength value somehow? i was setting the splitPointSet to false too early, because i was doing it if the warning marker is less than the strength marker, even if the warning marker was -1, fixed that. 
+if there is no blood set this.returnToWarning=true in pathfinding 
+
+the shoutOuts regarding split points don't appear
+when the strength marker is set to -1 on the tile, that is then set to 1 as the warrior that is on top of it sets it. this means only one warrior is needed to increase that to 2, instead of the 3 i was expecting. 
+
+turns out i forgot that i set the strength of the tile as i move onto it rather than as i move off it. which means the warrior with 2 strength would move ontop of the splitpoint before it even recognised that it was split point, at this time it set the strength to 2, once it recognised that it was on the split point it would lower its own strength to 0, but then this relied on the existing method to set the tile strength to 0, but that would not happen because the strength was already higher than that =2 , so try setting the strength of the current tile not the tile we are moving ontop of , hopefully that doesn't break anything
+
+i think this is ok
+
+it seems that warriors that walk on tiles with a higher strength than their own do not adopt that strength like i thought they did, they must charge for some other reason? oh, yeah it is when the strength marker on the tile exceeds it, at that point it does not matter what the warrior's individual strength is. 
+
+
+TODO when there is no blood and no enemies and the warrior reach the warning, they should just go home. removing the strength and warning trail as they go
+
+TODO don't let blood fall on walls
+TODO if more blood is spilled ontop of a split point, consider resetting the split point?
+TODO we should only be splitting if there is no other priority like we are being attacked. 
+TODO when we charge we reset the split point, it would be more efficient to store an array of any tiles that have a split point, and go through that array and test if the strength is higher than the warning on that tile, and if so reset the split point. 
+TODO if this.queue is true, should we check to see if the tile is vacant now?

@@ -23,6 +23,7 @@ export default class Tile extends Phaser.GameObjects.Sprite {
     //these are used by the explorer pathfinding
     this.exploredNumber=-1;
     this.newPathFromBlockedResource=false;
+    this.splitPoint=false;
     this.warningMarker=-1;
     this.strengthMarker=-1;
     this.resourceMarker=-1;

@@ -69,6 +69,14 @@ export default class MapData
     {
         return this.tiles[this.getIndexFromCoords(v)].warningMarker;
     }
+    setSplitPoint(v,b)
+    {
+        this.tiles[this.getIndexFromCoords(v)].splitPoint = b;
+    }
+    getSplitPoint(v)
+    {
+        return this.tiles[this.getIndexFromCoords(v)].splitPoint;
+    }
     setStrengthMarker(v,n)
     {
         this.tiles[this.getIndexFromCoords(v)].strengthMarker = n;
@@ -500,7 +508,11 @@ export default class MapData
         let text="";
         for(let i = 0; i < this.tiles.length ; i++)
         {
-            let n = ("0" + this.tiles[i][dataType]).slice (-2);
+            let n = this.tiles[i][dataType];
+            n=n==false?0:n;
+            n=n==true?1:n;
+            n = ("0" + n).slice (-2);
+            n=='se'?0:n;
             text+=n+',';
             if(i%mapWidth==mapWidth-1)
             {

@@ -116,6 +116,7 @@ export function drawGridCoords(scene,creatures,mapData)
         let resourceMark ='';
         let bloodStain ='';
         let warningMark ='';
+        let strengthMark ='';
         if(mapData.inBounds({tx:x,ty:y}))
         {
             contestedCurrent = mapData.getContestedFrom({tx:x,ty:y});
@@ -124,6 +125,7 @@ export function drawGridCoords(scene,creatures,mapData)
             resourceMark = mapData.getResourceMarker({tx:x,ty:y});
             bloodStain = mapData.getBloodStain({tx:x,ty:y});
             warningMark = mapData.getWarningMarker({tx:x,ty:y});
+            strengthMark = mapData.getStrengthMarker({tx:x,ty:y});
         }
         if(creatureIndex>-1)
         {
@@ -142,7 +144,8 @@ export function drawGridCoords(scene,creatures,mapData)
         blocked=${blocked},
         resourceMark=${resourceMark},
         bloodStain=${bloodStain},
-        warningMark=${warningMark}
+        warningMark=${warningMark},
+        strengthMark=${strengthMark}
         `);
         
     }

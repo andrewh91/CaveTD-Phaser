@@ -641,7 +641,7 @@ class Game extends Phaser.Scene
     {
         creatureIndex=-1;
         this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});
-        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});77
+        this.addCreatureToWaitingRoom({tx:13,ty:14,gx:0,gy:0,type:WORKER});
         priorityArray.loopThroughAll();
     }
     setUpDeadCreatures()

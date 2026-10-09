@@ -148,6 +148,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.strengthValue=1;
         this.oldStrengthValue=this.strengthValue;
         this.cleanUpBlood=false;
+        this.splitPointSet=false;
+        this.contributed=false;
         this.swapping=false;
         this.returnToWarning=false;
         /* 20251110 if we have been told to push up this will be set to true, that will override the pathfinding to push up one space, when we push up it wil go back to false*/
@@ -992,6 +994,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                 }
                             }
                             /**if we have not returned there might not be any adjacent blood */
+                            this.returnToWarning=true;
                         }
                     }
                 }
@@ -1003,9 +1006,30 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
                                         
             /**if there is no adjacent blood, we should travel on the strength trail following low explored numbers back to the warning trail*/
-            if(this.returnToWarning==true)
+            if(this.returnToWarning==true&&this.map.getWarningMarker({tx:this.tx,ty:this.ty})==-1)
             {
-
+                let neighbours = this.getAdjacent();
+                let neighboursWithStrengthMarker = this.refineAdjacentStrengthMarker(neighbours);
+                let neighboursWithStrengthMarkerByLowestExploredNumber = this.sortAdjacentLowestExploredNumber(neighboursWithStrengthMarker);              
+                if(neighboursWithStrengthMarkerByLowestExploredNumber.length==0)
+                {
+                    this.shoutOut('there is no neighbour with strength marker');
+                    this.remainStationary=true;
+                    return this.proposedPos;
+                }
+                this.proposedPos = neighboursWithStrengthMarkerByLowestExploredNumber[0];
+                this.shoutOut('return to splitPoint');
+                let tempCreatureTypeOnProposedPos = this.scene.getCreatureTypeOnTile(this.proposedPos);
+                /*find out if there is a warrior in our proposedPos, if so set queue flag to true */
+                if(tempCreatureTypeOnProposedPos == WARRIOR)
+                {
+                    this.queue = true;
+                }
+                else
+                {
+                    this.queue = false;
+                }
+                return this.proposedPos;
             }
 
             /*if the warning trail is of higher value than the strength trail, then the warriors need to assemble*/
@@ -1133,6 +1157,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 {
                     this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0]; 
                     this.shoutOut('Charge!');
+
                     return this.proposedPos;
                 }
                 else
@@ -2071,9 +2096,42 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
+        /*check if this warrior is already on a split point */
+        if(this.type==WARRIOR)
+        {
+            if(this.map.getSplitPoint({tx:this.tx,ty:this.ty})==true)
+            {
+                /*if so we don't want to set an additional split point, so we will set this warrior's flag to true so it does not set an additional splitpoint */
+                this.splitPointSet=true;
+                /**also, since we have reached a split point, we should add our strength to it, but only if there is not still blood here, if there is still blood here then we would split so no need to add strength to the group.  */
+                if(this.cleanUpBlood==false)
+                {
+                    let tempStrength = this.map.getStrengthMarker({tx:this.tx,ty:this.ty});
+                    /**the logic that sets strength later on in this method will set the strength to whatever our strength value is, so just assign our strength value here. use the contributed flag to prevent the warrior from adding its strength more than once */
+                    if(this.contributed==false)
+                    {
+                        this.shoutOut('increment strength');
+                        this.strengthValue=tempStrength+this.oldStrengthValue;
+                        this.contributed=true;
+                    }
+                }
+            }
+        }
         /**20261006 if the warrior pathfinding detects that we are on blood this will be true */
         if(this.cleanUpBlood==true)
         {
+            /**if the warrior has not set a split point recently, set a split point where it currently is */
+            if(this.splitPointSet==false)
+            {
+                /**so if there is blood on the current tile, and we have not already seen a split point recently, set the split point here.  */
+                this.shoutOut('set splitPoint');
+                this.map.setSplitPoint({tx:this.tx,ty:this.ty},true);
+                /**set this flag so that this warrior can not set another split point any time soon */
+                this.splitPointSet=true;
+                /**we also set the strength back to -1 on the tile, and we will set this warriors strength to its old strength. -at this point the strength would have been high enough to charge which would essentially be a count of how many warriors are in this loose group, so set it to this warrior's personal strength since the group will be splitting up here.  */
+                this.map.setStrengthMarker({tx:this.tx,ty:this.ty},-1);
+                this.strengthValue=-1+this.oldStrengthValue;
+            }
             /*we only want to clean up blood if there are 2 or less adjacent blood stains, because if there were 3 or 4 adjacent blood stains then deleting it would prevent other warriors from splitting up and cleaning blood in another direction 
             another way of saying this is if there are at least 2 adjacent tiles with no blood then we can clean up the blood*/
             /**get the adjacents of the current tile */
@@ -2272,12 +2330,26 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 }
 
                 /*everywhere the warrior goes, it should try to update the strength marker to match its strength*/
-                if(this.map.getStrengthMarker(v)<this.strengthValue)
+                /**20261009 i've had to change this so that the strength of the current tile is updated, not the strength of the tile we are moving to */
+                if(this.map.getStrengthMarker({tx:this.tx,ty:this.ty})<this.strengthValue)
                 {
                     /*this function sets the strength as the value of the 2nd argument */
-                    this.map.setStrengthMarker(v,this.strengthValue);
+                    this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
                 }
 
+                if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})>-1&&
+                this.map.getWarningMarker({tx:this.tx,ty:this.ty})<=this.map.getStrengthMarker({tx:this.tx,ty:this.ty}))
+                {
+                                        
+                    /**we are at full strength, so reset this flag which will enable us to split again if we find blood, reset the contributed flag so we can add our strength again if we do visit another split, reset the return to warning, and finally reset the split point if we are on it. */
+                    this.splitPointSet=false;
+                    this.contributed=false;
+                    this.returnToWarning=false;
+                    if(this.map.getSplitPoint({tx:this.tx,ty:this.ty})==true)
+                    {
+                        this.map.setSplitPoint({tx:this.tx,ty:this.ty},false);
+                    }
+                }
                 
             }
             //instead of clearing all contested data at the tile, which would clear the flags that other creatures added to the tile, instead just clear this creature's direction from the flags - 
