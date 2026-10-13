@@ -1443,3 +1443,23 @@ TODO if more blood is spilled ontop of a split point, consider resetting the spl
 TODO we should only be splitting if there is no other priority like we are being attacked. 
 TODO when we charge we reset the split point, it would be more efficient to store an array of any tiles that have a split point, and go through that array and test if the strength is higher than the warning on that tile, and if so reset the split point. 
 TODO if this.queue is true, should we check to see if the tile is vacant now?
+
+20261013
+a warrior should only add it's strength to the split point if its this.splitPointSet flag is false or if returnToWarning is true, or else a warrior will set the strength to -1, then immediately set it to 0 when it leaves the tile. 
+
+most of the time a blood stain will be detected and a worker will lay a warning trail from the first sight of blood. that means often the warriors will get to the blood and start to split up to clean the blood, only continuing along the warning path once they have enough strength, either from extra warriors or the ones cleaning up blood have returned, but once they have enough strength they will probably already be on the end of the warning trail anyway. 
+
+TODO fix below errors
+so i set up a different test, only kill the first worker when it has collected a resource and the 2nd worker is above it(further from the base) then the 2nd warrior will have to start the warning trail from the north, running all the way through the blood. 
+i've tested this a little and the 3rd warrior seems to lag behind the others, i think they worker was just getting in it's way. 
+the worker for some reason set the resource trail as blocked even though it wasn't and the worker sort of gets in the way of the warriors and stops them moving. 
+the warriors seem to be reducing the resource trail
+once the blood is cleaned up, 2 of the warriors are just charing but they are just swapping positions with each other, they should both be going north but the top one wants to come back south and is contesting that tile. the 3rd warrior just sits on the split point which still has strength -1
+
+TODO when there is no blood and no enemies and the warrior reach the warning, they should just go home. removing the strength and warning trail as they go
+
+TODO don't let blood fall on walls
+TODO if more blood is spilled ontop of a split point, consider resetting the split point?
+TODO we should only be splitting if there is no other priority like we are being attacked. 
+TODO when we charge we reset the split point, it would be more efficient to store an array of any tiles that have a split point, and go through that array and test if the strength is higher than the warning on that tile, and if so reset the split point. 
+TODO if this.queue is true, should we check to see if the tile is vacant now?

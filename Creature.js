@@ -2333,8 +2333,25 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /**20261009 i've had to change this so that the strength of the current tile is updated, not the strength of the tile we are moving to */
                 if(this.map.getStrengthMarker({tx:this.tx,ty:this.ty})<this.strengthValue)
                 {
-                    /*this function sets the strength as the value of the 2nd argument */
-                    this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
+                    /**20261013 when the warrior moves it will set the tile strength as it goes. most of the time it will read the strength of the tile when it spawned, and that will be the strength that it sets - that strength is supposed to be a count of the number of warriors that are heading down the warning trail. 
+                     * if the warrior splits because it sees blood, it will split from the warning trail to clean the blood, splitPointSet will then be set to true and the strength value will be a lower value - and will be the value of this warrior's strength rather than a count of the group of warriors. we still want to set the strength to the tile as this will give the warrior a path back to the warning trail when it finishes cleaning blood, but it will be this lower value of strength . 
+                     * when it splits it will lower the strength value of split point to -1, to indicate that the warriors have split and lost strength. we don't want to add our strength to this tile as we are splitting and not contributing our strength to that path. 
+                     so we always want to set the strength, unless we are on the split point, in which case only set it if we are returning to warning, or is splitpoint is false. 
+                    */
+                    if(this.map.getSplitPoint({tx:this.tx,ty:this.ty})==true)
+                    {
+                        if(this.splitPointSet==false ||this.returnToWarning==true)
+                        {
+                            /*this function sets the strength as the value of the 2nd argument */
+                            this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
+                        }
+                    }
+                    else                    
+                    {
+                        /*this function sets the strength as the value of the 2nd argument */
+                        this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
+                    }
+
                 }
 
                 if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})>-1&&
