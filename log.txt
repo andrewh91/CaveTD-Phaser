@@ -1451,7 +1451,7 @@ most of the time a blood stain will be detected and a worker will lay a warning 
 
 TODO fix below errors
 so i set up a different test, only kill the first worker when it has collected a resource and the 2nd worker is above it(further from the base) then the 2nd warrior will have to start the warning trail from the north, running all the way through the blood. 
-i've tested this a little and the 3rd warrior seems to lag behind the others, i think they worker was just getting in it's way. 
+i've tested this a little and the 3rd warrior seems to lag behind the others, i think the worker was just getting in its way. 
 the worker for some reason set the resource trail as blocked even though it wasn't and the worker sort of gets in the way of the warriors and stops them moving. 
 the warriors seem to be reducing the resource trail
 once the blood is cleaned up, 2 of the warriors are just charing but they are just swapping positions with each other, they should both be going north but the top one wants to come back south and is contesting that tile. the 3rd warrior just sits on the split point which still has strength -1
@@ -1463,3 +1463,8 @@ TODO if more blood is spilled ontop of a split point, consider resetting the spl
 TODO we should only be splitting if there is no other priority like we are being attacked. 
 TODO when we charge we reset the split point, it would be more efficient to store an array of any tiles that have a split point, and go through that array and test if the strength is higher than the warning on that tile, and if so reset the split point. 
 TODO if this.queue is true, should we check to see if the tile is vacant now?
+
+20261018 
+only reduce resource marker if we are a worker 
+the path blocked message will happen only if we are returning to base, but i should trigger it to happen if we are following a resource marker then a wall appears on top of it
+made the warrior set a flag when it reaches the end of the warning markers, this flag is returnToBase, when true it will return to base following the lowest explored numbers, i have not tested it yet, i think i might need to exclude explored numbers of -1 or else it would just explore instead of go base to base. 
