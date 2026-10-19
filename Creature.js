@@ -986,6 +986,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             /**if this is true then we must have reached the end of the warning trail, that is the only time this is currently set to true for a warrior, but in the future it might retreat for other reasons */
             if(this.returnToBase)
             {
+                let neighbours = this.getAdjacent();
                 let neighboursReversed = Helper.reverseArray(neighbours);
                 {
                     //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail - bear in mind that we may have deleted our tail if we reached the end of the warning trail, also only if it is not a wall 
@@ -999,6 +1000,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         &&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber)
                         {
                             this.proposedPos = neighboursByLowestExploredNumber[i];
+                            return this.proposedPos;
                         }
                     }
                 }
@@ -1052,7 +1054,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
             }
                                         
             /**if there is no adjacent blood, we should travel on the strength trail following low explored numbers back to the warning trail*/
-            if(this.returnToWarning==true&&this.map.getWarningMarker({tx:this.tx,ty:this.ty})==-1)
+            if(this.returnToWarning==true/*&&this.map.getWarningMarker({tx:this.tx,ty:this.ty})==-1*/)
             {
                 let neighbours = this.getAdjacent();
                 let neighboursWithStrengthMarker = this.refineAdjacentStrengthMarker(neighbours);
@@ -1199,19 +1201,24 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 let neighbours = this.getAdjacent();
                 let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighbours);
                 let neighboursWithWarningMarkerByHighestExploredNumber = this.sortAdjacentHighestExploredNumber(neighboursWithWarningMarker);
-                if(neighboursWithWarningMarkerByHighestExploredNumber.length>0)
-                {
-                    this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[0]; 
-                    this.shoutOut('Charge!');
 
-                    return this.proposedPos;
+                for(let i = 0 ; i < neighboursWithWarningMarker.length; i ++)
+                {                                                
+                    if(Helper.vectorEquals(this.memory[0],neighboursWithWarningMarkerByHighestExploredNumber[i])==false
+                    &&this.map.isWall(neighboursWithWarningMarkerByHighestExploredNumber[i])==false
+                    &&this.map.isEdge(neighboursWithWarningMarkerByHighestExploredNumber[i])==false)
+                    {
+                        this.proposedPos = neighboursWithWarningMarkerByHighestExploredNumber[i];
+                        this.shoutOut('Charge!');
+                        return this.proposedPos;
+                    }
                 }
-                else
+                
                 {
-                    /*this.shoutOut('tried to charge, no adjacent warning marker ');
-                    this.remainStationary=true;*/
+                    /*if there are no neighbours with a warning marker that is not our tail*/
                     this.shoutOut('reached end of warning, return to base');
                     this.returnToBase=true;
+                    this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
                     return this.proposedPos;
                 }
             }
@@ -2385,7 +2392,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     /**20261013 when the warrior moves it will set the tile strength as it goes. most of the time it will read the strength of the tile when it spawned, and that will be the strength that it sets - that strength is supposed to be a count of the number of warriors that are heading down the warning trail. 
                      * if the warrior splits because it sees blood, it will split from the warning trail to clean the blood, splitPointSet will then be set to true and the strength value will be a lower value - and will be the value of this warrior's strength rather than a count of the group of warriors. we still want to set the strength to the tile as this will give the warrior a path back to the warning trail when it finishes cleaning blood, but it will be this lower value of strength . 
                      * when it splits it will lower the strength value of split point to -1, to indicate that the warriors have split and lost strength. we don't want to add our strength to this tile as we are splitting and not contributing our strength to that path. 
-                     so we always want to set the strength, unless we are on the split point, in which case only set it if we are returning to warning, or is splitpoint is false. 
+                     so we always want to set the strength, unless we are on the split point, in which case only set it if we are returning to warning, or if splitpoint is false. 
                     */
                     if(this.map.getSplitPoint({tx:this.tx,ty:this.ty})==true)
                     {
@@ -2393,6 +2400,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
                         {
                             /*this function sets the strength as the value of the 2nd argument */
                             this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
+                        }
+                        /*if we are returning to warning, and we have reached the splitpoint, delete our memory, as our new direction might need to be our tail */
+                        if(this.returnToWarning==true)
+                        {
+                            this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
                         }
                     }
                     else                    
