@@ -78,6 +78,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.oldProposedPos={tx:undefined,ty:undefined};;
         //the memory can be various things, but related to pathfinding
         this.memory=[];
+        this.wallMemory=[];
         //use this to store the previous position, we will update this in the move method and the swapCreatureWith method 
         this.memoryDirection=STATIONARY;
         //pathfinding bools, some bools like shortcutMode always start off as false, but these bools below, might be true of false depending on what pathfinding method we have chosen, this is all handled in the setPathfindingMethod method
@@ -117,6 +118,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.returnPathBlocked=false;
         /*when an established path to the resource is blocked, this will tell us to go home and maybe get a digger */
         this.returnToBase=false;
+        this.deleteWarning=false;
+        this.despawnFlag=false;
         this.noLongerBlocked=false;
         this.foundNewPathToBlockedResource=false;
         
@@ -464,7 +467,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
     wallRunner4()
     {
         this.proposedPos=undefined;
-        let wall = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
+        let wall = this.wallMemory.length>0?Object.assign({}, this.wallMemory[0]):undefined;
         if(wall)
         {
             //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
@@ -492,7 +495,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
         this.encounteredWall=false;
         this.proposedPos=undefined;
         //use object.assign to copy the memory by value not by ref 
-        let wall = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
+        let wall = this.wallMemory.length>0?Object.assign({}, this.wallMemory[0]):undefined;
         if(this.shortcutMode)
         {
             this.proposedPos = this.beelineDigger6();
@@ -926,7 +929,17 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.explorerDirectionAlt = this.explorerDirectionBoolToggle==true?{tx:this.explorerDirectionOriginal.tx,ty:0}:{tx:0,ty:this.explorerDirectionOriginal.ty};
             this.explorerDirectionBoolToggle= !this.explorerDirectionBoolToggle;
         }
-        
+        /*this is simply to slightly delay the warrior despawning by the creature base - we need to set some proposed pos or else move creature will not run and it will not be despawned */
+        if(this.despawnFlag==true)
+        {
+            let neighbours = this.getAdjacent();
+            for(let i = 0 ; i < neighbours.length; i ++)
+            {  
+                if(this.map.getCreatureBaseIndex(neighbours[i])>-1)
+                this.proposedPos=neighbours[i];
+            }
+            return this.proposedPos;
+        }
         /*the step off flag will be set to true initially, when the warrior is born. it will be set to false when it moves off the base in the update function, it should then remain false.*/
         if(this.stepOff)
         {
@@ -988,18 +1001,33 @@ export default class Creature extends Phaser.GameObjects.Sprite
             {
                 let neighbours = this.getAdjacent();
                 let neighboursReversed = Helper.reverseArray(neighbours);
+                let neighboursWithWarningMarker = this.refineAdjacentWarningMarker(neighboursReversed);
                 {
+                    //set proposed move to the neighbour with a warning marker with lowest explored number, so long as that neighbour's exploredNumber is less than or equal to the tile we are on , also only if it is not a wall 
+                    let currentTileExploredNumber = this.map.getExploredNumber({tx:this.tx,ty:this.ty});
+                    let neighboursWithWarningMarkerByLowestExploredNumber =this.sortAdjacentLowestExploredNumber(neighboursWithWarningMarker);
+                    for(let i = 0 ; i < neighboursWithWarningMarkerByLowestExploredNumber.length; i ++)
+                    {                                                
+                        if(this.map.isWall(neighboursWithWarningMarkerByLowestExploredNumber[i])==false
+                        &&this.map.isEdge(neighboursWithWarningMarkerByLowestExploredNumber[i])==false
+                        &&this.map.getExploredNumber(neighboursWithWarningMarkerByLowestExploredNumber[i])<=currentTileExploredNumber)
+                        {
+                            this.proposedPos = neighboursWithWarningMarkerByLowestExploredNumber[i];
+                            this.shoutOut('returning-on warning trail');
+                            return this.proposedPos;
+                        }
+                    }
                     //set proposed move to the neighbour with lowest explored number, so long as that neighbour's exploredNumber is less than the tile we are on and so long as it is not the tail - bear in mind that we may have deleted our tail if we reached the end of the warning trail, also only if it is not a wall 
-                    let currentExploredNumber = this.exploredNumber;
                     let neighboursByLowestExploredNumber =this.sortAdjacentLowestExploredNumber(neighboursReversed);
                     for(let i = 0 ; i < neighboursByLowestExploredNumber.length; i ++)
                     {                                                
                         if(Helper.vectorEquals(this.memory[0],neighboursByLowestExploredNumber[i])==false
                         &&this.map.isWall(neighboursByLowestExploredNumber[i])==false
                         &&this.map.isEdge(neighboursByLowestExploredNumber[i])==false
-                        &&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentExploredNumber)
+                        &&this.map.getExploredNumber(neighboursByLowestExploredNumber[i])<currentTileExploredNumber)
                         {
                             this.proposedPos = neighboursByLowestExploredNumber[i];
+                            this.shoutOut('returning-off warning trail');
                             return this.proposedPos;
                         }
                     }
@@ -1011,14 +1039,20 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 if(this.map.getBloodStain({tx:this.tx,ty:this.ty})>-1||this.cleanUpBlood==true)
                 {
                     /*when we set this to true we will set the memory to the position of the wall instead of the tail */
+
+                    if(this.cleanUpBlood==false)
+                    {
+                        /*if we are setting clean up blood for the first time then set the wallMemory to a copy of the value in the memory (that will be the tail memory) */
+                        this.wallMemory[0] = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
+                    }
                     this.cleanUpBlood=true;
-                    this.rememberTail=false;
+                    /*this.rememberTail=false;*/
                     this.shoutOut('found blood, start cleanup');
                     /*we need to set the strength value back to this creature's actual strength, not the strength that was set on the tiles. this is because the warriors will now split up to clean the blood, potentially going off the warning trail, and they should lay their actual strength value on the tiles as they do so which they will be able to follow to get back to the warning trail.  */
                     this.strengthValue = this.oldStrengthValue;
 
                     /**adapted from the wallrunner pathfinding  */
-                    let wall = this.memory.length>0?Object.assign({}, this.memory[0]):undefined;
+                    let wall = this.wallMemory.length>0?Object.assign({}, this.wallMemory[0]):undefined;
                     if(wall)
                     {
                         //the wall memory will be where the wall should be, if we happen to have gone around the outside of a corner then the wall could actually be a path, if so move onto it - so we have followed the wall around a corner . 
@@ -1071,6 +1105,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /*find out if there is a warrior in our proposedPos, if so set queue flag to true */
                 if(tempCreatureTypeOnProposedPos == WARRIOR)
                 {
+                    this.shoutOut('queue');
                     this.queue = true;
                 }
                 else
@@ -1080,8 +1115,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 return this.proposedPos;
             }
 
-            /*if the warning trail is of higher value than the strength trail, then the warriors need to assemble*/
-            if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})>this.map.getStrengthMarker({tx:this.tx,ty:this.ty}))
+            /*if the warning trail is of higher value than the strength trail and the warrior's own strength value, then the warriors need to assemble*/
+            if(this.map.getWarningMarker({tx:this.tx,ty:this.ty})>this.map.getStrengthMarker({tx:this.tx,ty:this.ty})
+            &&this.map.getWarningMarker({tx:this.tx,ty:this.ty})>this.strengthValue)
             {
                 /*warriors should try to assemble at least 5 tiles away from the base*/
                 /*if the explored number is less than 5 then move along the warning trail */
@@ -1139,7 +1175,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                                     return this.proposedPos;
                                 }
                             }
-                            /*if we found a tile adjacent to the warnning trail with no warriors on it and no walls, then we would have set that as the proposedPos, if we reach this code then we must not have found such a tile */
+                            /*if we found a tile adjacent to the warning trail with no warriors on it and no walls, then we would have set that as the proposedPos, if we reach this code then we must not have found such a tile */
                             /*so we should try to move up the warning trail */
                             /*get the neighbour that is on the warning trail, that has the highest explored number*/
                             neighbours = this.getAdjacent();
@@ -1218,7 +1254,18 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     /*if there are no neighbours with a warning marker that is not our tail*/
                     this.shoutOut('reached end of warning, return to base');
                     this.returnToBase=true;
+                    this.deleteWarning=true;
                     this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
+
+                    /*we can also reach this part of the code if we just followed the warning trail back to the base! check if there is an adjacent base, if so move there. */
+                    for(let i = 0 ; i < neighbours.length; i ++)
+                    {
+                        if(this.map.getCreatureBaseIndex(neighbours[i])>-1)
+                        {
+                            this.proposedPos = neighbours[i];
+                        }
+                    }
+                    /*if we found a creature base, then proposedPos will be that location, otherwise it should be undefined, which means we will stay still, but return to base will be true and we delete our tail so next update we should move*/
                     return this.proposedPos;
                 }
             }
@@ -1979,6 +2026,24 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     kill()
     {
+        this.bleed();
+        this.despawn();
+    }
+    bleed()
+    {
+        /*20251010 I need to add the blood to this tile as well as the 8 surrounding tiles, that includes the diagonal ones, this could result in an error if v was at the edge of the map although that should not happen as i add a border to the edge of the map */
+        /*20251014 if the creature is killed while laying a warning trail after it discovered a blood stain, then it should lay a blood stain value equal to that discovered bloodstain plus it's own bloodstain value so that another creature can resume the trail*/
+        if(this.valueOfDiscoveredBloodStain>-1)
+        {
+            this.add9BloodStains({tx:this.tx,ty:this.ty},this.valueOfDiscoveredBloodStain+this.bloodStainValue);
+        }
+        else
+        {
+            this.add9BloodStains({tx:this.tx,ty:this.ty},this.bloodStainValue);
+        }
+    }
+    despawn()
+    {
         this.shoutOut('avenge me!');
         /* 20251107 if a warrior dies we need to update the group strength*/
         this.scene.subtractWarriorGroupStrength(this.warriorGroupKey,this.strengthValue);
@@ -1998,22 +2063,15 @@ export default class Creature extends Phaser.GameObjects.Sprite
         {
             this.scene.addResource({tx:this.tx,ty:this.ty},1); 
         }
-        /*20251010 I need to add the blood to this tile as well as the 8 surrounding tiles, that includes the diagonal ones, this could result in an error if v was at the edge of the map although that should not happen as i add a border to the edge of the map */
-        /*20251014 if the creature is killed while laying a warning trail after it discovered a blood stain, then it should lay a blood stain value equal to that discovered bloodstain plus it's own bloodstain value so that another creature can resume the trail*/
-        if(this.valueOfDiscoveredBloodStain>-1)
-        {
-            this.add9BloodStains({tx:this.tx,ty:this.ty},this.valueOfDiscoveredBloodStain+this.bloodStainValue);
-        }
-        else
-        {
-            this.add9BloodStains({tx:this.tx,ty:this.ty},this.bloodStainValue);
-        }
+
         /*this.scene.addBloodStain({tx:this.tx,ty:this.ty},this.bloodStainValue);*/
         //reset all the things that would be reset on visiting the base 
         this.exploredNumber=0;
         this.exploredDeadEnd=false;
         this.returnPathBlocked=false;
         this.returnToBase=false;
+        this.deleteWarning=false;
+        this.despawnFlag=false;
         this.noLongerBlocked=false;
         
         this.exploringWhileCarrying=false;
@@ -2036,15 +2094,19 @@ export default class Creature extends Phaser.GameObjects.Sprite
     /*20251010 this will add the value of the dead creature to the tile and also spills over the the 8 adjacent tiles */ 
     add9BloodStains(pos,value)
     {
-        this.scene.setBloodStain({tx:pos.tx-1,ty:pos.ty-1},value);
-        this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty-1},value);
-        this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty-1},value);
-        this.scene.setBloodStain({tx:pos.tx-1,ty:pos.ty+0},value);
-        this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty+0},value);
-        this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty+0},value);
-        this.scene.setBloodStain({tx:pos.tx-1,ty:pos.ty+1},value);
-        this.scene.setBloodStain({tx:pos.tx-0,ty:pos.ty+1},value);
-        this.scene.setBloodStain({tx:pos.tx+1,ty:pos.ty+1},value);
+        /**20261025 i don't want to drop blood on walls.  */
+        for(let i = -1; i <= 1;i++)
+        {
+            for(let j = -1; j <= 1;j++)
+            {    
+                if(this.map.isWall({tx:pos.tx+j,ty:pos.ty+i})==false
+                &&this.map.isEdge({tx:pos.tx+j,ty:pos.ty+i})==false)
+                {
+                    this.scene.setBloodStain({tx:pos.tx+j,ty:pos.ty+i},value);
+                }
+            }
+                
+        }
     }
     /*20251021 this will return true if the pos or any of the 4 adjacent pos have a warning marker*/
     warningInAdjacent5(pos,array)
@@ -2152,6 +2214,11 @@ export default class Creature extends Phaser.GameObjects.Sprite
     }
     moveCreature(v)
     {
+        if(this.despawnFlag==true)
+        {
+            this.despawn();
+            return;
+        }
         /*check if this warrior is already on a split point */
         if(this.type==WARRIOR)
         {
@@ -2172,6 +2239,22 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     }
                 }
             }
+            /**20261025 if we are returning to base after investigating the warning, we should reduce the warning and the strength trail as we go */
+            if(this.returnToBase==true
+            &&this.deleteWarning==true)
+            {
+                let tempWarningValue = this.map.getWarningMarker(v);
+                if(tempWarningValue>-1)
+                {
+                    this.map.setWarningMarker(v,tempWarningValue-this.oldStrengthValue);
+                }
+                let tempStrengthValue = this.map.getStrengthMarker(v);
+                if(tempStrengthValue>-1)
+                {
+                    this.map.setStrengthMarker(v,tempStrengthValue-this.oldStrengthValue);
+                }
+            }
+            
         }
         /**20261006 if the warrior pathfinding detects that we are on blood this will be true */
         if(this.cleanUpBlood==true)
@@ -2185,35 +2268,47 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 /**set this flag so that this warrior can not set another split point any time soon */
                 this.splitPointSet=true;
                 /**we also set the strength back to -1 on the tile, and we will set this warriors strength to its old strength. -at this point the strength would have been high enough to charge which would essentially be a count of how many warriors are in this loose group, so set it to this warrior's personal strength since the group will be splitting up here.  */
-                this.map.setStrengthMarker({tx:this.tx,ty:this.ty},-1);
+                this.map.setStrengthMarker({tx:this.tx,ty:this.ty},0);
                 this.strengthValue=-1+this.oldStrengthValue;
             }
-            /*we only want to clean up blood if there are 2 or less adjacent blood stains, because if there were 3 or 4 adjacent blood stains then deleting it would prevent other warriors from splitting up and cleaning blood in another direction 
-            another way of saying this is if there are at least 2 adjacent tiles with no blood then we can clean up the blood*/
+
             /**get the adjacents of the current tile */
+            /**20261025 look at the 3 adjacents - excluding the tail. count how many of these 3 have NO blood. if the number is 3 or 2 then we can delete our current blood.  */
+            /**first count how many of the FOUR adjacents have no blood */
             let n = this.getAdjacentCheap({tx:this.tx,ty:this.ty});
-            let countTilesWithNoBlood=0;
+            let countTilesWithNoBlood3=0;
+            let countTilesWithNoBlood4=0;
             for(let i = 0; i < n.length;i++)
             {
                 /**for each adjacent, count how many have no bloodstain */
                 if(this.map.getBloodStain(n[i])==-1)
                 {
-                    countTilesWithNoBlood++;
+                    countTilesWithNoBlood3++;
+                    countTilesWithNoBlood4++;
                 }
             }
+            /**now in order to exclude the tail, test if the tail has no blood, if so subtract that from the count */
+            if(this.memory[0]!=undefined)
+            {
+                if(this.map.getBloodStain(this.memory[0])==-1)
+                {
+                    countTilesWithNoBlood3--;
+                }
+            }
+            /*now we know how many of the 3 adjacent - excluding the tail, have no blood*/
             /**if at least 2 have no blood stain we can clean the blood */
-            if(countTilesWithNoBlood>1)
+            if(countTilesWithNoBlood3>1)
             {
                 this.shoutOut('clean blood');
                 this.map.setBloodStain({tx:this.tx,ty:this.ty},-1);
             }            
-            if(countTilesWithNoBlood==4&&this.swapping==false)        
+            if(countTilesWithNoBlood4==4&&this.swapping==false)        
             {                        
 
                 this.shoutOut('no adjacent blood');
                                     
                 this.cleanUpBlood=false;
-                this.rememberTail=true;
+                /*this.rememberTail=true;*/
                 /**if there is no adjacent blood, we should travel on the strength trail following low explored numbers back to the warning trail*/
                 this.returnToWarning=true;
             }
@@ -2401,16 +2496,18 @@ export default class Creature extends Phaser.GameObjects.Sprite
                             /*this function sets the strength as the value of the 2nd argument */
                             this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
                         }
-                        /*if we are returning to warning, and we have reached the splitpoint, delete our memory, as our new direction might need to be our tail */
+                        /*if we are returning to warning, and we have reached the splitpoint, delete our memory, as our new direction might need to be our tail, also set returnToWarning back to false */
                         if(this.returnToWarning==true)
                         {
                             this.memory[0]=Object.assign({}, {tx:this.tx,ty:this.ty});
+                            this.returnToWarning = false;
                         }
                     }
                     else                    
                     {
                         /*this function sets the strength as the value of the 2nd argument */
                         this.map.setStrengthMarker({tx:this.tx,ty:this.ty},this.strengthValue);
+                        console.log('creature '+this.index+' strength '+this.strengthValue)
                     }
 
                 }
@@ -2525,6 +2622,12 @@ export default class Creature extends Phaser.GameObjects.Sprite
                     this.seenWarningBool=false;
                     this.addedStrength=false;
                 }
+                /*20261025 so far this will trigger if we have explored the blood trail and are returning to base - as a warrior, basically i want to kill the warrior but without the blood. */
+                if(this.deleteWarning==true)
+                {
+ 
+                    this.despawnFlag=true;
+                }
             }
         }
     }
@@ -2605,7 +2708,7 @@ export default class Creature extends Phaser.GameObjects.Sprite
                             this.killAllTunnels();
                             if(this.rememberWall)
                             {
-                                this.memory = [];
+                                this.wallMemory = [];
                             }
                         }
                     }
@@ -2631,9 +2734,9 @@ export default class Creature extends Phaser.GameObjects.Sprite
             this.memory=[];
             this.memory.push({tx:this.tx,ty:this.ty});
         }
-        if(this.rememberWall&&this.memory.length>0)
+        if(this.rememberWall&&this.wallMemory.length>0)
         {
-            let wall = Object.assign({}, this.memory[0]);
+            let wall = Object.assign({}, this.wallMemory[0]);
             //if the creature has just moved to the wall then it must have turned a corner
             if(Helper.vectorEquals(wall,this.proposedPos))
             {
@@ -2642,8 +2745,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //times that by the following and the creature's preferred direction and move in the other axis to get the new wall position
                 wall.ty=wall.ty+(d.tx*-1*this.wallRunnerDirection);
                 wall.tx=wall.tx+(d.ty*+1*this.wallRunnerDirection);
-                this.memory=[];
-                this.memory.push(wall);
+                this.wallMemory=[];
+                this.wallMemory.push(wall);
             }
             else
             {
@@ -2653,14 +2756,14 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //now turn the wall back into a position by adding that direction to the new position 
                 wall.tx=wall.tx+this.proposedPos.tx;
                 wall.ty=wall.ty+this.proposedPos.ty;
-                this.memory=[];
-                this.memory.push(wall);
+                this.wallMemory=[];
+                this.wallMemory.push(wall);
             }
         }
-        /**20261006 when teh warriors are cleaning up blood, it is slightly different than the wall runner logic, so i need a new way to set the wall in memory */
-        if(this.cleanUpBlood&&this.memory.length>0)
+        /**20261006 when the warriors are cleaning up blood, it is slightly different than the wall runner logic, so i need a new way to set the wall in memory */
+        if(this.cleanUpBlood&&this.wallMemory.length>0)
         {
-            let wall = Object.assign({}, this.memory[0]);
+            let wall = Object.assign({}, this.wallMemory[0]);
             //if the creature has just moved to the wall then it must have turned a corner
             if(Helper.vectorEquals(wall,this.proposedPos))
             {
@@ -2669,8 +2772,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                 //times that by the following and the creature's preferred direction and move in the other axis to get the new wall position
                 wall.ty=wall.ty+(d.tx*-1*this.wallRunnerDirection);
                 wall.tx=wall.tx+(d.ty*+1*this.wallRunnerDirection);
-                this.memory=[];
-                this.memory.push(wall);
+                this.wallMemory=[];
+                this.wallMemory.push(wall);
             }
             else
             {
@@ -2680,8 +2783,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
                  * so you plug in the wall, then the current location, then direction which we will assume is RIGHT
                  * if we instead plug in the current location, and then the proposed location, and the same direction it should give us the wall location.  */
                 wall = this.rightAnglePosition({tx:this.tx,ty:this.ty},this.proposedPos,this.wallRunnerDirection);
-                this.memory=[];
-                this.memory.push(wall);
+                this.wallMemory=[];
+                this.wallMemory.push(wall);
             }
         }
     }
@@ -2763,8 +2866,8 @@ export default class Creature extends Phaser.GameObjects.Sprite
     {
         if(this.rememberWall)
         {
-            this.memory=[];
-            this.memory.push(v);
+            this.wallMemory=[];
+            this.wallMemory.push(v);
             this.shoutOut('a wall');
         }
     }
